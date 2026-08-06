@@ -1,84 +1,67 @@
 <?php
-$pageTitle = 'Registrar Ingreso — Control de Ingresos';
+$pageTitle = 'Terminal RFID — Control de Ingresos SENA';
 require __DIR__ . '/../../views/layouts/header.php';
 ?>
 
-<div class="container px-4 py-4" style="max-width:680px;">
+<div style="max-width: 600px; margin: 0 auto;">
 
-    <h1 class="page-title mb-1">
-        <i class="bi bi-person-check me-2 text-sena"></i>Registro de Ingreso
-    </h1>
-    <p class="text-muted mb-4">Escanea la tarjeta RFID o ingresa el ID del aprendiz manualmente.</p>
+    <div class="page-header" style="text-align: center; justify-content: center; flex-direction: column;">
+        <h1 class="page-header-title">Terminal de Registro RFID</h1>
+        <div class="page-header-subtitle">Acerca la tarjeta/llavero RFID al lector para marcar ingreso o salida</div>
+    </div>
 
-    <!-- ── Alerta de resultado ─────────────────────────────── -->
+    <!-- 🟢 EDITAR AQUÍ: Alertas de respuesta al escanear RFID -->
     <?php if (!empty($mensaje)): ?>
-    <div class="alert alert-<?= htmlspecialchars($mensaje['tipo']) ?> d-flex align-items-center gap-2 mb-4 fs-6">
-        <i class="bi bi-info-circle-fill flex-shrink-0"></i>
-        <span><?= $mensaje['texto'] ?></span>
+    <div style="margin-bottom: 1.25rem;" class="alert-auto-dismiss">
+        <div class="shadcn-card" style="padding: 1rem 1.25rem; display: flex; align-items: center; gap: 0.75rem; border-left: 4px solid var(--sena-brand);">
+            <i class="bi bi-info-circle-fill fs-5" style="color:var(--sena-brand);"></i>
+            <span style="font-size:0.9rem; font-weight:500;"><?= $mensaje['texto'] ?></span>
+        </div>
     </div>
     <?php endif; ?>
 
-    <!-- ── Formulario RFID ─────────────────────────────────── -->
-    <div class="card mb-3 shadow-sm">
-        <div class="card-header fw-semibold">
-            <i class="bi bi-wifi me-2"></i>Lectura RFID
+    <!-- 🟢 EDITAR AQUÍ: Formulario de lectura de la tarjeta RFID -->
+    <div class="shadcn-card" style="margin-bottom: 1.5rem;">
+        <div class="card-header-shadcn">
+            <h3><i class="bi bi-wifi me-2" style="color:var(--sena-brand);"></i>Lectura Automática RFID</h3>
+            <span class="shadcn-badge badge-puntual"><i class="bi bi-dot"></i>Lector listo</span>
         </div>
-        <div class="card-body">
+        <div class="card-body-shadcn">
+            <!-- 🟢 EDITAR AQUÍ: Cambia la propiedad action= por tu controlador o ruta -->
             <form method="POST" action="index.php?action=registrar-ingreso" id="rfidForm">
-                <div class="mb-3">
-                    <label for="rfid_uid" class="form-label">UID de la tarjeta</label>
-                    <div class="input-group input-group-lg">
-                        <span class="input-group-text"><i class="bi bi-credit-card-2-front"></i></span>
-                        <input type="text" id="rfid_uid" name="rfid_uid"
-                               class="form-control form-control-lg font-monospace"
-                               placeholder="Esperando lectura..."
-                               autocomplete="off" autofocus>
-                    </div>
-                    <div class="form-text">El sistema registra automáticamente al detectar el UID.</div>
+                <div style="margin-bottom: 1rem;">
+                    <label style="display:block; font-size:0.875rem; font-weight:500; margin-bottom:0.375rem;">Código UID RFID</label>
+                    <input type="text" id="rfid_uid" name="rfid_uid" class="shadcn-input"
+                           placeholder="Esperando lectura de tarjeta..." autocomplete="off" autofocus
+                           style="font-family: monospace; font-size: 1.1rem; padding: 0.75rem; text-align: center;">
                 </div>
-                <button type="submit" class="btn btn-sena btn-lg w-100">
-                    <i class="bi bi-check-circle me-2"></i>Registrar
+                <button type="submit" class="btn-shadcn btn-shadcn-primary" style="width: 100%; padding:0.75rem;">
+                    <i class="bi bi-check-circle"></i>
+                    <span>Registrar Ingreso / Salida</span>
                 </button>
             </form>
         </div>
     </div>
 
-    <!-- ── Formulario manual ───────────────────────────────── -->
-    <div class="card shadow-sm">
-        <div class="card-header fw-semibold">
-            <i class="bi bi-keyboard me-2"></i>Registro manual
+    <!-- 🟢 EDITAR AQUÍ: Formulario de ingreso manual por ID -->
+    <div class="shadcn-card">
+        <div class="card-header-shadcn">
+            <h3><i class="bi bi-keyboard me-2"></i>Ingreso Manual por ID</h3>
         </div>
-        <div class="card-body">
+        <div class="card-body-shadcn">
             <form method="POST" action="index.php?action=registrar-ingreso">
-                <div class="mb-3">
-                    <label for="aprendiz_id" class="form-label">ID del aprendiz</label>
-                    <div class="input-group">
-                        <span class="input-group-text"><i class="bi bi-person"></i></span>
-                        <input type="number" id="aprendiz_id" name="aprendiz_id"
-                               class="form-control" placeholder="Ej: 42" min="1">
-                    </div>
+                <div style="margin-bottom: 1rem;">
+                    <label style="display:block; font-size:0.875rem; font-weight:500; margin-bottom:0.375rem;">ID de Aprendiz</label>
+                    <input type="number" name="aprendiz_id" class="shadcn-input" placeholder="Ej: 15" min="1">
                 </div>
-                <button type="submit" class="btn btn-outline-sena w-100">
-                    <i class="bi bi-check me-1"></i>Registrar manualmente
+                <button type="submit" class="btn-shadcn btn-shadcn-outline" style="width: 100%;">
+                    <i class="bi bi-person-check"></i>
+                    <span>Registrar Manualmente</span>
                 </button>
             </form>
         </div>
     </div>
 
-    <div class="mt-3 text-center">
-        <a href="index.php?action=historial" class="btn btn-link text-muted">
-            <i class="bi bi-clock-history me-1"></i>Ver historial del día
-        </a>
-    </div>
 </div>
-
-<script>
-// Auto-submit al detectar RFID (cuando el lector llena el campo)
-document.getElementById('rfid_uid').addEventListener('change', function() {
-    if (this.value.trim().length > 0) {
-        document.getElementById('rfidForm').submit();
-    }
-});
-</script>
 
 <?php require __DIR__ . '/../../views/layouts/footer.php'; ?>
