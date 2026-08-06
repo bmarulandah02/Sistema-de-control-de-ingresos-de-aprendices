@@ -1,5 +1,5 @@
 # Estructura de Carpetas Propuesta
-´´´
+```
 sistema-control-ingreso/
 │
 ├── config/
@@ -46,4 +46,4 @@ sistema-control-ingreso/
 │   └── index.php             # Punto de entrada único de la aplicación
 │
 └── vendor/                   # Librerías externas (Ej. FPDF/PhpSpreadsheet)
-´´´
+```
