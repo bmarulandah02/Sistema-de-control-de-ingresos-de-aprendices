@@ -11,9 +11,26 @@ class MySQL{
         $usuario='root';
         $contrasena="";
         //data source name (linea que contiene el nombre origen de datos)
+        $dsn="mysql:host=$host;dbname=$dbname;charset=utf8mb4";
+        try{
+            $this->conexion=new PDO($dsn,$usuario,$contrasena);
+            $this->conexion->setAttribute(PDO::ATTR_ERRMODE,PDO::ERRMODE_EXCEPTION);
+        }catch (PDOException $e){
+            die("Error de conexion: ".  $e->getMessage());
 
+        }
+
+     }
+     //esta la utilizo por si la conexion suele ser privada 
+     public function getConexion()
+     {
+        return $this->conexion;
+     }
+    //cierro la conecion con el siguiente metodo
+    public function desconectar(){
+        $this->conexion=null;
     }
-
+    
 
 }
 
