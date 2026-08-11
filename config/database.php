@@ -7,7 +7,7 @@ class MySQL{
     //establesco la conexion
     public function conectarBD(){
         $host='localhost';
-        $dbname='control_ingreso_aprendices';
+        $dbname='asistencia_aprendice';
         $usuario='root';
         $contrasena="";
         //data source name (linea que contiene el nombre origen de datos)
@@ -16,10 +16,8 @@ class MySQL{
             $this->conexion=new PDO($dsn,$usuario,$contrasena);
             $this->conexion->setAttribute(PDO::ATTR_ERRMODE,PDO::ERRMODE_EXCEPTION);
         }catch (PDOException $e){
-            die("Error de conexion: ".  $e->getMessage());
-
+            $this->conexion=null;
         }
-
      }
      //esta la utilizo por si la conexion suele ser privada 
      public function getConexion()

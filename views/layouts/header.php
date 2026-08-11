@@ -27,7 +27,7 @@
             </div>
             <div>
                 <!-- 🟢 EDITAR AQUÍ: Título de tu sistema -->
-                <div class="sidebar-brand-name">ServiIngreso</div>
+                <div class="sidebar-brand-name">Ingreso</div>
                 <div class="sidebar-brand-sub">SENA ADSO</div>
             </div>
         </div>
@@ -84,7 +84,7 @@
         </nav>
 
         <div class="sidebar-footer">
-            <a href="index.php?action=login" class="nav-link-item text-danger">
+            <a href="index.php?action=logout" class="nav-link-item text-danger">
                 <i class="bi bi-box-arrow-right"></i>
                 <span>Cerrar sesión</span>
             </a>

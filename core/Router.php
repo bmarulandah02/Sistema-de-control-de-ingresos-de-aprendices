@@ -1,20 +1,52 @@
 <?php
 // ──────────────────────────────────────────────
-//  core/Router.php — Router para previsualización de plantillas
+//  core/Router.php — Manejo de Rutas y Sesiones
 // ──────────────────────────────────────────────
+
+require_once __DIR__ . '/../controllers/AuthController.php';
 
 class Router {
 
     public static function dispatch(): void {
-        $action = $_GET['action'] ?? 'dashboard';
+        $action = $_GET['action'] ?? null;
+        $estaAutenticado = isset($_SESSION['usuario_id']);
 
-        // Variables de sesión de prueba para la previsualización
-        $_SESSION['usuario_id'] = 1;
-        $_SESSION['nombre']     = 'Instructor SENA';
-        $_SESSION['correo']     = 'instructor@sena.edu.co';
-        $_SESSION['rol']        = 'Administrador';
+        // Manejo de la acción de Cerrar Sesión
+        if ($action === 'logout') {
+            $authController = new AuthController();
+            $authController->logout();
+            return;
+        }
 
-        // Datos simulados para previsualizar las vistas sin necesidad de BD
+        // Manejo de la acción de Inicio de Sesión
+        if ($action === 'login') {
+            $authController = new AuthController();
+            if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+                $authController->login();
+                return;
+            } else {
+                if ($estaAutenticado) {
+                    header('Location: index.php?action=dashboard');
+                    exit();
+                }
+                $authController->mostrarLogin();
+                return;
+            }
+        }
+
+        // Si el usuario no ha iniciado sesión, forzar la pantalla de Login primero
+        if (!$estaAutenticado) {
+            $authController = new AuthController();
+            $authController->mostrarLogin();
+            return;
+        }
+
+        // Acción por defecto al estar autenticado
+        if (empty($action)) {
+            $action = ($_SESSION['rol'] === 'Aprendiz') ? 'mi-perfil' : 'dashboard';
+        }
+
+        // Datos simulados/preparados para la renderización de vistas
         $statsHoy = ['total' => 12, 'puntuales' => 10, 'retardos' => 2];
         $statsAprendiz = ['activos' => 35];
         $ultimos = [
@@ -31,11 +63,11 @@ class Router {
         ];
         $filtros = ['fecha_inicio' => date('Y-m-01'), 'fecha_fin' => date('Y-m-d'), 'estado' => ''];
         $ficha = null;
-        $aprendiz = ['nombre' => 'Carlos Pérez', 'documento' => '1012345678', 'estado' => 'Activo', 'numero_ficha' => '2978456', 'programa' => 'ADSO', 'correo' => 'carlos@sena.edu.co', 'telefono' => '3001234567'];
+        $aprendiz = ['nombre' => $_SESSION['nombre'] ?? 'Carlos Pérez', 'documento' => '1012345678', 'estado' => 'Activo', 'numero_ficha' => '2978456', 'programa' => 'ADSO', 'correo' => $_SESSION['correo'] ?? 'carlos@sena.edu.co', 'telefono' => '3001234567'];
         $asistencias = $ultimos;
         $mensaje = null;
 
-        // Rutas a tus archivos de vista en la estructura MVC
+        // Despacho de Vistas
         switch ($action) {
             case 'asistencia':
                 require __DIR__ . '/../views/asistencia/registro.php';
@@ -60,9 +92,7 @@ class Router {
             case 'mis-excusas':
                 require __DIR__ . '/../views/aprendiz/excusas.php';
                 break;
-            case 'login':
-                require __DIR__ . '/../views/auth/login.php';
-                break;
+            case 'dashboard':
             default:
                 require __DIR__ . '/../views/admin/dashboard.php';
                 break;

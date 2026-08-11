@@ -30,8 +30,8 @@
     <!-- 🟢 EDITAR AQUÍ: Formulario de inicio de sesión -->
     <form method="POST" action="index.php?action=login">
         <div style="margin-bottom: 1.25rem;">
-            <label style="display:block; font-size:0.875rem; font-weight:500; margin-bottom:0.375rem;">Correo institucional</label>
-            <input type="email" name="correo" class="shadcn-input" placeholder="ejemplo@sena.edu.co" required autofocus value="<?= htmlspecialchars($_POST['correo'] ?? '') ?>">
+            <label style="display:block; font-size:0.875rem; font-weight:500; margin-bottom:0.375rem;">Usuario, correo o identificación</label>
+            <input type="text" name="correo" class="shadcn-input" placeholder="ej. ejemplo@sena.edu.co o 123456" required autofocus value="<?= htmlspecialchars($_POST['correo'] ?? '') ?>">
         </div>
 
         <div style="margin-bottom: 1.5rem;">
