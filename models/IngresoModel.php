@@ -8,9 +8,9 @@ require_once __DIR__ . '/../config/database.php';
 class IngresoModel {
 
     /**
-     * Obtiene métricas del día actual (total ingresos, puntuales, retardos)
+     * Obtiene métricas del día actual (total ingresos, puntuales, retardos) filtrando opcionalmente por Ficha
      */
-    public static function obtenerEstadisticasHoy(): array {
+    public static function obtenerEstadisticasHoy(?int $idFicha = null): array {
         $stats = ['total' => 0, 'puntuales' => 0, 'retardos' => 0];
 
         try {
@@ -19,29 +19,44 @@ class IngresoModel {
             $conexion = $mysql->getConexion();
 
             if ($conexion) {
-                // Total ingresos hoy
-                $sqlTotal = "SELECT COUNT(*) FROM ingresos WHERE fecha_registro = CURDATE()";
-                $stats['total'] = (int) $conexion->query($sqlTotal)->fetchColumn();
+                if ($idFicha && $idFicha > 0) {
+                    $sqlTotal = "SELECT COUNT(*) FROM ingresos i 
+                                 JOIN aprendiz a ON i.fk_aprendiz = a.id_aprendiz 
+                                 WHERE i.fecha_registro = CURDATE() AND a.fk_ficha = :ficha";
+                    $stmt = $conexion->prepare($sqlTotal);
+                    $stmt->execute([':ficha' => $idFicha]);
+                    $stats['total'] = (int) $stmt->fetchColumn();
 
-                // Puntuales hoy
-                $sqlPuntual = "SELECT COUNT(*) FROM ingresos WHERE fecha_registro = CURDATE() AND estado_asistencia = 'Puntual'";
-                $stats['puntuales'] = (int) $conexion->query($sqlPuntual)->fetchColumn();
+                    $sqlPuntual = "SELECT COUNT(*) FROM ingresos i 
+                                   JOIN aprendiz a ON i.fk_aprendiz = a.id_aprendiz 
+                                   WHERE i.fecha_registro = CURDATE() AND i.estado_asistencia = 'Puntual' AND a.fk_ficha = :ficha";
+                    $stmt = $conexion->prepare($sqlPuntual);
+                    $stmt->execute([':ficha' => $idFicha]);
+                    $stats['puntuales'] = (int) $stmt->fetchColumn();
 
-                // Retardos hoy
-                $sqlRetardos = "SELECT COUNT(*) FROM ingresos WHERE fecha_registro = CURDATE() AND estado_asistencia = 'Retardo'";
-                $stats['retardos'] = (int) $conexion->query($sqlRetardos)->fetchColumn();
+                    $sqlRetardos = "SELECT COUNT(*) FROM ingresos i 
+                                    JOIN aprendiz a ON i.fk_aprendiz = a.id_aprendiz 
+                                    WHERE i.fecha_registro = CURDATE() AND i.estado_asistencia = 'Retardo' AND a.fk_ficha = :ficha";
+                    $stmt = $conexion->prepare($sqlRetardos);
+                    $stmt->execute([':ficha' => $idFicha]);
+                    $stats['retardos'] = (int) $stmt->fetchColumn();
+                } else {
+                    $stats['total'] = (int) $conexion->query("SELECT COUNT(*) FROM ingresos WHERE fecha_registro = CURDATE()")->fetchColumn();
+                    $stats['puntuales'] = (int) $conexion->query("SELECT COUNT(*) FROM ingresos WHERE fecha_registro = CURDATE() AND estado_asistencia = 'Puntual'")->fetchColumn();
+                    $stats['retardos'] = (int) $conexion->query("SELECT COUNT(*) FROM ingresos WHERE fecha_registro = CURDATE() AND estado_asistencia = 'Retardo'")->fetchColumn();
+                }
             }
         } catch (Exception $e) {
-            // Silencioso: devuelve 0 si no hay tabla/datos
+            // Silencioso
         }
 
         return $stats;
     }
 
     /**
-     * Obtiene los últimos movimientos del día para el Dashboard
+     * Obtiene los últimos movimientos del día para el Dashboard filtrando opcionalmente por Ficha
      */
-    public static function obtenerUltimosMovimientos(int $limite = 8): array {
+    public static function obtenerUltimosMovimientos(int $limite = 8, ?int $idFicha = null): array {
         $registros = [];
 
         try {
@@ -50,6 +65,11 @@ class IngresoModel {
             $conexion = $mysql->getConexion();
 
             if ($conexion) {
+                $where = "";
+                if ($idFicha && $idFicha > 0) {
+                    $where = "WHERE f.id_ficha = :idFicha";
+                }
+
                 $sql = "SELECT i.id_ingresos, i.fecha_registro, i.entrada, i.salida, i.estado_asistencia AS estado,
                                CONCAT(u.nombre, ' ', u.apellido) AS aprendiz, u.identificacion AS documento,
                                f.id_ficha AS numero_ficha, f.nombre_programa AS programa
@@ -57,11 +77,15 @@ class IngresoModel {
                         JOIN aprendiz a ON i.fk_aprendiz = a.id_aprendiz
                         JOIN usuario u ON a.fk_usuario = u.id_usuario
                         LEFT JOIN ficha f ON a.fk_ficha = f.id_ficha
+                        {$where}
                         ORDER BY i.entrada DESC
                         LIMIT :limite";
 
                 $stmt = $conexion->prepare($sql);
                 $stmt->bindValue(':limite', $limite, PDO::PARAM_INT);
+                if ($idFicha && $idFicha > 0) {
+                    $stmt->bindValue(':idFicha', $idFicha, PDO::PARAM_INT);
+                }
                 $stmt->execute();
 
                 while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {

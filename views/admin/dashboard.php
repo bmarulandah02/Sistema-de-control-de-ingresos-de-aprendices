@@ -1,17 +1,31 @@
 <?php
-$pageTitle = 'Dashboard — Shadcn Admin SENA';
+$pageTitle = 'Dashboard — Control de Ingresos SENA';
 require __DIR__ . '/../layouts/header.php';
 ?>
 
-<div class="page-header">
+<div class="page-header" style="display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:1rem;">
     <div>
         <h1 class="page-header-title">Dashboard</h1>
         <div class="page-header-subtitle">
-            <!-- 🟢 EDITAR AQUÍ: Puedes cambiar el mensaje de bienvenida -->
-            <?= date('l, d \d\e F \d\e Y') ?> — Resumen de ingresos y asistencia de aprendices.
+            <?= date('d/m/Y') ?> — Resumen de ingresos y asistencia de aprendices.
         </div>
     </div>
-    <div style="display:flex; gap:0.5rem;">
+    <div style="display:flex; align-items:center; gap:0.75rem; flex-wrap:wrap;">
+        <!-- ── FILTRO DINÁMICO POR FICHA DE FORMACIÓN ───────────────── -->
+        <form method="GET" action="index.php" style="display:flex; align-items:center; gap:0.5rem; background:var(--card); padding:0.375rem 0.75rem; border:1px solid var(--border); border-radius:var(--radius);">
+            <input type="hidden" name="action" value="dashboard">
+            <i class="bi bi-funnel-fill" style="color:var(--sena-brand);"></i>
+            <span style="font-size:0.8125rem; font-weight:600; color:var(--muted-foreground);">Ficha:</span>
+            <select name="ficha_id" class="shadcn-select" onchange="this.form.submit()" style="padding:0.25rem 0.5rem; font-size:0.875rem; border:none; background:transparent;">
+                <option value="">— Todas las Fichas —</option>
+                <?php foreach ($fichas ?? [] as $f): ?>
+                <option value="<?= $f['id'] ?>" <?= (($fichaSeleccionada ?? '') == $f['id']) ? 'selected' : '' ?>>
+                    Ficha <?= htmlspecialchars($f['numero_ficha']) ?> — <?= htmlspecialchars($f['programa']) ?>
+                </option>
+                <?php endforeach; ?>
+            </select>
+        </form>
+
         <a href="index.php?action=asistencia" class="btn-shadcn btn-shadcn-primary">
             <i class="bi bi-qr-code-scan"></i>
             <span>Terminal RFID</span>
@@ -19,9 +33,8 @@ require __DIR__ . '/../layouts/header.php';
     </div>
 </div>
 
-<!-- ── 🟢 TARJETAS DE MÉTRICAS (METRIC CARDS) ───────────────────── -->
+<!-- ── TARJETAS DE MÉTRICAS (METRIC CARDS) ───────────────────── -->
 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; margin-bottom: 1.75rem;">
-    <!-- 🟢 EDITAR AQUÍ: Reemplaza $statsHoy['total'] por tu variable o consulta SQL -->
     <div class="metric-card">
         <div class="metric-header">
             <span>Ingresos Hoy</span>
@@ -31,7 +44,6 @@ require __DIR__ . '/../layouts/header.php';
         <div class="metric-footer">Registros marcados hoy</div>
     </div>
 
-    <!-- 🟢 EDITAR AQUÍ: Reemplaza $statsHoy['puntuales'] por tu variable -->
     <div class="metric-card">
         <div class="metric-header">
             <span>A tiempo</span>
@@ -41,7 +53,6 @@ require __DIR__ . '/../layouts/header.php';
         <div class="metric-footer">Ingresos sin retardo</div>
     </div>
 
-    <!-- 🟢 EDITAR AQUÍ: Reemplaza $statsHoy['retardos'] por tu variable -->
     <div class="metric-card">
         <div class="metric-header">
             <span>Retardos</span>
@@ -51,7 +62,6 @@ require __DIR__ . '/../layouts/header.php';
         <div class="metric-footer">Llegadas después del límite</div>
     </div>
 
-    <!-- 🟢 EDITAR AQUÍ: Reemplaza $statsAprendiz['activos'] por tu variable -->
     <div class="metric-card">
         <div class="metric-header">
             <span>Aprendices Activos</span>
@@ -62,10 +72,15 @@ require __DIR__ . '/../layouts/header.php';
     </div>
 </div>
 
-<!-- ── 🟢 TABLA DE ÚLTIMOS MOVIMIENTOS ────────────────────────── -->
+<!-- ── TABLA DE ÚLTIMOS MOVIMIENTOS ────────────────────────── -->
 <div class="shadcn-card">
     <div class="card-header-shadcn">
-        <h3><i class="bi bi-activity me-2"></i>Últimos movimientos del día</h3>
+        <div style="display:flex; align-items:center; gap:0.5rem;">
+            <h3><i class="bi bi-activity me-2"></i>Últimos movimientos del día</h3>
+            <?php if (!empty($fichaSeleccionada)): ?>
+            <span class="shadcn-badge badge-secondary">Filtro Ficha Activa</span>
+            <?php endif; ?>
+        </div>
         <a href="index.php?action=historial" class="btn-shadcn btn-shadcn-outline" style="font-size:0.75rem; padding:0.25rem 0.625rem;">
             Ver todos
         </a>
@@ -84,12 +99,11 @@ require __DIR__ . '/../layouts/header.php';
                 </tr>
             </thead>
             <tbody>
-                <!-- 🟢 EDITAR AQUÍ: Aquí recorres con foreach($ultimos as $r) los datos de tu BD -->
                 <?php if (empty($ultimos)): ?>
                 <tr>
-                    <td colspan="6" style="text-align:center; padding: 2rem; color:var(--muted-foreground);">
+                    <td colspan="6" style="text-align:center; padding: 2.5rem; color:var(--muted-foreground);">
                         <i class="bi bi-inbox fs-3 d-block mb-1"></i>
-                        No hay ingresos registrados el día de hoy.
+                        No hay ingresos registrados el día de hoy para esta selección.
                     </td>
                 </tr>
                 <?php else: ?>
