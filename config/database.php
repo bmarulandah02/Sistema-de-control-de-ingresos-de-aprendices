@@ -7,7 +7,7 @@ class MySQL{
     //establesco la conexion
     public function conectarBD(){
         $host='localhost';
-        $dbname='control_ingreso_apredices';
+        $dbname='control_ingreso_aprendices';
         $usuario='root';
         $contrasena="";
         //data source name (linea que contiene el nombre origen de datos)
