@@ -27,6 +27,31 @@ class AprendizModel {
     }
 
     /**
+     * Inserta un nuevo registro en la tabla aprendiz asociando código RFID, ficha y usuario
+     */
+    public static function crearAprendiz(?int $codigoRfid, int $fkFicha, int $fkUsuario): bool {
+        try {
+            $mysql = new MySQL();
+            $mysql->conectarBD();
+            $conexion = $mysql->getConexion();
+
+            if ($conexion) {
+                $sql = "INSERT INTO aprendiz (codigo_rfid, fk_ficha, fk_usuario) VALUES (:rfid, :ficha, :usuario)";
+                $stmt = $conexion->prepare($sql);
+                return $stmt->execute([
+                    ':rfid'    => $codigoRfid,
+                    ':ficha'   => $fkFicha,
+                    ':usuario' => $fkUsuario
+                ]);
+            }
+        } catch (Exception $e) {
+            // Silencioso
+        }
+
+        return false;
+    }
+
+    /**
      * Obtiene la información del perfil del aprendiz por su fk_usuario
      */
     public static function obtenerPorUsuarioId(int $usuarioId): ?array {

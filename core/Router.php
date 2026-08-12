@@ -4,6 +4,8 @@
 // ──────────────────────────────────────────────
 
 require_once __DIR__ . '/../controllers/AuthController.php';
+require_once __DIR__ . '/../controllers/UsuarioController.php';
+require_once __DIR__ . '/../controllers/FichaController.php';
 require_once __DIR__ . '/../models/IngresoModel.php';
 require_once __DIR__ . '/../models/AprendizModel.php';
 require_once __DIR__ . '/../models/HorarioModel.php';
@@ -83,6 +85,12 @@ class Router {
 
         // 6. Despacho de Vistas
         switch ($action) {
+            case 'usuarios':
+                (new UsuarioController())->index();
+                break;
+            case 'usuario-crear':
+                (new UsuarioController())->guardar();
+                break;
             case 'asistencia':
                 require __DIR__ . '/../views/asistencia/registro.php';
                 break;
@@ -90,11 +98,19 @@ class Router {
                 require __DIR__ . '/../views/asistencia/historial.php';
                 break;
             case 'fichas':
-                require __DIR__ . '/../views/admin/fichas.php';
+                (new FichaController())->index();
                 break;
             case 'ficha-crear':
+                (new FichaController())->formulario();
+                break;
             case 'ficha-editar':
-                require __DIR__ . '/../views/fichas/formulario.php';
+                (new FichaController())->formulario((int)($_GET['id'] ?? 0));
+                break;
+            case 'ficha-guardar':
+                (new FichaController())->guardar();
+                break;
+            case 'ficha-eliminar':
+                (new FichaController())->eliminar();
                 break;
             case 'reportes':
             case 'excusas-admin':

@@ -38,6 +38,7 @@ require __DIR__ . '/../layouts/header.php';
                 <tr>
                     <th>Nº Ficha</th>
                     <th>Programa</th>
+                    <th>Jornada</th>
                     <th>Instructor Encargado</th>
                     <th>Aprendices</th>
                     <th>Inicio</th>
@@ -49,10 +50,9 @@ require __DIR__ . '/../layouts/header.php';
                 </tr>
             </thead>
             <tbody>
-                <!-- 🟢 EDITAR AQUÍ: Recorre con foreach($fichas as $f) los registros de tu BD -->
                 <?php if (empty($fichas)): ?>
                 <tr>
-                    <td colspan="8" style="text-align:center; padding:2.5rem; color:var(--muted-foreground);">
+                    <td colspan="9" style="text-align:center; padding:2.5rem; color:var(--muted-foreground);">
                         No existen fichas registradas aún.
                     </td>
                 </tr>
@@ -61,14 +61,15 @@ require __DIR__ . '/../layouts/header.php';
                 <tr>
                     <td style="font-weight:700; color:var(--sena-brand);"><?= htmlspecialchars($f['numero_ficha']) ?></td>
                     <td><?= htmlspecialchars($f['programa']) ?></td>
+                    <td><span class="shadcn-badge badge-outline"><?= htmlspecialchars($f['jornada'] ?? 'Diurna') ?></span></td>
                     <td><?= htmlspecialchars($f['instructor'] ?? '—') ?></td>
                     <td>
                         <span class="shadcn-badge badge-secondary">
                             <?= (int) $f['total_aprendices'] ?> aprendices
                         </span>
                     </td>
-                    <td><?= htmlspecialchars($f['fecha_inicio']) ?></td>
-                    <td><?= htmlspecialchars($f['fecha_fin']) ?></td>
+                    <td><?= htmlspecialchars($f['fecha_inicio'] ?? '—') ?></td>
+                    <td><?= htmlspecialchars($f['fecha_fin'] ?? '—') ?></td>
                     <td>
                         <?php $bClass = ($f['estado'] === 'Activo') ? 'badge-activo' : 'badge-inactivo'; ?>
                         <span class="shadcn-badge <?= $bClass ?>">

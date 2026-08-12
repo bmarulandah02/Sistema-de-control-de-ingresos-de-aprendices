@@ -54,6 +54,11 @@
             <?php if (in_array($_SESSION['rol'] ?? '', ['Administrador', 'Instructor'])): ?>
             <div class="nav-section-title">Gestión</div>
 
+            <a href="index.php?action=usuarios" class="nav-link-item <?= (in_array($_GET['action'] ?? '', ['usuarios', 'usuario-crear'])) ? 'active' : '' ?>">
+                <i class="bi bi-people"></i>
+                <span>Usuarios & Aprendices</span>
+            </a>
+
             <a href="index.php?action=fichas" class="nav-link-item <?= (($_GET['action'] ?? '') === 'fichas') ? 'active' : '' ?>">
                 <i class="bi bi-journal-bookmark"></i>
                 <span>Fichas & Horarios</span>
