@@ -40,10 +40,17 @@ require __DIR__ . '/../../views/layouts/header.php';
             <div style="margin-bottom: 1.25rem;">
                 <label style="display:block; font-size:0.875rem; font-weight:600; margin-bottom:0.375rem;">Rol del Usuario *</label>
                 <select name="fk_rol" id="selectRol" class="shadcn-select" required onchange="toggleCamposAprendiz()">
-                    <option value="">Selecciona un rol</option>
                     <?php 
+                        $soloUnRol = count($roles) === 1;
                         $rolSel = $_POST['fk_rol'] ?? ($usuarioEditar['fk_rol'] ?? '');
+                        if (empty($rolSel) && $soloUnRol) {
+                            $primerRol = reset($roles);
+                            $rolSel = $primerRol['id_rol'];
+                        }
                     ?>
+                    <?php if (!$soloUnRol): ?>
+                    <option value="">Selecciona un rol</option>
+                    <?php endif; ?>
                     <?php foreach ($roles as $r): ?>
                     <option value="<?= $r['id_rol'] ?>" <?= ($rolSel == $r['id_rol']) ? 'selected' : '' ?>>
                         <?= htmlspecialchars($r['nombre_rol']) ?>

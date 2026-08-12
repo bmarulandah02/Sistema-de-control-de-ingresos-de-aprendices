@@ -22,14 +22,22 @@ class UsuarioController {
      * Muestra el formulario para registrar o editar un usuario
      */
     public function formulario(?int $id = null, ?string $error = null): void {
+        $rolSesion = $_SESSION['rol'] ?? '';
         $roles = UsuarioModel::obtenerRoles();
         $fichas = HorarioModel::obtenerTodasFichas();
         $usuarioEditar = $id ? UsuarioModel::obtenerPorId($id) : null;
 
         // Permisos: Si el rol es Instructor y se intenta editar a un Administrador, denegar acceso
-        if ($usuarioEditar && ($_SESSION['rol'] ?? '') === 'Instructor' && $usuarioEditar['rol'] === 'Administrador') {
+        if ($usuarioEditar && $rolSesion === 'Instructor' && $usuarioEditar['rol'] === 'Administrador') {
             header('Location: index.php?action=usuarios&error=sin_permiso');
             exit();
+        }
+
+        // Si el usuario en sesión es Instructor, solo se le permite asignar el rol de Aprendiz (id_rol = 3)
+        if ($rolSesion === 'Instructor') {
+            $roles = array_filter($roles, function($r) {
+                return $r['nombre_rol'] === 'Aprendiz' || (int)$r['id_rol'] === 3;
+            });
         }
 
         require __DIR__ . '/../views/admin/formulario_usuario.php';
@@ -40,6 +48,7 @@ class UsuarioController {
      */
     public function guardar(): void {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $rolSesion      = $_SESSION['rol'] ?? '';
             $idUsuario      = !empty($_POST['id_usuario']) ? (int)$_POST['id_usuario'] : null;
             $nombre         = trim($_POST['nombre'] ?? '');
             $apellido       = trim($_POST['apellido'] ?? '');
@@ -51,6 +60,12 @@ class UsuarioController {
             $fk_ficha       = (int) ($_POST['fk_ficha'] ?? 0);
             $codigo_rfid    = !empty($_POST['codigo_rfid']) ? (int) $_POST['codigo_rfid'] : null;
             $esEdicion      = !empty($idUsuario);
+
+            // Control de Seguridad: Un Instructor solo puede registrar o actualizar el rol de Aprendiz (id 3)
+            if ($rolSesion === 'Instructor' && $fk_rol !== 3) {
+                $this->formulario($idUsuario, 'Los Instructores sólo tienen autorización para registrar usuarios con el rol de Aprendiz.');
+                return;
+            }
 
             if (empty($nombre) || empty($apellido) || empty($identificacion) || empty($correo) || empty($fk_rol)) {
                 $this->formulario($idUsuario, 'Por favor completa todos los campos obligatorios (*).');
