@@ -52,6 +52,36 @@ class AprendizModel {
     }
 
     /**
+     * Actualiza o crea los datos de un aprendiz (RFID y Ficha)
+     */
+    public static function actualizarAprendiz(?int $codigoRfid, int $fkFicha, int $fkUsuario): bool {
+        try {
+            $mysql = new MySQL();
+            $mysql->conectarBD();
+            $conexion = $mysql->getConexion();
+
+            if ($conexion) {
+                $check = (int) $conexion->query("SELECT COUNT(*) FROM aprendiz WHERE fk_usuario = " . (int)$fkUsuario)->fetchColumn();
+                if ($check > 0) {
+                    $sql = "UPDATE aprendiz SET codigo_rfid = :rfid, fk_ficha = :ficha WHERE fk_usuario = :usuario";
+                } else {
+                    $sql = "INSERT INTO aprendiz (codigo_rfid, fk_ficha, fk_usuario) VALUES (:rfid, :ficha, :usuario)";
+                }
+                $stmt = $conexion->prepare($sql);
+                return $stmt->execute([
+                    ':rfid'    => $codigoRfid,
+                    ':ficha'   => $fkFicha,
+                    ':usuario' => $fkUsuario
+                ]);
+            }
+        } catch (Exception $e) {
+            // Silencioso
+        }
+
+        return false;
+    }
+
+    /**
      * Obtiene la información del perfil del aprendiz por su fk_usuario
      */
     public static function obtenerPorUsuarioId(int $usuarioId): ?array {

@@ -1,35 +1,29 @@
 <?php
-$pageTitle = 'Fichas & Horarios — Control de Ingresos SENA';
-require __DIR__ . '/../layouts/header.php';
+$pageTitle = 'Fichas de Formación — Control de Ingresos SENA';
+require __DIR__ . '/../../views/layouts/header.php';
 ?>
 
 <div class="page-header">
     <div>
         <h1 class="page-header-title">Fichas de Formación</h1>
-        <div class="page-header-subtitle">Gestión de cursos, horarios e instructores encargados</div>
+        <div class="page-header-subtitle">Gestión de fichas, programas e instructores encargados</div>
     </div>
     <?php if (in_array($_SESSION['rol'] ?? '', ['Administrador', 'Instructor'])): ?>
     <div>
-        <!-- 🟢 EDITAR AQUÍ: Botón para crear nueva ficha -->
+        <!-- 🟢 EDITAR AQUÍ: Cambia el enlace según la ruta de creación de ficha -->
         <a href="index.php?action=ficha-crear" class="btn-shadcn btn-shadcn-primary">
             <i class="bi bi-plus-lg"></i>
-            <span>Nueva Ficha</span>
+            <span>+ Nueva Ficha</span>
         </a>
     </div>
     <?php endif; ?>
 </div>
 
-<!-- 🟢 EDITAR AQUÍ: Mensaje de confirmación -->
-<?php if (!empty($_GET['ok'])): ?>
-<div style="background-color:rgba(34,197,94,0.12); color:#16a34a; padding:0.75rem 1rem; border-radius:var(--radius); font-size:0.875rem; margin-bottom:1.25rem; border:1px solid rgba(34,197,94,0.2);">
-    <i class="bi bi-check-circle-fill me-1"></i> Operación completada con éxito.
-</div>
-<?php endif; ?>
-
-<!-- ── 🟢 TABLA DE FICHAS REGISTRADAS ─────────────────────────── -->
+<!-- ── 🟢 TABLA DE FICHAS ───────────────────────────────────────── -->
 <div class="shadcn-card">
     <div class="card-header-shadcn">
         <h3><i class="bi bi-journal-bookmark me-2"></i>Fichas Registradas</h3>
+        <span class="shadcn-badge badge-secondary"><?= count($fichas) ?> fichas</span>
     </div>
 
     <div class="shadcn-table-wrapper">
@@ -79,18 +73,16 @@ require __DIR__ . '/../layouts/header.php';
                     <?php if (in_array($_SESSION['rol'] ?? '', ['Administrador', 'Instructor'])): ?>
                     <td>
                         <div style="display:flex; gap:0.375rem;">
-                            <!-- 🟢 EDITAR AQUÍ: Enlace para editar ficha -->
                             <a href="index.php?action=ficha-editar&id=<?= $f['id'] ?>"
                                class="btn-shadcn btn-shadcn-outline" style="padding:0.25rem 0.5rem; font-size:0.75rem;" title="Editar">
                                 <i class="bi bi-pencil"></i>
                             </a>
                             <?php if ($_SESSION['rol'] === 'Administrador'): ?>
-                            <!-- 🟢 EDITAR AQUÍ: Enlace para eliminar ficha -->
-                            <a href="index.php?action=ficha-eliminar&id=<?= $f['id'] ?>"
-                               class="btn-shadcn btn-shadcn-danger" style="padding:0.25rem 0.5rem; font-size:0.75rem;" title="Eliminar"
-                               onclick="return confirm('¿Eliminar la ficha <?= htmlspecialchars($f['numero_ficha']) ?>?')">
+                            <button type="button"
+                                    onclick="confirmarEliminarFicha(<?= $f['id'] ?>, '<?= htmlspecialchars(addslashes($f['numero_ficha'])) ?>')"
+                                    class="btn-shadcn btn-shadcn-outline" style="padding:0.25rem 0.5rem; font-size:0.75rem; color:#dc2626; border-color:rgba(239,68,68,0.3);" title="Eliminar">
                                 <i class="bi bi-trash"></i>
-                            </a>
+                            </button>
                             <?php endif; ?>
                         </div>
                     </td>
@@ -102,5 +94,37 @@ require __DIR__ . '/../layouts/header.php';
         </table>
     </div>
 </div>
+
+<script>
+function confirmarEliminarFicha(id, numero) {
+    Swal.fire({
+        title: '¿Eliminar Ficha?',
+        text: `¿Estás seguro de eliminar la ficha N° ${numero}? Esta acción eliminará su registro.`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#dc2626',
+        cancelButtonColor: '#64748b',
+        confirmButtonText: 'Sí, eliminar',
+        cancelButtonText: 'Cancelar'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            window.location.href = `index.php?action=ficha-eliminar&id=${id}`;
+        }
+    });
+}
+
+<?php if (isset($_GET['ok'])): ?>
+document.addEventListener('DOMContentLoaded', () => {
+    Swal.fire({
+        icon: 'success',
+        title: '¡Ficha Guardada!',
+        text: 'La información de la ficha de formación ha sido guardada con éxito.',
+        timer: 3000,
+        showConfirmButton: false,
+        timerProgressBar: true
+    });
+});
+<?php endif; ?>
+</script>
 
 <?php require __DIR__ . '/../layouts/footer.php'; ?>

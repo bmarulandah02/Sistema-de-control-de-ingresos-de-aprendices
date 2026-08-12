@@ -91,6 +91,18 @@ class Router {
             case 'usuario-crear':
                 (new UsuarioController())->guardar();
                 break;
+            case 'usuario-editar':
+                (new UsuarioController())->formulario((int)($_GET['id'] ?? 0));
+                break;
+            case 'usuario-actualizar':
+                (new UsuarioController())->guardar();
+                break;
+            case 'usuario-eliminar':
+                (new UsuarioController())->eliminar();
+                break;
+            case 'mi-perfil-guardar':
+                (new UsuarioController())->guardarPerfilPersonal();
+                break;
             case 'asistencia':
                 require __DIR__ . '/../views/asistencia/registro.php';
                 break;

@@ -10,24 +10,23 @@ require __DIR__ . '/../../views/layouts/header.php';
         <div class="page-header-subtitle">Acerca la tarjeta/llavero RFID al lector para marcar ingreso o salida</div>
     </div>
 
-    <!-- 🟢 EDITAR AQUÍ: Alertas de respuesta al escanear RFID -->
+    <!-- 🟢 ALERTAS DE RESPUESTA AL ESCANEAR RFID -->
     <?php if (!empty($mensaje)): ?>
     <div style="margin-bottom: 1.25rem;" class="alert-auto-dismiss">
         <div class="shadcn-card" style="padding: 1rem 1.25rem; display: flex; align-items: center; gap: 0.75rem; border-left: 4px solid var(--sena-brand);">
             <i class="bi bi-info-circle-fill fs-5" style="color:var(--sena-brand);"></i>
-            <span style="font-size:0.9rem; font-weight:500;"><?= $mensaje['texto'] ?></span>
+            <span style="font-size:0.9rem; font-weight:500;"><?= htmlspecialchars($mensaje['texto'] ?? '') ?></span>
         </div>
     </div>
     <?php endif; ?>
 
-    <!-- 🟢 EDITAR AQUÍ: Formulario de lectura de la tarjeta RFID -->
+    <!-- 🟢 FORMULARIO DE LECTURA RFID AUTOMÁTICO -->
     <div class="shadcn-card" style="margin-bottom: 1.5rem;">
         <div class="card-header-shadcn">
             <h3><i class="bi bi-wifi me-2" style="color:var(--sena-brand);"></i>Lectura Automática RFID</h3>
             <span class="shadcn-badge badge-puntual"><i class="bi bi-dot"></i>Lector listo</span>
         </div>
         <div class="card-body-shadcn">
-            <!-- 🟢 EDITAR AQUÍ: Cambia la propiedad action= por tu controlador o ruta -->
             <form method="POST" action="index.php?action=registrar-ingreso" id="rfidForm">
                 <div style="margin-bottom: 1rem;">
                     <label style="display:block; font-size:0.875rem; font-weight:500; margin-bottom:0.375rem;">Código UID RFID</label>
@@ -43,7 +42,7 @@ require __DIR__ . '/../../views/layouts/header.php';
         </div>
     </div>
 
-    <!-- 🟢 EDITAR AQUÍ: Formulario de ingreso manual por ID -->
+    <!-- 🟢 FORMULARIO DE INGRESO MANUAL -->
     <div class="shadcn-card">
         <div class="card-header-shadcn">
             <h3><i class="bi bi-keyboard me-2"></i>Ingreso Manual por ID</h3>
@@ -63,5 +62,23 @@ require __DIR__ . '/../../views/layouts/header.php';
     </div>
 
 </div>
+
+<?php if (!empty($mensaje)): ?>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const esError = <?= json_encode(($mensaje['tipo'] ?? '') === 'error') ?>;
+    const textoMsg = <?= json_encode($mensaje['texto'] ?? '') ?>;
+
+    Swal.fire({
+        icon: esError ? 'error' : 'success',
+        title: esError ? 'Ingreso no registrado' : '¡Registro Exitoso!',
+        text: textoMsg,
+        timer: 4000,
+        timerProgressBar: true,
+        showConfirmButton: false
+    });
+});
+</script>
+<?php endif; ?>
 
 <?php require __DIR__ . '/../../views/layouts/footer.php'; ?>
