@@ -35,6 +35,7 @@
         </div>
 
         <nav class="sidebar-nav">
+            <?php if (in_array($_SESSION['rol'] ?? '', ['Administrador', 'Instructor'])): ?>
             <div class="nav-section-title">General</div>
             
             <a href="index.php?action=dashboard" class="nav-link-item <?= (($_GET['action'] ?? '') === 'dashboard') ? 'active' : '' ?>">
@@ -52,11 +53,9 @@
                 <span>Asistencias</span>
             </a>
 
-            <!-- 🟢 EDITAR AQUÍ: Puedes cambiar las opciones del menú según los roles de tu sistema -->
-            <?php if (in_array($_SESSION['rol'] ?? '', ['Administrador', 'Instructor'])): ?>
             <div class="nav-section-title">Gestión</div>
 
-            <a href="index.php?action=usuarios" class="nav-link-item <?= (in_array($_GET['action'] ?? '', ['usuarios', 'usuario-crear'])) ? 'active' : '' ?>">
+            <a href="index.php?action=usuarios" class="nav-link-item <?= (in_array($_GET['action'] ?? '', ['usuarios', 'usuario-crear', 'usuario-editar'])) ? 'active' : '' ?>">
                 <i class="bi bi-people"></i>
                 <span>Usuarios & Aprendices</span>
             </a>
@@ -76,16 +75,16 @@
                 <span>Reportes PDF/Excel</span>
             </a>
             <?php else: ?>
-            <div class="nav-section-title">Aprendiz</div>
+            <div class="nav-section-title">Portal Aprendiz</div>
 
-            <a href="index.php?action=mi-perfil" class="nav-link-item <?= (($_GET['action'] ?? '') === 'mi-perfil') ? 'active' : '' ?>">
+            <a href="index.php?action=mi-perfil" class="nav-link-item <?= (in_array($_GET['action'] ?? '', ['mi-perfil', ''])) ? 'active' : '' ?>">
                 <i class="bi bi-person-badge"></i>
-                <span>Mi Perfil</span>
+                <span>Mi Perfil & Asistencias</span>
             </a>
 
             <a href="index.php?action=mis-excusas" class="nav-link-item <?= (($_GET['action'] ?? '') === 'mis-excusas') ? 'active' : '' ?>">
                 <i class="bi bi-file-earmark-medical"></i>
-                <span>Mis Excusas</span>
+                <span>Mis Excusas Médicas</span>
             </a>
             <?php endif; ?>
         </nav>

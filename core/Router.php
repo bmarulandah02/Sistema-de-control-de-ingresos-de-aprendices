@@ -47,9 +47,14 @@ class Router {
             return;
         }
 
-        // 4. Determinar vista por defecto según el rol del usuario autenticado
-        if (empty($action)) {
-            $action = (($_SESSION['rol'] ?? '') === 'Aprendiz') ? 'mi-perfil' : 'dashboard';
+        // 4. Determinar vista por defecto y restringir acceso a Aprendices
+        if (($_SESSION['rol'] ?? '') === 'Aprendiz') {
+            $rutasProhibidasAprendiz = ['dashboard', 'asistencia', 'usuarios', 'usuario-crear', 'usuario-editar', 'fichas', 'ficha-crear', 'ficha-editar', 'excusas-admin', 'reportes'];
+            if (empty($action) || in_array($action, $rutasProhibidasAprendiz)) {
+                $action = 'mi-perfil';
+            }
+        } else if (empty($action)) {
+            $action = 'dashboard';
         }
 
         // 5. Carga de datos desde la Base de Datos para las vistas
