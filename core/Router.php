@@ -1,41 +1,87 @@
 <?php
 // ──────────────────────────────────────────────
-//  core/Router.php — Router para previsualización de plantillas
+//  core/Router.php — Enrutador Principal del Sistema
 // ──────────────────────────────────────────────
+
+require_once __DIR__ . '/../controllers/AuthController.php';
+require_once __DIR__ . '/../models/IngresoModel.php';
+require_once __DIR__ . '/../models/AprendizModel.php';
+require_once __DIR__ . '/../models/HorarioModel.php';
+require_once __DIR__ . '/../models/ExcusaModel.php';
 
 class Router {
 
     public static function dispatch(): void {
-        $action = $_GET['action'] ?? 'dashboard';
+        $action = $_GET['action'] ?? null;
+        $estaAutenticado = isset($_SESSION['usuario_id']);
 
-        // Variables de sesión de prueba para la previsualización
-        $_SESSION['usuario_id'] = 1;
-        $_SESSION['nombre']     = 'Instructor SENA';
-        $_SESSION['correo']     = 'instructor@sena.edu.co';
-        $_SESSION['rol']        = 'Administrador';
+        // 1. Manejo del Cierre de Sesión
+        if ($action === 'logout') {
+            $authController = new AuthController();
+            $authController->logout();
+            return;
+        }
 
-        // Datos simulados para previsualizar las vistas sin necesidad de BD
-        $statsHoy = ['total' => 12, 'puntuales' => 10, 'retardos' => 2];
-        $statsAprendiz = ['activos' => 35];
-        $ultimos = [
-            ['aprendiz' => 'Carlos Pérez', 'documento' => '1012345678', 'numero_ficha' => '2978456', 'hora_entrada' => '06:55:12', 'hora_salida' => '12:58:40', 'estado' => 'Puntual'],
-            ['aprendiz' => 'María Rodríguez', 'documento' => '1098765432', 'numero_ficha' => '2978456', 'hora_entrada' => '07:12:05', 'hora_salida' => null, 'estado' => 'Retardo'],
-            ['aprendiz' => 'Juan Gómez', 'documento' => '1023456789', 'numero_ficha' => '2978456', 'hora_entrada' => '06:58:30', 'hora_salida' => '13:00:10', 'estado' => 'Puntual'],
-        ];
-        $registros = $ultimos;
-        $fichas = [
-            ['id' => 1, 'numero_ficha' => '2978456', 'programa' => 'Análisis y Desarrollo de Software (ADSO)', 'instructor' => 'Juan Camilo Vanegas', 'total_aprendices' => 35, 'fecha_inicio' => '2024-01-15', 'fecha_fin' => '2025-12-15', 'estado' => 'Activo']
-        ];
-        $excusas = [
-            ['id' => 1, 'aprendiz' => 'María Rodríguez', 'documento' => '1098765432', 'numero_ficha' => '2978456', 'motivo' => 'Cita médica Odontología', 'fecha_inicio' => '2026-08-05', 'fecha_fin' => '2026-08-05', 'archivo' => 'incapacidad.pdf', 'estado' => 'Pendiente', 'created_at' => '2026-08-05 08:00:00']
-        ];
-        $filtros = ['fecha_inicio' => date('Y-m-01'), 'fecha_fin' => date('Y-m-d'), 'estado' => ''];
-        $ficha = null;
-        $aprendiz = ['nombre' => 'Carlos Pérez', 'documento' => '1012345678', 'estado' => 'Activo', 'numero_ficha' => '2978456', 'programa' => 'ADSO', 'correo' => 'carlos@sena.edu.co', 'telefono' => '3001234567'];
-        $asistencias = $ultimos;
-        $mensaje = null;
+        // 2. Manejo del Inicio de Sesión
+        if ($action === 'login') {
+            $authController = new AuthController();
+            if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+                $authController->login();
+                return;
+            } else {
+                if ($estaAutenticado) {
+                    header('Location: index.php?action=dashboard');
+                    exit();
+                }
+                $authController->mostrarLogin();
+                return;
+            }
+        }
 
-        // Rutas a tus archivos de vista en la estructura MVC
+        // 3. Protección de Rutas: Si no está autenticado, fuerza la pantalla de Login
+        if (!$estaAutenticado) {
+            $authController = new AuthController();
+            $authController->mostrarLogin();
+            return;
+        }
+
+        // 4. Determinar vista por defecto según el rol del usuario autenticado
+        if (empty($action)) {
+            $action = (($_SESSION['rol'] ?? '') === 'Aprendiz') ? 'mi-perfil' : 'dashboard';
+        }
+
+        // 5. Carga de datos desde la Base de Datos para las vistas
+        $statsHoy       = IngresoModel::obtenerEstadisticasHoy();
+        $statsAprendiz  = ['activos' => AprendizModel::contarActivos()];
+        $ultimos        = IngresoModel::obtenerUltimosMovimientos(8);
+
+        // Captura de filtros de la URL para consultas en el historial
+        $filtros = [
+            'fecha_inicio' => $_GET['fecha_inicio'] ?? date('Y-m-01'),
+            'fecha_fin'    => $_GET['fecha_fin'] ?? date('Y-m-d'),
+            'estado'       => $_GET['estado'] ?? ''
+        ];
+
+        $registros   = IngresoModel::obtenerHistorialConFiltros($filtros);
+        $fichas      = HorarioModel::obtenerTodasFichas();
+        $excusas     = ExcusaModel::obtenerTodas();
+        
+        $ficha       = null;
+        $mensaje     = null;
+        $asistencias = $registros;
+
+        $datosAprendiz = AprendizModel::obtenerPorUsuarioId((int)($_SESSION['usuario_id'] ?? 0));
+        $aprendiz      = $datosAprendiz ?? [
+            'nombre'       => $_SESSION['nombre'] ?? 'Usuario',
+            'documento'    => '—',
+            'estado'       => 'Activo',
+            'numero_ficha' => '—',
+            'programa'     => '—',
+            'correo'       => $_SESSION['correo'] ?? '—',
+            'telefono'     => '—'
+        ];
+
+        // 6. Despacho de Vistas
         switch ($action) {
             case 'asistencia':
                 require __DIR__ . '/../views/asistencia/registro.php';
@@ -60,9 +106,7 @@ class Router {
             case 'mis-excusas':
                 require __DIR__ . '/../views/aprendiz/excusas.php';
                 break;
-            case 'login':
-                require __DIR__ . '/../views/auth/login.php';
-                break;
+            case 'dashboard':
             default:
                 require __DIR__ . '/../views/admin/dashboard.php';
                 break;
