@@ -199,5 +199,30 @@ class IngresoModel {
         }
 
     } 
+    //funcion para insertar las filas al marcar una entrada 
+    public function registrarEntrada($fechaActual,$horaActual,$estadoAsistencia,$identificadorAprendiz)
+    {
+        try{
+        $mysql= new MySQL();
+        $mysql->conectarBD();
+        $conexion=$mysql->getConexion();
+        if($conexion)
+            {
+                $consulta="insert into ingresos (fecha_registro,entrada,estado_asistencia,fk_aprendiz) values (:FA,:HA,:EA,:IA)";
+                $stmt=$conexion->prepare($consulta);
+                $stmt->bindParam(':FA',$fechaActual,PDO::PARAM_STR);
+                $stmt->bindParam(':HA',$horaActual,PDO::PARAM_STR);
+                $stmt->bindParam(':EA',$estadoAsistencia,PDO::PARAM_STR);
+                $stmt->bidParam(':IA',$identificadorAprendiz,PDO::PARAM_INT);
+                return $stmt->execute();
+
+            }
+        }catch(PDOException $e)
+        {
+            error_log("Error al insertar la entrada ". $e->getMessage());
+            return false;
+
+        }
+    }
 }
 ?>
