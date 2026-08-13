@@ -43,6 +43,27 @@ public function lecturaCodigoRfid()
                         {
                             $horarioEntrada=$horarioFicha['entrada'];
                             $tipoAsistencia="LLego puntual";
+                            //si la hora actual es diferente de la hora de entrada es decir llega mas tarde 
+                            if($horaActual>$horarioEntrada)
+                                {
+                                    $horaEntradaConvertida=new DateTime($horarioEntrada);
+                                    $horaActualConvertida= new DateTime($horaActual);
+                                    //hago la operacion para calcular el tiempo el cua el aprendiz se demoro en llegar 
+                                    $tiempo=$horaEntradaConvertida->diff($horaActualConvertida);
+                                    $minutosRetraso=($tiempo->h*60)+ $tiempo->i;
+                                    $estadoAsistencia="Retardo de ". $minutosRetraso . "minutos";
+                                }
+                                //guardo la hora de entrada en la tabla de ingresos 
+                                $resultado=$ingresoModel->registrarEntrada($fechaActual,$horaActual,$estadoAsistencia,$identificadorAprendiz);
+                                if($resultado)
+                                    {
+                                        $_SESSION['mensaje']="Entrada Registrada con exito. Estado:" . $estadoAsistencia;
+                                        $_SESSION['tipo_alerta']="success";
+                                    }else{
+                                        $_SESSION['mensaje']="Error de conexion al intentar guardar ";
+                                        $_SESSION['tipo_alerta']="danger";
+                                    }
+
                         }
                 }
             }
