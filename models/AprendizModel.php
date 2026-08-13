@@ -127,4 +127,30 @@ class AprendizModel {
 
         return null;
     }
+
+    public function obtenerAprendiz($codigo)
+    {
+        try{
+            $mysql= new MySQL();
+            $mysql->conectarBD();
+            $conexion=$mysql->getConexion();
+            if($conexion)
+                {
+                    $consulta="select id_aprendiz,fk_ficha from aprendiz where codigo_rfid=:codigo limit 1";
+                    $stmt=$conexion->prepare($consulta);
+                    $stmt->bindParam(':codigo',$codigo,pdo::PARAM_STR);
+                    $stmt->execute();
+                    return $stmt->fetch(PDO::FETCH_ASSOC);
+
+                }
+
+        }
+        catch(PDOException $excepcion_error){
+            error_log("Error en aprendiz Model: ". $excepcion_error->getMessage());
+            return false;
+
+
+        }
+    }
 }
+?>
