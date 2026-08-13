@@ -222,4 +222,29 @@ class HorarioModel {
         }
         return false;
     }
+
+    public function obtenerHorarioFicha($identificadorFicha,$fechaActual)
+    { try{
+        $mysql = new MySQL;
+        $mysql->conectarBD();
+        $conexion= $mysql->getConexion();
+        if($conexion)
+            {
+                $consulta="select entrada,salida from horario where fk_ficha =:identificadorFicha AND fecha=:fechaActual";
+                $stmt=$conexion->prepare($consulta);
+                $stmt->bindParam(':identificadorFicha',$identificadorFicha,PDO::PARAM_INT);
+                $stmt->bindParam(':fechaActual',$fechaActual,PDO::PARAM_STR);
+                $stmt->execute();
+                return $stmt->fetch(PDO::FETCH_ASSOC);
+            }
+    }catch(PDOException $e)
+    {
+        error_log("Error en horarioModel ". $e->getMessage());
+        return false;
+
+    }
+
+       
+    }
 }
+?>
