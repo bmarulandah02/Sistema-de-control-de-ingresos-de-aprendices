@@ -224,5 +224,31 @@ class IngresoModel {
 
         }
     }
+
+    ////funcion para actualizar la fila de la tabla para marcar la salida 
+
+    public function registrarSalida($id_ingreso,$horaActual,$estadoAsistencia)
+    {
+        try{
+            $mysql= new MySQL();
+            $mysql->conectarBD();
+            $conexion=$mysql->getConexion();
+            if($conexion)
+                {
+                    $consulta="update ingresos set salida=:HA,estado_asistencia=:EA where id_ingreso=:ID";
+                    $stmt=$conexion->prepare($consulta);
+                    $stmt->bindParam(':HA',$horaActual,PDO::PARAM_STR);
+                    $stmt->bindParam(':EA',$estadoAsistencia,PDO::PARAM_STR);
+                    $stmt->bindParam(':ID',$id_ingreso,PDO::PARAM_INT);
+                    return $stmt->execute();
+                }
+
+        }catch(PDOException $e)
+        {
+            error_log("Error al marca salida: ". $e->getMessage());
+            return false;
+
+        }
+    }
 }
 ?>
