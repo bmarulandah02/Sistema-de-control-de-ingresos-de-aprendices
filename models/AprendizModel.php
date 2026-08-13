@@ -152,5 +152,27 @@ class AprendizModel {
 
         }
     }
+    public function obtenerAprendizPorId($id_aprendiz_manual)
+    {
+        try {
+            $mysql = new MySQL();
+            $mysql->conectarBD();
+            $conexion = $mysql->getConexion();
+            
+            if ($conexion) {
+                // Seleccionamos exactamente los mismos datos pero buscando por el ID en lugar del RFID
+                $consulta = "SELECT id_aprendiz, fk_ficha FROM aprendiz WHERE id_aprendiz = :id LIMIT 1";
+                $stmt = $conexion->prepare($consulta);
+                $stmt->bindParam(':id', $id_aprendiz_manual, PDO::PARAM_INT);
+                $stmt->execute();
+                
+                return $stmt->fetch(PDO::FETCH_ASSOC);
+            }
+        } catch (PDOException $excepcion_error) {
+            error_log("Error al buscar aprendiz por ID: " . $excepcion_error->getMessage());
+            return false;
+        }
+        return false;
+    }
 }
 ?>

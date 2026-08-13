@@ -1,10 +1,10 @@
 <?php 
 //icio la conexion para el registro de asistencias 
 //solicito los archivos que necesito para llevar acabo lo requerido 
-
-require_once '../models/IngresoModel.php';
-require_once '../models/AprendizModel.php';
-require_once '../models/HorarioModel.php';
+    
+require_once __DIR__ . '/../models/IngresoModel.php';
+require_once __DIR__ . '/../models/AprendizModel.php';
+require_once __DIR__ .'/../models/HorarioModel.php';
 
 //genero la clase para recibir el codigo rfid
 class AsistenciaController {
@@ -12,24 +12,38 @@ public function lecturaCodigoRfid()
 {
     //recibo el codigo pero primero valido que la avriable y la peticion no esten vacias 
 
-    if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['rfid']) && !empty($_POST['rfid'])){
-        //sanatizo las variables eliminando espacios
-        $rfid=htmlspecialchars(trim($_POST['rfid']));
+    $trajoRfid= isset($_POST['rfid_uid']) && !empty(trim($_POST['rfid_uid']));
+    $tRajoIdManual= isset($_POST['id_aprendiz']) && !empty(trim($_POST['id_aprendiz']));
+    if($_SERVER['REQUEST_METHOD']==='POST' && ($trajoRfid || $tRajoIdManual)){
+      
         //capturo la fecha y la hora
         $horaActual=date('H:i:s');
-        $fechaActual=date('y-m-d');
+        $fechaActual=date('Y-m-d');
 
         //instancio los modelos 
         $aprendizModel= new AprendizModel();
         $horarioModel= new HorarioModel();
         $ingresoModel= new IngresoModel();
         //busco la informacion del aprendiz por el codigo 
-        $datosAprendiz=$aprendizModel->obtenerAprendiz($rfid);
+        $datosAprendiz=null;
+        //lectura automatica por tarjeta rfid
+        if(isset($_POST['rfid_uid']) && !empty(trim($_POST['rfid_uid'])))
+            {
+                $codigoRfid=htmlspecialchars(trim($_POST['rfid_uid']));
+                $datosAprendiz=$aprendizModel->obtenerAprendiz($codigoRfid);
+                   //ingreso manual por el id del aprendiz
+            }elseif(isset($_POST['id_aprendiz']) && !empty($_POST['id_aprendiz']))
+            {
+                //busco directamente por el id del aprendiz
+                $idAprendizManual=intval($_POST['id_aprendiz']);
+                $datosAprendiz=$aprendizModel->obtenerAprendizPorId($idAprendizManual);
+            }
+            
 
         if($datosAprendiz)
             {
                 $identificadorAprendiz=intval($datosAprendiz['id_aprendiz']);
-                $identificadorFicha=intval('fk_ficha');
+                $identificadorFicha=intval($datosAprendiz['fk_ficha']);
 
                 //busco el horario que le corresponde a la ficha el dia de hoy
                 $horarioFicha=$horarioModel->obtenerHorarioFicha($identificadorFicha,$fechaActual);
@@ -42,37 +56,67 @@ public function lecturaCodigoRfid()
                     if(!$registroActual)
                         {
                             $horarioEntrada=$horarioFicha['entrada'];
-                            $tipoAsistencia="LLego puntual";
+                            $estadoAsistencia="Puntual";
                             //si la hora actual es diferente de la hora de entrada es decir llega mas tarde 
                             if($horaActual>$horarioEntrada)
                                 {
-                                    $horaEntradaConvertida=new DateTime($horarioEntrada);
-                                    $horaActualConvertida= new DateTime($horaActual);
-                                    //hago la operacion para calcular el tiempo el cua el aprendiz se demoro en llegar 
-                                    $tiempo=$horaEntradaConvertida->diff($horaActualConvertida);
-                                    $minutosRetraso=($tiempo->h*60)+ $tiempo->i;
-                                    $estadoAsistencia="Retardo de ". $minutosRetraso . "minutos";
+                                    $estadoAsistencia="Retardo";
                                 }
                                 //guardo la hora de entrada en la tabla de ingresos 
                                 $resultado=$ingresoModel->registrarEntrada($fechaActual,$horaActual,$estadoAsistencia,$identificadorAprendiz);
                                 if($resultado)
                                     {
-                                        $_SESSION['mensaje']="Entrada Registrada con exito. Estado:" . $estadoAsistencia;
-                                        $_SESSION['tipo_alerta']="success";
+                                       $_SESSION['mensaje'] = ['texto' => "Entrada Registrada con exito. Estado:" . $estadoAsistencia, 'tipo' => "success"];
                                     }else{
-                                        $_SESSION['mensaje']="Error de conexion al intentar guardar ";
-                                        $_SESSION['tipo_alerta']="danger";
+                                       $_SESSION['mensaje'] = ['texto' => "Error de conexion al intentar guardar ", 'tipo' => "error"];
                                     }
 
+                        }elseif($registroActual['salida']==null)
+                        {
+                            $horaSalida=$horarioFicha['salida'];
+                            $estadoEntrada=$registroActual['estado_asistencia'];
+                            $estadoDeSalida="Salio a la hora correspondiente";
+                            if($horaActual<$horaSalida)
+                                {
+                                    $horaActualConvertida= new DateTime($horaActual);
+                                    $horaSalidaConvertida= new DateTime($horaSalida);
+                                    $tiempo=$horaActualConvertida->diff($horaSalidaConvertida);
+                                    $minutos=($tiempo->h *60)+ $tiempo->i;
+
+                                    $estadoDeSalida="Salio ".$minutos. " minutos antes.";
+                                }
+                                $estadoAsistenciaFinal =$estadoEntrada . "/" . $estadoDeSalida;
+                                $idIngresoTabla=$registroActual['id_ingresos'];
+                                $resultado=$ingresoModel->registrarSalida($idIngresoTabla,$horaActual,$estadoAsistenciaFinal);
+                                if($resultado)
+                                    {
+                                   $_SESSION['mensaje'] = ['texto' => "Salida Registrada con exito. Estado:" . $estadoDeSalida, 'tipo' => "success"];
+                                    }else{
+                                          $_SESSION['mensaje'] = ['texto' => "Error no se pudo actualizar la salida", 'tipo' => "error"];
+                                    }
                         }
+                        else{
+                            $_SESSION['mensaje'] = ['texto' => "El aprendiz ya completo sus registros de entrada y salida de hoy ", 'tipo' => "warning"];
+                        }
+                }else{
+                 $_SESSION['mensaje'] = ['texto' => "no se encontro un horario asignado para la ficha hoy ", 'tipo' => "warning"];
+
                 }
+            }else{
+                 $_SESSION['mensaje'] = ['texto' => "El codigo RFID no se encuentra registrado en el sistema ", 'tipo' => "error"];
+
             }
 
         
+    }else{
+          $_SESSION['mensaje'] = ['texto' => "Error datos de tarjeta incompletos ", 'tipo' => "error"];
     }
+    header("Location: index.php?action=asistencia");
+    exit();
 
 }
 }
+
 
 
 

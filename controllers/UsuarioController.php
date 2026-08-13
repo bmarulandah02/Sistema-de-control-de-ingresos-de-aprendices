@@ -36,7 +36,7 @@ class UsuarioController {
         // Si el usuario en sesión es Instructor, solo se le permite asignar el rol de Aprendiz (id_rol = 3)
         if ($rolSesion === 'Instructor') {
             $roles = array_filter($roles, function($r) {
-                return $r['nombre_rol'] === 'Aprendiz' || (int)$r['id_rol'] === 3;
+                return $r['nombre_rol'] === 'Aprendiz' || (int)$r['id_rol'] === 2;
             });
         }
 
@@ -62,7 +62,7 @@ class UsuarioController {
             $esEdicion      = !empty($idUsuario);
 
             // Control de Seguridad: Un Instructor solo puede registrar o actualizar el rol de Aprendiz (id 3)
-            if ($rolSesion === 'Instructor' && $fk_rol !== 3) {
+            if ($rolSesion === 'Instructor' && $fk_rol !== 2) {
                 $this->formulario($idUsuario, 'Los Instructores sólo tienen autorización para registrar usuarios con el rol de Aprendiz.');
                 return;
             }
@@ -101,12 +101,12 @@ class UsuarioController {
                 }
 
                 UsuarioModel::actualizarUsuario($idUsuario, $datosUsuario);
-                if ($fk_rol === 3 && !empty($fk_ficha)) {
+                if ($fk_rol === 2 && !empty($fk_ficha)) {
                     AprendizModel::actualizarAprendiz($codigo_rfid, $fk_ficha, $idUsuario);
                 }
             } else {
                 $idInsertado = UsuarioModel::crearUsuario($datosUsuario);
-                if ($idInsertado && $fk_rol === 3 && !empty($fk_ficha)) {
+                if ($idInsertado && $fk_rol === 2 && !empty($fk_ficha)) {
                     AprendizModel::crearAprendiz($codigo_rfid, $fk_ficha, $idInsertado);
                 }
             }

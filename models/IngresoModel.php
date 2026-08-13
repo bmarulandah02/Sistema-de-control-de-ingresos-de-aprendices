@@ -185,8 +185,8 @@ class IngresoModel {
                 {
                     $consulta="select id_ingresos,entrada,salida,estado_asistencia from ingresos where fk_aprendiz=:idA and fecha_registro=:FA limit 1";
                     $stmt=$conexion->prepare($consulta);
-                    $stmt->binParam(':idA',$identificadorAprendiz,PDO::PARAM_INT);
-                    $stmt->binParam(':FA',$fechaActual,PDO::PARAM_STR);
+                    $stmt->bindParam(':idA',$identificadorAprendiz,PDO::PARAM_INT);
+                    $stmt->bindParam(':FA',$fechaActual,PDO::PARAM_STR);
                     $stmt->execute();
                     return $stmt->fetch(PDO::FETCH_ASSOC);
                 }
@@ -213,7 +213,7 @@ class IngresoModel {
                 $stmt->bindParam(':FA',$fechaActual,PDO::PARAM_STR);
                 $stmt->bindParam(':HA',$horaActual,PDO::PARAM_STR);
                 $stmt->bindParam(':EA',$estadoAsistencia,PDO::PARAM_STR);
-                $stmt->bidParam(':IA',$identificadorAprendiz,PDO::PARAM_INT);
+                $stmt->bindParam(':IA',$identificadorAprendiz,PDO::PARAM_INT);
                 return $stmt->execute();
 
             }
@@ -235,7 +235,7 @@ class IngresoModel {
             $conexion=$mysql->getConexion();
             if($conexion)
                 {
-                    $consulta="update ingresos set salida=:HA,estado_asistencia=:EA where id_ingreso=:ID";
+                    $consulta="update ingresos set salida=:HA,estado_asistencia=:EA where id_ingresos=:ID";
                     $stmt=$conexion->prepare($consulta);
                     $stmt->bindParam(':HA',$horaActual,PDO::PARAM_STR);
                     $stmt->bindParam(':EA',$estadoAsistencia,PDO::PARAM_STR);

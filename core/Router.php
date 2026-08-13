@@ -10,6 +10,7 @@ require_once __DIR__ . '/../models/IngresoModel.php';
 require_once __DIR__ . '/../models/AprendizModel.php';
 require_once __DIR__ . '/../models/HorarioModel.php';
 require_once __DIR__ . '/../models/ExcusaModel.php';
+require_once __DIR__ . '/../controllers/AsistenciaController.php';
 
 class Router {
 
@@ -110,8 +111,19 @@ class Router {
                 (new UsuarioController())->guardarPerfilPersonal();
                 break;
             case 'asistencia':
+                 // Recupero el mensaje guardado en sesión (si viene de un redirect de registrar-ingreso)
+                // y lo elimino después de leerlo, para que no se repita en el próximo refresco
+                if (isset($_SESSION['mensaje']))
+                    {
+                        $mensaje=$_SESSION['mensaje'];
+                        //el unset elimina la variable
+                        unset($_SESSION['mensaje']);
+                    }
                 require __DIR__ . '/../views/asistencia/registro.php';
                 break;
+                case'registrar-ingreso':
+                    (new AsistenciaController())->lecturaCodigoRfid();
+                    break;
             case 'historial':
                 require __DIR__ . '/../views/asistencia/historial.php';
                 break;
