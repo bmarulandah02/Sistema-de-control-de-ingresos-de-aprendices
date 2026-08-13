@@ -250,5 +250,45 @@ class IngresoModel {
 
         }
     }
+    //obtener el historial privado de cada aprendiz
+    public static function HistorialAprendiz(int $idAprendiz): array {
+        $registros=[];
+         $idAprendiz = (int) $idAprendiz;
+        if ($idAprendiz <= 0) {
+            return $registros;
+        }
+        try{
+            $mysql= new MySQL();
+            $mysql->conectarBD();
+            $conexion=$mysql->getConexion();
+            if($conexion)
+                {
+                    $consulta="SELECT ingresos.id_ingresos,ingresos.fecha_registro,ingresos.entrada,ingresos.salida, ingresos.estado_asistencia AS estado
+                    FROM ingresos where ingresos.fk_aprendiz=:idAprendiz
+                    ORDER BY ingresos.fecha_registro desc, ingresos.entrada";
+                    $stmt=$conexion->prepare($consulta);
+                    $stmt->bindValue(':idAprendiz',$idAprendiz,PDO::PARAM_INT);
+                    $stmt->execute();
+                    while ($row=$stmt->fetch(PDO::FETCH_ASSOC))
+                        {
+                            $registros[]=[
+                                'id'           => (int)$row['id_ingresos'],
+                                'fecha'        =>htmlspecialchars( $row['fecha_registro']?? '',ENT_QUOTES,'UTF-8'),
+                                'hora_entrada' => $row['entrada'] ? date('H:i:s', strtotime($row['entrada'])) : '—',
+                                'hora_salida'  => ($row['salida'] && $row['salida'] !== '0000-00-00 00:00:00') ? date('H:i:s', strtotime($row['salida'])) : null,
+                                'estado'       => htmlspecialchars($row['estado']?? '',ENT_QUOTES,'UTF-8')
+
+
+                            ];
+                        }
+                }
+
+        }catch(PDOException $e)
+        {
+            error_log("Error en obtenerHistorialPorAprendiz: ". $e->getMessage());
+
+        }
+        return $registros;
+    }
 }
 ?>

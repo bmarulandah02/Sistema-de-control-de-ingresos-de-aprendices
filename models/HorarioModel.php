@@ -223,28 +223,42 @@ class HorarioModel {
         return false;
     }
 
-    public function obtenerHorarioFicha($identificadorFicha,$fechaActual)
-    { try{
-        $mysql = new MySQL;
+public function obtenerHorarioFicha($identificadorFicha, $fechaActual)
+{
+    $identificadorFicha = intval($identificadorFicha);
+
+    if($identificadorFicha <= 0 || empty($fechaActual))
+    {
+        return false;
+    }
+
+    try{
+        $mysql = new MySQL();
         $mysql->conectarBD();
-        $conexion= $mysql->getConexion();
+        $conexion = $mysql->getConexion();
         if($conexion)
-            {
-                $consulta="select entrada,salida from horario where fk_ficha =:identificadorFicha AND fecha=:fechaActual";
-                $stmt=$conexion->prepare($consulta);
-                $stmt->bindParam(':identificadorFicha',$identificadorFicha,PDO::PARAM_INT);
-                $stmt->bindParam(':fechaActual',$fechaActual,PDO::PARAM_STR);
-                $stmt->execute();
-                return $stmt->fetch(PDO::FETCH_ASSOC);
-            }
+        {
+            // Marcadores :identificadorFicha y :fechaActual
+            $consulta = "SELECT entrada, salida FROM horario 
+                         WHERE fk_ficha = :identificadorFicha 
+                         AND DATE(fecha) = :fechaActual 
+                         LIMIT 1";
+                         
+            $stmt = $conexion->prepare($consulta);
+            
+            // Enlazamos exactamente los mismos nombres
+            $stmt->bindParam(':identificadorFicha', $identificadorFicha, PDO::PARAM_INT);
+            $stmt->bindParam(':fechaActual', $fechaActual, PDO::PARAM_STR);
+            
+            $stmt->execute();
+            return $stmt->fetch(PDO::FETCH_ASSOC);
+        }
     }catch(PDOException $e)
     {
-        error_log("Error en horarioModel ". $e->getMessage());
+        error_log("Error en horarioModel: ". $e->getMessage());
         return false;
-
     }
-
-       
-    }
+    return false;
+}
 }
 ?>

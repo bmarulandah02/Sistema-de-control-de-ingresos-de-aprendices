@@ -71,25 +71,38 @@ class Router {
             'estado'       => $_GET['estado'] ?? ''
         ];
 
-        $registros   = IngresoModel::obtenerHistorialConFiltros($filtros);
-        $fichas      = HorarioModel::obtenerTodasFichas();
-        $excusas     = ExcusaModel::obtenerTodas();
-        
-        $ficha       = null;
-        $mensaje     = null;
-        $asistencias = $registros;
+      $registros   = IngresoModel::obtenerHistorialConFiltros($filtros);
+$fichas      = HorarioModel::obtenerTodasFichas();
+$excusas     = ExcusaModel::obtenerTodas();
 
-        $datosAprendiz = AprendizModel::obtenerPorUsuarioId((int)($_SESSION['usuario_id'] ?? 0));
-        $aprendiz      = $datosAprendiz ?? [
-            'nombre'       => $_SESSION['nombre'] ?? 'Usuario',
-            'documento'    => '—',
-            'estado'       => 'Activo',
-            'numero_ficha' => '—',
-            'programa'     => '—',
-            'correo'       => $_SESSION['correo'] ?? '—',
-            'telefono'     => '—'
-        ];
+$ficha       = null;
+$mensaje     = null;
 
+// Saneo: fuerzo a entero el id de sesión antes de usarlo en cualquier consulta
+$usuarioIdSesion = filter_var($_SESSION['usuario_id'] ?? 0, FILTER_VALIDATE_INT);
+$usuarioIdSesion = ($usuarioIdSesion !== false && $usuarioIdSesion > 0) ? $usuarioIdSesion : 0;
+
+$datosAprendiz = AprendizModel::obtenerPorUsuarioId($usuarioIdSesion);
+$aprendiz      = $datosAprendiz ?? [
+    'nombre'       => htmlspecialchars($_SESSION['nombre'] ?? 'Usuario', ENT_QUOTES, 'UTF-8'),
+    'documento'    => '—',
+    'estado'       => 'Activo',
+    'numero_ficha' => '—',
+    'programa'     => '—',
+    'correo'       => htmlspecialchars($_SESSION['correo'] ?? '—', ENT_QUOTES, 'UTF-8'),
+    'telefono'     => '—'
+];
+
+// Si el usuario logueado es un aprendiz, su tabla de "Mis Asistencias" debe ser SOLO la suya.
+// Si es admin/instructor viendo el historial general, se usa la lista completa.
+if ($datosAprendiz && isset($datosAprendiz['id_aprendiz'])) {
+    $idAprendizSesion = filter_var($datosAprendiz['id_aprendiz'], FILTER_VALIDATE_INT);
+    $asistencias = ($idAprendizSesion !== false && $idAprendizSesion > 0)
+        ? IngresoModel::HistorialAprendiz($idAprendizSesion)
+        : [];
+} else {
+    $asistencias = $registros;
+}
         // 6. Despacho de Vistas
         switch ($action) {
             case 'usuarios':

@@ -1,24 +1,25 @@
 <?php 
 //icio la conexion para el registro de asistencias 
 //solicito los archivos que necesito para llevar acabo lo requerido 
-    
+
 require_once __DIR__ . '/../models/IngresoModel.php';
 require_once __DIR__ . '/../models/AprendizModel.php';
-require_once __DIR__ .'/../models/HorarioModel.php';
+require_once __DIR__ . '/../models/HorarioModel.php';
 
 //genero la clase para recibir el codigo rfid
 class AsistenciaController {
 public function lecturaCodigoRfid()
 {
-    //recibo el codigo pero primero valido que la avriable y la peticion no esten vacias 
+    //recibo el codigo pero primero valido que la peticion traiga rfid_uid O id_aprendiz
+    $trajoRfid     = isset($_POST['rfid_uid']) && !empty(trim($_POST['rfid_uid']));
+    $tRajoIdManual = isset($_POST['id_aprendiz']) && !empty(trim($_POST['id_aprendiz']));
 
-    $trajoRfid= isset($_POST['rfid_uid']) && !empty(trim($_POST['rfid_uid']));
-    $tRajoIdManual= isset($_POST['id_aprendiz']) && !empty(trim($_POST['id_aprendiz']));
     if($_SERVER['REQUEST_METHOD']==='POST' && ($trajoRfid || $tRajoIdManual)){
-      
+
         //capturo la fecha y la hora
         $horaActual=date('H:i:s');
         $fechaActual=date('Y-m-d');
+        $fechaHoraActual=$fechaActual . ' ' .$horaActual;
 
         //instancio los modelos 
         $aprendizModel= new AprendizModel();
@@ -26,19 +27,23 @@ public function lecturaCodigoRfid()
         $ingresoModel= new IngresoModel();
         //busco la informacion del aprendiz por el codigo 
         $datosAprendiz=null;
+
         //lectura automatica por tarjeta rfid
-        if(isset($_POST['rfid_uid']) && !empty(trim($_POST['rfid_uid'])))
+        if($trajoRfid)
             {
+                
                 $codigoRfid=htmlspecialchars(trim($_POST['rfid_uid']));
                 $datosAprendiz=$aprendizModel->obtenerAprendiz($codigoRfid);
                    //ingreso manual por el id del aprendiz
-            }elseif(isset($_POST['id_aprendiz']) && !empty($_POST['id_aprendiz']))
+            }elseif($tRajoIdManual)
             {
-                //busco directamente por el id del aprendiz
+                //sanitizo forzando que sea un numero entero, si mandan texto se vuelve 0
                 $idAprendizManual=intval($_POST['id_aprendiz']);
-                $datosAprendiz=$aprendizModel->obtenerAprendizPorId($idAprendizManual);
+                if($idAprendizManual > 0)
+                    {
+                        $datosAprendiz=$aprendizModel->obtenerAprendizPorId($idAprendizManual);
+                    }
             }
-            
 
         if($datosAprendiz)
             {
@@ -50,12 +55,10 @@ public function lecturaCodigoRfid()
                 if($horarioFicha){
                     $registroActual=$ingresoModel->verificarIngreso($identificadorAprendiz,$fechaActual);
 
-
-
                     //verifico si no hay registro hoy, si no lo hay registro la entrada
                     if(!$registroActual)
                         {
-                            $horarioEntrada=$horarioFicha['entrada'];
+                            $horarioEntrada=date('H:i:s',strtotime($horarioFicha['entrada']));
                             $estadoAsistencia="Puntual";
                             //si la hora actual es diferente de la hora de entrada es decir llega mas tarde 
                             if($horaActual>$horarioEntrada)
@@ -63,7 +66,7 @@ public function lecturaCodigoRfid()
                                     $estadoAsistencia="Retardo";
                                 }
                                 //guardo la hora de entrada en la tabla de ingresos 
-                                $resultado=$ingresoModel->registrarEntrada($fechaActual,$horaActual,$estadoAsistencia,$identificadorAprendiz);
+                                $resultado=$ingresoModel->registrarEntrada($fechaActual,$fechaHoraActual,$estadoAsistencia,$identificadorAprendiz);
                                 if($resultado)
                                     {
                                        $_SESSION['mensaje'] = ['texto' => "Entrada Registrada con exito. Estado:" . $estadoAsistencia, 'tipo' => "success"];
@@ -73,7 +76,7 @@ public function lecturaCodigoRfid()
 
                         }elseif($registroActual['salida']==null)
                         {
-                            $horaSalida=$horarioFicha['salida'];
+                            $horaSalida = date('H:i:s', strtotime($horarioFicha['salida']));
                             $estadoEntrada=$registroActual['estado_asistencia'];
                             $estadoDeSalida="Salio a la hora correspondiente";
                             if($horaActual<$horaSalida)
@@ -86,8 +89,8 @@ public function lecturaCodigoRfid()
                                     $estadoDeSalida="Salio ".$minutos. " minutos antes.";
                                 }
                                 $estadoAsistenciaFinal =$estadoEntrada . "/" . $estadoDeSalida;
-                                $idIngresoTabla=$registroActual['id_ingresos'];
-                                $resultado=$ingresoModel->registrarSalida($idIngresoTabla,$horaActual,$estadoAsistenciaFinal);
+                                $idIngresoTabla=intval($registroActual['id_ingresos']);
+                                $resultado=$ingresoModel->registrarSalida($idIngresoTabla,$fechaHoraActual,$estadoAsistenciaFinal);
                                 if($resultado)
                                     {
                                    $_SESSION['mensaje'] = ['texto' => "Salida Registrada con exito. Estado:" . $estadoDeSalida, 'tipo' => "success"];
@@ -107,7 +110,6 @@ public function lecturaCodigoRfid()
 
             }
 
-        
     }else{
           $_SESSION['mensaje'] = ['texto' => "Error datos de tarjeta incompletos ", 'tipo' => "error"];
     }
@@ -116,9 +118,4 @@ public function lecturaCodigoRfid()
 
 }
 }
-
-
-
-
-
 ?>

@@ -51,7 +51,7 @@ require __DIR__ . '/../../views/layouts/header.php';
             <form method="POST" action="index.php?action=registrar-ingreso">
                 <div style="margin-bottom: 1rem;">
                     <label style="display:block; font-size:0.875rem; font-weight:500; margin-bottom:0.375rem;">ID de Aprendiz</label>
-                    <input type="number" name="aprendiz_id" class="shadcn-input" placeholder="Ej: 15" min="1">
+                    <input type="number" name="id_aprendiz" class="shadcn-input" placeholder="Ej: 15" min="1">
                 </div>
                 <button type="submit" class="btn-shadcn btn-shadcn-outline" style="width: 100%;">
                     <i class="bi bi-person-check"></i>
@@ -68,10 +68,19 @@ require __DIR__ . '/../../views/layouts/header.php';
 document.addEventListener('DOMContentLoaded', () => {
     const esError = <?= json_encode(($mensaje['tipo'] ?? '') === 'error') ?>;
     const textoMsg = <?= json_encode($mensaje['texto'] ?? '') ?>;
+    const tipoMensaje = <?= json_encode($mensaje['tipo'] ?? 'success') ?>;
+
+//mapeo cada tipo guardado en la sesion a su icono y titulo correcto de SweetAlert
+    const configPorTipo = {
+        success: { icon: 'success', title: '¡Registro Exitoso!' },
+        warning: { icon: 'warning', title: 'Atencion' },
+        error:   { icon: 'error',   title: 'Ingreso no registrado' }
+    };
+    const config = configPorTipo[tipoMensaje] || configPorTipo.success;
 
     Swal.fire({
-        icon: esError ? 'error' : 'success',
-        title: esError ? 'Ingreso no registrado' : '¡Registro Exitoso!',
+        icon: config.icon,
+        title: config.title,
         text: textoMsg,
         timer: 4000,
         timerProgressBar: true,
