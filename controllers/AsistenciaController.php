@@ -23,6 +23,30 @@ public function lecturaCodigoRfid()
         $aprendizModel= new AprendizModel();
         $horarioModel= new HorarioModel();
         $ingresoModel= new IngresoModel();
+        //busco la informacion del aprendiz por el codigo 
+        $datosAprendiz=$aprendizModel->obtenerAprendiz($rfid);
+
+        if($datosAprendiz)
+            {
+                $identificadorAprendiz=intval($datosAprendiz['id_aprendiz']);
+                $identificadorFicha=intval('fk_ficha');
+
+                //busco el horario que le corresponde a la ficha el dia de hoy
+                $horarioFicha=$horarioModel->obtenerHorarioFicha($identificadorFicha,$fechaActual);
+                if($horarioFicha){
+                    $registroActual=$ingresoModel->verificarIngreso($identificadorAprendiz,$fechaActual);
+
+
+
+                    //verifico si no hay registro hoy, si no lo hay registro la entrada
+                    if(!$registroActual)
+                        {
+                            $horarioEntrada=$horarioFicha['entrada'];
+                            $tipoAsistencia="LLego puntual";
+                        }
+                }
+            }
+
         
     }
 
