@@ -174,4 +174,30 @@ class IngresoModel {
 
         return $registros;
     }
+
+    public function verificarIngreso($identificadorAprendiz,$fechaActual)
+    {
+        try{
+            $mysql= new MySQL();
+            $mysql->conectarBD();
+            $conexion=$mysql->getConexion();
+            if($conexion)
+                {
+                    $consulta="select id_ingresos,entrada,salida,estado_asistencia from ingresos where fk_aprendiz=:idA and fecha_registro=:FA limit 1";
+                    $stmt=$conexion->prepare($consulta);
+                    $stmt->binParam(':idA',$identificadorAprendiz,PDO::PARAM_INT);
+                    $stmt->binParam(':FA',$fechaActual,PDO::PARAM_STR);
+                    $stmt->execute();
+                    return $stmt->fetch(PDO::FETCH_ASSOC);
+                }
+            
+        }catch(PDOException $e)
+        {
+            error_log("Error en IngresoModel ". $e->getMessage());
+            return false;
+
+        }
+
+    } 
 }
+?>
