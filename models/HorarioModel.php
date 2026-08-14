@@ -139,7 +139,64 @@ class HorarioModel {
     }
 
     /**
-     * Inserta una nueva ficha en la base de datos guardando fechas de inicio y fin
+     * Guarda o actualiza el horario asignado a una ficha en la tabla horario de MySQL según su jornada
+     */
+    private static function guardarHorarioPredeterminado($conexion, int $idFicha, string $jornada): void {
+        try {
+            $fechaActual = date('Y-m-d');
+            switch ($jornada) {
+                case 'Tarde':
+                case 'Vespertina':
+                    $horaEntrada = '12:00:00';
+                    $horaSalida  = '18:00:00';
+                    break;
+                case 'Noche':
+                case 'Nocturna':
+                    $horaEntrada = '18:00:00';
+                    $horaSalida  = '22:00:00';
+                    break;
+                case 'Mixta':
+                    $horaEntrada = '07:00:00';
+                    $horaSalida  = '17:00:00';
+                    break;
+                case 'Mañana':
+                case 'Diurna':
+                default:
+                    $horaEntrada = '06:00:00';
+                    $horaSalida  = '12:00:00';
+                    break;
+            }
+
+            $entradaDT = $fechaActual . ' ' . $horaEntrada;
+            $salidaDT  = $fechaActual . ' ' . $horaSalida;
+
+            // Verificar si ya existe un registro en la tabla horario para esta ficha
+            $stmtCheck = $conexion->prepare("SELECT id_horario FROM horario WHERE fk_ficha = :ficha ORDER BY id_horario DESC LIMIT 1");
+            $stmtCheck->execute([':ficha' => $idFicha]);
+            $idHorarioExistente = $stmtCheck->fetchColumn();
+
+            if ($idHorarioExistente) {
+                $stmtUpdate = $conexion->prepare("UPDATE horario SET entrada = :entrada, salida = :salida WHERE id_horario = :id");
+                $stmtUpdate->execute([
+                    ':entrada' => $entradaDT,
+                    ':salida'  => $salidaDT,
+                    ':id'      => $idHorarioExistente
+                ]);
+            } else {
+                $stmtInsert = $conexion->prepare("INSERT INTO horario (entrada, salida, fk_ficha) VALUES (:entrada, :salida, :ficha)");
+                $stmtInsert->execute([
+                    ':entrada' => $entradaDT,
+                    ':salida'  => $salidaDT,
+                    ':ficha'   => $idFicha
+                ]);
+            }
+        } catch (Exception $e) {
+            error_log("Error al guardar horario en BD: " . $e->getMessage());
+        }
+    }
+
+    /**
+     * Inserta una nueva ficha en la base de datos guardando fechas de inicio/fin y creando su horario en la BD
      */
     public static function crearFicha(array $datos): bool {
         try {
@@ -153,7 +210,7 @@ class HorarioModel {
                 $sql = "INSERT INTO ficha (id_ficha, nombre_programa, jornada, fk_usuario, fecha_inicio, fecha_fin)
                         VALUES (:id_ficha, :nombre_programa, :jornada, :fk_usuario, :fecha_inicio, :fecha_fin)";
                 $stmt = $conexion->prepare($sql);
-                return $stmt->execute([
+                $exito = $stmt->execute([
                     ':id_ficha'        => (int) $datos['numero_ficha'],
                     ':nombre_programa' => $datos['programa'],
                     ':jornada'         => $datos['jornada'] ?? 'Mañana',
@@ -161,6 +218,12 @@ class HorarioModel {
                     ':fecha_inicio'    => !empty($datos['fecha_inicio']) ? $datos['fecha_inicio'] : null,
                     ':fecha_fin'       => !empty($datos['fecha_fin']) ? $datos['fecha_fin'] : null
                 ]);
+
+                if ($exito) {
+                    self::guardarHorarioPredeterminado($conexion, (int) $datos['numero_ficha'], $datos['jornada'] ?? 'Mañana');
+                }
+
+                return $exito;
             }
         } catch (Exception $e) {
             // Silencioso
@@ -169,7 +232,7 @@ class HorarioModel {
     }
 
     /**
-     * Actualiza una ficha existente guardando fechas de inicio y fin
+     * Actualiza una ficha existente guardando fechas de inicio/fin y su horario en la BD
      */
     public static function actualizarFicha(array $datos): bool {
         try {
@@ -188,7 +251,7 @@ class HorarioModel {
                             fecha_fin = :fecha_fin
                         WHERE id_ficha = :id_ficha";
                 $stmt = $conexion->prepare($sql);
-                return $stmt->execute([
+                $exito = $stmt->execute([
                     ':nombre_programa' => $datos['programa'],
                     ':jornada'         => $datos['jornada'] ?? 'Mañana',
                     ':fk_usuario'      => (int) $datos['instructor_id'],
@@ -196,6 +259,12 @@ class HorarioModel {
                     ':fecha_fin'       => !empty($datos['fecha_fin']) ? $datos['fecha_fin'] : null,
                     ':id_ficha'        => (int) $datos['numero_ficha']
                 ]);
+
+                if ($exito) {
+                    self::guardarHorarioPredeterminado($conexion, (int) $datos['numero_ficha'], $datos['jornada'] ?? 'Mañana');
+                }
+
+                return $exito;
             }
         } catch (Exception $e) {
             // Silencioso
@@ -204,7 +273,7 @@ class HorarioModel {
     }
 
     /**
-     * Elimina una ficha por su ID
+     * Elimina una ficha por su ID y borra sus horarios asociados
      */
     public static function eliminarFicha(int $idFicha): bool {
         try {
@@ -213,6 +282,7 @@ class HorarioModel {
             $conexion = $mysql->getConexion();
 
             if ($conexion) {
+                $conexion->exec("DELETE FROM horario WHERE fk_ficha = " . (int)$idFicha);
                 $sql = "DELETE FROM ficha WHERE id_ficha = :id";
                 $stmt = $conexion->prepare($sql);
                 return $stmt->execute([':id' => $idFicha]);
@@ -238,27 +308,63 @@ public function obtenerHorarioFicha($identificadorFicha, $fechaActual)
         $conexion = $mysql->getConexion();
         if($conexion)
         {
-            // Marcadores :identificadorFicha y :fechaActual
             $consulta = "SELECT entrada, salida FROM horario 
                          WHERE fk_ficha = :identificadorFicha 
-                         AND DATE(fecha) = :fechaActual 
-                         LIMIT 1";
+                         AND (DATE(entrada) = :fechaActual OR entrada IS NOT NULL)
+                         ORDER BY id_horario DESC LIMIT 1";
                          
             $stmt = $conexion->prepare($consulta);
             
-            // Enlazamos exactamente los mismos nombres
             $stmt->bindParam(':identificadorFicha', $identificadorFicha, PDO::PARAM_INT);
             $stmt->bindParam(':fechaActual', $fechaActual, PDO::PARAM_STR);
             
             $stmt->execute();
-            return $stmt->fetch(PDO::FETCH_ASSOC);
+            $horario = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            // Fallback 1: Buscar cualquier horario registrado para la ficha
+            if (!$horario) {
+                $stmtFallback = $conexion->prepare("SELECT entrada, salida FROM horario WHERE fk_ficha = :identificadorFicha ORDER BY id_horario DESC LIMIT 1");
+                $stmtFallback->bindParam(':identificadorFicha', $identificadorFicha, PDO::PARAM_INT);
+                $stmtFallback->execute();
+                $horario = $stmtFallback->fetch(PDO::FETCH_ASSOC);
+            }
+
+            // Fallback 2: Si no hay registros en la tabla horario, obtener el horario según la jornada de la ficha
+            if (!$horario) {
+                $stmtJornada = $conexion->prepare("SELECT jornada FROM ficha WHERE id_ficha = :identificadorFicha LIMIT 1");
+                $stmtJornada->bindParam(':identificadorFicha', $identificadorFicha, PDO::PARAM_INT);
+                $stmtJornada->execute();
+                $ficha = $stmtJornada->fetch(PDO::FETCH_ASSOC);
+
+                $jornada = $ficha['jornada'] ?? 'Mañana';
+                switch ($jornada) {
+                    case 'Tarde':
+                    case 'Vespertina':
+                        $horario = ['entrada' => '12:00:00', 'salida' => '18:00:00'];
+                        break;
+                    case 'Noche':
+                    case 'Nocturna':
+                        $horario = ['entrada' => '18:00:00', 'salida' => '22:00:00'];
+                        break;
+                    case 'Mixta':
+                        $horario = ['entrada' => '07:00:00', 'salida' => '17:00:00'];
+                        break;
+                    case 'Mañana':
+                    case 'Diurna':
+                    default:
+                        $horario = ['entrada' => '06:00:00', 'salida' => '12:00:00'];
+                        break;
+                }
+            }
+
+            return $horario;
         }
     }catch(PDOException $e)
     {
         error_log("Error en horarioModel: ". $e->getMessage());
-        return false;
+        return ['entrada' => '07:00:00', 'salida' => '18:00:00'];
     }
-    return false;
+    return ['entrada' => '07:00:00', 'salida' => '18:00:00'];
 }
 }
 ?>

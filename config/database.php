@@ -13,8 +13,10 @@ class MySQL{
         //data source name (linea que contiene el nombre origen de datos)
         $dsn="mysql:host=$host;dbname=$dbname;charset=utf8mb4";
         try{
+            date_default_timezone_set('America/Bogota');
             $this->conexion=new PDO($dsn,$usuario,$contrasena);
             $this->conexion->setAttribute(PDO::ATTR_ERRMODE,PDO::ERRMODE_EXCEPTION);
+            $this->conexion->exec("SET time_zone = '-05:00'");
         }catch (PDOException $e){
             $this->conexion=null;
         }

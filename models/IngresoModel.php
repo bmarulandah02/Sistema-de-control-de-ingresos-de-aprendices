@@ -203,20 +203,24 @@ class IngresoModel {
     public function registrarEntrada($fechaActual,$horaActual,$estadoAsistencia,$identificadorAprendiz)
     {
         try{
-        $mysql= new MySQL();
-        $mysql->conectarBD();
-        $conexion=$mysql->getConexion();
-        if($conexion)
-            {
-                $consulta="insert into ingresos (fecha_registro,entrada,estado_asistencia,fk_aprendiz) values (:FA,:HA,:EA,:IA)";
-                $stmt=$conexion->prepare($consulta);
-                $stmt->bindParam(':FA',$fechaActual,PDO::PARAM_STR);
-                $stmt->bindParam(':HA',$horaActual,PDO::PARAM_STR);
-                $stmt->bindParam(':EA',$estadoAsistencia,PDO::PARAM_STR);
-                $stmt->bindParam(':IA',$identificadorAprendiz,PDO::PARAM_INT);
-                return $stmt->execute();
+            $mysql= new MySQL();
+            $mysql->conectarBD();
+            $conexion=$mysql->getConexion();
+            if($conexion)
+                {
+                    // Asegurar que la columna salida permita valores NULOS al registrar únicamente la entrada
+                    try {
+                        $conexion->exec("ALTER TABLE ingresos MODIFY COLUMN salida DATETIME NULL DEFAULT NULL");
+                    } catch (Exception $e) {}
 
-            }
+                    $consulta="INSERT INTO ingresos (fecha_registro, entrada, salida, estado_asistencia, fk_aprendiz) VALUES (:FA, :HA, NULL, :EA, :IA)";
+                    $stmt=$conexion->prepare($consulta);
+                    $stmt->bindParam(':FA',$fechaActual,PDO::PARAM_STR);
+                    $stmt->bindParam(':HA',$horaActual,PDO::PARAM_STR);
+                    $stmt->bindParam(':EA',$estadoAsistencia,PDO::PARAM_STR);
+                    $stmt->bindParam(':IA',$identificadorAprendiz,PDO::PARAM_INT);
+                    return $stmt->execute();
+                }
         }catch(PDOException $e)
         {
             error_log("Error al insertar la entrada ". $e->getMessage());

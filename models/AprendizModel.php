@@ -136,22 +136,25 @@ class AprendizModel {
             $conexion=$mysql->getConexion();
             if($conexion)
                 {
-                    $consulta="select id_aprendiz,fk_ficha from aprendiz where codigo_rfid=:codigo limit 1";
+                    $consulta="SELECT a.id_aprendiz, a.fk_ficha 
+                               FROM aprendiz a
+                               LEFT JOIN usuario u ON a.fk_usuario = u.id_usuario
+                               WHERE a.codigo_rfid = :codigo OR u.identificacion = :codigo OR a.id_aprendiz = :codigo 
+                               LIMIT 1";
                     $stmt=$conexion->prepare($consulta);
                     $stmt->bindParam(':codigo',$codigo,pdo::PARAM_STR);
                     $stmt->execute();
                     return $stmt->fetch(PDO::FETCH_ASSOC);
-
                 }
 
         }
         catch(PDOException $excepcion_error){
             error_log("Error en aprendiz Model: ". $excepcion_error->getMessage());
             return false;
-
-
         }
+        return false;
     }
+
     public function obtenerAprendizPorId($id_aprendiz_manual)
     {
         try {
@@ -160,10 +163,13 @@ class AprendizModel {
             $conexion = $mysql->getConexion();
             
             if ($conexion) {
-                // Seleccionamos exactamente los mismos datos pero buscando por el ID en lugar del RFID
-                $consulta = "SELECT id_aprendiz, fk_ficha FROM aprendiz WHERE id_aprendiz = :id LIMIT 1";
+                $consulta = "SELECT a.id_aprendiz, a.fk_ficha 
+                             FROM aprendiz a
+                             LEFT JOIN usuario u ON a.fk_usuario = u.id_usuario
+                             WHERE a.id_aprendiz = :id OR u.identificacion = :id OR a.codigo_rfid = :id 
+                             LIMIT 1";
                 $stmt = $conexion->prepare($consulta);
-                $stmt->bindParam(':id', $id_aprendiz_manual, PDO::PARAM_INT);
+                $stmt->bindParam(':id', $id_aprendiz_manual, PDO::PARAM_STR);
                 $stmt->execute();
                 
                 return $stmt->fetch(PDO::FETCH_ASSOC);
