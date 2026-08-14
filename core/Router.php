@@ -58,24 +58,26 @@ class Router {
             $action = 'dashboard';
         }
 
-        // 5. Carga de datos desde la Base de Datos para las vistas
-        $fichaSeleccionada = !empty($_GET['ficha_id']) ? (int)$_GET['ficha_id'] : null;
-        $statsHoy          = IngresoModel::obtenerEstadisticasHoy($fichaSeleccionada);
-        $statsAprendiz     = ['activos' => AprendizModel::contarActivos($fichaSeleccionada)];
-        $ultimos           = IngresoModel::obtenerUltimosMovimientos(8, $fichaSeleccionada);
-
         // Saneo y permisos por Rol
-        $rolSesion       = $_SESSION['rol'] ?? '';
-        $usuarioIdSesion = filter_var($_SESSION['usuario_id'] ?? 0, FILTER_VALIDATE_INT);
-        $usuarioIdSesion = ($usuarioIdSesion !== false && $usuarioIdSesion > 0) ? $usuarioIdSesion : 0;
+        $rolSesion          = $_SESSION['rol'] ?? '';
+        $usuarioIdSesion    = filter_var($_SESSION['usuario_id'] ?? 0, FILTER_VALIDATE_INT);
+        $usuarioIdSesion    = ($usuarioIdSesion !== false && $usuarioIdSesion > 0) ? $usuarioIdSesion : 0;
+
+        $fichaSeleccionada  = !empty($_GET['ficha_id']) ? (int)$_GET['ficha_id'] : null;
+        $instructorIdFiltro = ($rolSesion === 'Instructor') ? $usuarioIdSesion : null;
+
+        // 5. Carga de datos desde la Base de Datos para las vistas
+        $statsHoy      = IngresoModel::obtenerEstadisticasHoy($fichaSeleccionada, $instructorIdFiltro);
+        $statsAprendiz = ['activos' => AprendizModel::contarActivos($fichaSeleccionada, $instructorIdFiltro)];
+        $ultimos       = IngresoModel::obtenerUltimosMovimientos(8, $fichaSeleccionada, $instructorIdFiltro);
 
         // Captura de filtros de la URL para consultas en el historial
         $filtros = [
             'fecha_inicio'  => $_GET['fecha_inicio'] ?? date('Y-m-01'),
             'fecha_fin'     => $_GET['fecha_fin'] ?? date('Y-m-d'),
             'estado'        => $_GET['estado'] ?? '',
-            'ficha_id'      => !empty($_GET['ficha_id']) ? (int)$_GET['ficha_id'] : null,
-            'instructor_id' => ($rolSesion === 'Instructor') ? $usuarioIdSesion : null
+            'ficha_id'      => $fichaSeleccionada,
+            'instructor_id' => $instructorIdFiltro
         ];
 
         // Obtener fichas asignadas si es Instructor, o todas si es Administrador

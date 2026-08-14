@@ -8,9 +8,9 @@ require_once __DIR__ . '/../config/database.php';
 class AprendizModel {
 
     /**
-     * Cuenta el total de aprendices registrados en la BD (opcionalmente filtrando por ficha)
+     * Cuenta el total de aprendices registrados en la BD (opcionalmente filtrando por ficha o por instructor)
      */
-    public static function contarActivos(?int $idFicha = null): int {
+    public static function contarActivos(?int $idFicha = null, ?int $instructorId = null): int {
         try {
             $mysql = new MySQL();
             $mysql->conectarBD();
@@ -20,6 +20,10 @@ class AprendizModel {
                 if ($idFicha && $idFicha > 0) {
                     $stmt = $conexion->prepare("SELECT COUNT(*) FROM aprendiz WHERE fk_ficha = :ficha");
                     $stmt->execute([':ficha' => $idFicha]);
+                    return (int) $stmt->fetchColumn();
+                } else if ($instructorId && $instructorId > 0) {
+                    $stmt = $conexion->prepare("SELECT COUNT(*) FROM aprendiz a JOIN ficha f ON a.fk_ficha = f.id_ficha WHERE f.fk_usuario = :instructor");
+                    $stmt->execute([':instructor' => $instructorId]);
                     return (int) $stmt->fetchColumn();
                 }
                 return (int) $conexion->query("SELECT COUNT(*) FROM aprendiz")->fetchColumn();
