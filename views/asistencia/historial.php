@@ -25,6 +25,18 @@ require __DIR__ . '/../../views/layouts/header.php';
             <input type="hidden" name="action" value="historial">
 
             <div>
+                <label style="display:block; font-size:0.875rem; font-weight:500; margin-bottom:0.375rem;">Ficha de Formación</label>
+                <select name="ficha_id" class="shadcn-select">
+                    <option value="">— <?= (($_SESSION['rol'] ?? '') === 'Instructor') ? 'Todas mis fichas' : 'Todas las fichas' ?> —</option>
+                    <?php foreach ($fichas as $f): ?>
+                    <option value="<?= $f['id'] ?>" <?= (($filtros['ficha_id'] ?? '') == $f['id']) ? 'selected' : '' ?>>
+                        Ficha <?= htmlspecialchars($f['numero_ficha']) ?> — <?= htmlspecialchars($f['programa']) ?>
+                    </option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+
+            <div>
                 <label style="display:block; font-size:0.875rem; font-weight:500; margin-bottom:0.375rem;">Fecha Inicio</label>
                 <input type="date" name="fecha_inicio" class="shadcn-input" value="<?= htmlspecialchars($filtros['fecha_inicio']) ?>">
             </div>
@@ -37,7 +49,7 @@ require __DIR__ . '/../../views/layouts/header.php';
             <div>
                 <label style="display:block; font-size:0.875rem; font-weight:500; margin-bottom:0.375rem;">Estado</label>
                 <select name="estado" class="shadcn-select">
-                    <option value="">Todos</option>
+                    <option value="">Todos los estados</option>
                     <option value="Puntual" <?= ($filtros['estado'] ?? '') === 'Puntual' ? 'selected' : '' ?>>Puntual</option>
                     <option value="Retardo" <?= ($filtros['estado'] ?? '') === 'Retardo' ? 'selected' : '' ?>>Retardo</option>
                 </select>

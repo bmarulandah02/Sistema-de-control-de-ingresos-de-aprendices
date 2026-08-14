@@ -64,16 +64,29 @@ class Router {
         $statsAprendiz     = ['activos' => AprendizModel::contarActivos($fichaSeleccionada)];
         $ultimos           = IngresoModel::obtenerUltimosMovimientos(8, $fichaSeleccionada);
 
+        // Saneo y permisos por Rol
+        $rolSesion       = $_SESSION['rol'] ?? '';
+        $usuarioIdSesion = filter_var($_SESSION['usuario_id'] ?? 0, FILTER_VALIDATE_INT);
+        $usuarioIdSesion = ($usuarioIdSesion !== false && $usuarioIdSesion > 0) ? $usuarioIdSesion : 0;
+
         // Captura de filtros de la URL para consultas en el historial
         $filtros = [
-            'fecha_inicio' => $_GET['fecha_inicio'] ?? date('Y-m-01'),
-            'fecha_fin'    => $_GET['fecha_fin'] ?? date('Y-m-d'),
-            'estado'       => $_GET['estado'] ?? ''
+            'fecha_inicio'  => $_GET['fecha_inicio'] ?? date('Y-m-01'),
+            'fecha_fin'     => $_GET['fecha_fin'] ?? date('Y-m-d'),
+            'estado'        => $_GET['estado'] ?? '',
+            'ficha_id'      => !empty($_GET['ficha_id']) ? (int)$_GET['ficha_id'] : null,
+            'instructor_id' => ($rolSesion === 'Instructor') ? $usuarioIdSesion : null
         ];
 
-      $registros   = IngresoModel::obtenerHistorialConFiltros($filtros);
-$fichas      = HorarioModel::obtenerTodasFichas();
-$excusas     = ExcusaModel::obtenerTodas();
+        // Obtener fichas asignadas si es Instructor, o todas si es Administrador
+        if ($rolSesion === 'Instructor') {
+            $fichas = HorarioModel::obtenerFichasPorInstructor($usuarioIdSesion);
+        } else {
+            $fichas = HorarioModel::obtenerTodasFichas();
+        }
+
+        $registros = IngresoModel::obtenerHistorialConFiltros($filtros);
+        $excusas   = ExcusaModel::obtenerTodas();
 
 $ficha       = null;
 $mensaje     = null;

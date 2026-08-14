@@ -139,6 +139,16 @@ class IngresoModel {
                     $params[':estado'] = $filtros['estado'];
                 }
 
+                if (!empty($filtros['ficha_id'])) {
+                    $where[] = "f.id_ficha = :ficha_id";
+                    $params[':ficha_id'] = (int) $filtros['ficha_id'];
+                }
+
+                if (!empty($filtros['instructor_id'])) {
+                    $where[] = "f.fk_usuario = :instructor_id";
+                    $params[':instructor_id'] = (int) $filtros['instructor_id'];
+                }
+
                 $whereSql = !empty($where) ? "WHERE " . implode(" AND ", $where) : "";
 
                 $sql = "SELECT i.id_ingresos, i.fecha_registro, i.entrada, i.salida, i.estado_asistencia AS estado,

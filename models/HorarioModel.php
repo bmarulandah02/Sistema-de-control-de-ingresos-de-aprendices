@@ -96,6 +96,52 @@ class HorarioModel {
     }
 
     /**
+     * Obtiene el listado de fichas pertenecientes a un instructor específico
+     */
+    public static function obtenerFichasPorInstructor(int $instructorId): array {
+        $fichas = [];
+        try {
+            $mysql = new MySQL();
+            $mysql->conectarBD();
+            $conexion = $mysql->getConexion();
+
+            if ($conexion) {
+                self::asegurarColumnasFechas($conexion);
+
+                $sql = "SELECT f.id_ficha, f.nombre_programa, f.jornada, f.fk_usuario AS instructor_id,
+                               f.fecha_inicio, f.fecha_fin,
+                               CONCAT(u.nombre, ' ', u.apellido) AS instructor,
+                               (SELECT COUNT(*) FROM aprendiz a WHERE a.fk_ficha = f.id_ficha) AS total_aprendices
+                        FROM ficha f
+                        LEFT JOIN usuario u ON f.fk_usuario = u.id_usuario
+                        WHERE f.fk_usuario = :instructorId
+                        ORDER BY f.id_ficha DESC";
+
+                $stmt = $conexion->prepare($sql);
+                $stmt->execute([':instructorId' => $instructorId]);
+                while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+                    $fichas[] = [
+                        'id'               => $row['id_ficha'],
+                        'numero_ficha'     => $row['id_ficha'],
+                        'programa'         => $row['nombre_programa'],
+                        'jornada'          => $row['jornada'] ?: 'Diurna',
+                        'instructor_id'    => $row['instructor_id'],
+                        'instructor'       => !empty(trim($row['instructor'])) ? $row['instructor'] : 'Por asignar',
+                        'total_aprendices' => (int) $row['total_aprendices'],
+                        'fecha_inicio'     => (!empty($row['fecha_inicio']) && $row['fecha_inicio'] !== '0000-00-00') ? $row['fecha_inicio'] : '—',
+                        'fecha_fin'        => (!empty($row['fecha_fin']) && $row['fecha_fin'] !== '0000-00-00') ? $row['fecha_fin'] : '—',
+                        'estado'           => 'Activo'
+                    ];
+                }
+            }
+        } catch (Exception $e) {
+            // Silencioso
+        }
+
+        return $fichas;
+    }
+
+    /**
      * Obtiene los datos de una ficha específica por su ID/Número
      */
     public static function obtenerFichaPorId(int $idFicha): ?array {
