@@ -30,6 +30,12 @@ require __DIR__ . '/../layouts/header.php';
             <i class="bi bi-qr-code-scan"></i>
             <span>Terminal RFID</span>
         </a>
+        <!-- agrego el nuevo boton para cerrar la jornada es decir para eliminar los datos que cumplen con el horario en la tabla de ingresos -->
+         <a href="index.php?action=cerrar-jornada" class="btn-shadcn btn-shadcn-outline"
+           onclick="return confirm('¿Cerrar la jornada de hoy? Se eliminarán los registros de aprendices que su estado es  (puntuales y con salida a tiempo).');">
+            <i class="bi bi-moon-stars"></i>
+            <span>Cerrar Jornada</span>
+        </a>
     </div>
 </div>
 <!-- alerta de mantenmiento en el sistema -->

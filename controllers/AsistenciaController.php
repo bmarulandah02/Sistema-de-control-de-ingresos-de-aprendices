@@ -125,7 +125,7 @@ public function cerrarJornada()
     if($resultado['success'])
         {
             $_SESSION['mensaje']=[
-                'texto'=>"Se limpiaron los registros" . $resultado['eliminados'] . "registro",
+                'texto'=>"Se limpiaron los registros" . $resultado['eliminados'] . " registro",
                 'tipo'=>"success"
             ];
         }else

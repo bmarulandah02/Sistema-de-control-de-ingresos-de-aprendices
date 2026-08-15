@@ -340,7 +340,7 @@ class IngresoModel {
                     $consulta="DELETE FROM ingresos where estado_asistencia =:estadoABorrar and fecha_registro=:fechaCierre";
                     $stmt=$conexion->prepare($consulta);
                     $stmt->bindParam(':estadoABorrar',$estadoABorrar,PDO::PARAM_STR);
-                    $stmt->bidParam(':fechaCierre',$fechaCierre,PDO::PARAM_STR);
+                    $stmt->bindParam(':fechaCierre',$fechaCierre,PDO::PARAM_STR);
                     $stmt->execute();
                     $filasEliminadas=$stmt->rowCount();
                     return ['success'=>true,'eliminados'=>$filasEliminadas,'fecha'=>$fechaCierre];
