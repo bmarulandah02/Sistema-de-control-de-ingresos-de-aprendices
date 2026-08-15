@@ -323,5 +323,37 @@ class IngresoModel {
         }
         return $registros;
     }
+    //eliminare los registros que se cumplieron perfectamente del dia de hoy
+    public function BorrarRegistros(?string $fecha = null): array
+    {
+        try{
+            $mysql= new MySQL();
+            $mysql->conectarBD();
+            $conexion= $mysql->getConexion();
+            if($conexion)
+                {
+                    $estadoABorrar= "Puntual/Salio a la hora correspondiente";
+                    //si no se da una fecha utilizo la de hoy
+                    //los dos signos ?? significan que si no hay una fecha es decir si es nula 
+                    //se utilizara la fecha actual
+                    $fechaCierre= $fecha ?? date('Y-m-d'); 
+                    $consulta="DELETE FROM ingresos where estado_asistencia =:estadoABorrar and fecha_registro=:fechaCierre";
+                    $stmt=$conexion->prepare($consulta);
+                    $stmt->bindParam(':estadoABorrar',$estadoABorrar,PDO::PARAM_STR);
+                    $stmt->bidParam(':fechaCierre',$fechaCierre,PDO::PARAM_STR);
+                    $stmt->execute();
+                    $filasEliminadas=$stmt->rowCount();
+                    return ['success'=>true,'eliminados'=>$filasEliminadas,'fecha'=>$fechaCierre];
+                }
+                  return ['success'=>false,'eliminados'=>0];
+
+        }catch(PDOException $e)
+        {
+            error_log("Error al eliminar aprendices con cumplimienro en el horario ". $e->getMessage());
+            return ['success'=>false,'eliminados'=>0];
+
+        }
+
+    } 
 }
 ?>
