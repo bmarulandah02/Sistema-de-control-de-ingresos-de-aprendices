@@ -117,5 +117,26 @@ public function lecturaCodigoRfid()
     exit();
 
 }
+//funcionn para limpiar los registros que cumplieron su entrada y salida 
+public function cerrarJornada()
+{
+    $ingresoModel= new IngresoModel();
+    $resultado= $ingresoModel->BorrarRegistros();
+    if($resultado['success'])
+        {
+            $_SESSION['mensaje']=[
+                'texto'=>"Se limpiaron los registros" . $resultado['eliminados'] . "registro",
+                'tipo'=>"success"
+            ];
+        }else
+        {
+             $_SESSION['mensaje']=[
+                'texto'=>"Error al limpiar los registros",
+                'tipo'=>"error"
+            ];
+        }
+        header("Location: index.php?action=dashboard");
+        exit();
+}
 }
 ?>
