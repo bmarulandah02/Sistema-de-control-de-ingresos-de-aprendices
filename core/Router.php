@@ -50,7 +50,7 @@ class Router {
 
         // 4. Determinar vista por defecto y restringir acceso a Aprendices
         if (($_SESSION['rol'] ?? '') === 'Aprendiz') {
-            $rutasProhibidasAprendiz = ['dashboard', 'asistencia', 'usuarios', 'usuario-crear', 'usuario-editar', 'fichas', 'ficha-crear', 'ficha-editar', 'excusas-admin', 'reportes'];
+            $rutasProhibidasAprendiz = ['dashboard', 'asistencia', 'usuarios', 'usuario-crear', 'usuario-editar', 'fichas', 'ficha-crear', 'ficha-editar', 'excusas-admin', 'reportes','cerrar-jornada'];
             if (empty($action) || in_array($action, $rutasProhibidasAprendiz)) {
                 $action = 'mi-perfil';
             }
@@ -92,6 +92,12 @@ class Router {
 
 $ficha       = null;
 $mensaje     = null;
+//guardo el mensaje y lo elimino para queluego no se reputa cada que recargue la pantalla
+
+if(isset($_SESSION['mensaje'])){
+    $mensaje=$_SESSION['mensaje'];
+    unset($_SESSION['mensaje']);
+}
 
 // Saneo: fuerzo a entero el id de sesión antes de usarlo en cualquier consulta
 $usuarioIdSesion = filter_var($_SESSION['usuario_id'] ?? 0, FILTER_VALIDATE_INT);
@@ -139,14 +145,6 @@ if ($datosAprendiz && isset($datosAprendiz['id_aprendiz'])) {
                 (new UsuarioController())->guardarPerfilPersonal();
                 break;
             case 'asistencia':
-                 // Recupero el mensaje guardado en sesión (si viene de un redirect de registrar-ingreso)
-                // y lo elimino después de leerlo, para que no se repita en el próximo refresco
-                if (isset($_SESSION['mensaje']))
-                    {
-                        $mensaje=$_SESSION['mensaje'];
-                        //el unset elimina la variable
-                        unset($_SESSION['mensaje']);
-                    }
                 require __DIR__ . '/../views/asistencia/registro.php';
                 break;
                 case'registrar-ingreso':

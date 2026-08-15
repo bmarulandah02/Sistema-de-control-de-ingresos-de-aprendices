@@ -32,6 +32,15 @@ require __DIR__ . '/../layouts/header.php';
         </a>
     </div>
 </div>
+<!-- alerta de mantenmiento en el sistema -->
+ <?php if(!empty($mensaje)):?>
+    <div style="margin-bottom: 1.25 rem;" class="alert-auto-dismiss">
+           <div class="shadcn-card" style="padding: 1rem 1.25rem; display: flex; align-items: center; gap: 0.75rem; border-left: 4px solid var(--sena-brand);">
+        <i class="bi bi-info-circle-fill fs-5" style="color:var(--sena-brand);"></i>
+        <span style="font-size:0.9rem; font-weight:500;"><?= htmlspecialchars($mensaje['texto'] ?? '') ?></span>
+    </div>
+    </div>
+    <?php endif; ?>
 
 <!-- ── TARJETAS DE MÉTRICAS (METRIC CARDS) ───────────────────── -->
 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; margin-bottom: 1.75rem;">
