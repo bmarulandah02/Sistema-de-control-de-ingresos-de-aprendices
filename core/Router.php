@@ -152,6 +152,9 @@ if ($datosAprendiz && isset($datosAprendiz['id_aprendiz'])) {
                 case'registrar-ingreso':
                     (new AsistenciaController())->lecturaCodigoRfid();
                     break;
+                    case'cerrar-jornada':
+                        (new AsistenciaController())->cerrarJornada();
+                        break;
             case 'historial':
                 require __DIR__ . '/../views/asistencia/historial.php';
                 break;
