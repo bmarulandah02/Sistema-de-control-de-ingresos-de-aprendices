@@ -4,11 +4,66 @@
 
 document.addEventListener('DOMContentLoaded', () => {
 
+    // ── 🔴 MODO OSCURO / CLARO (THEME TOGGLE) ─────────────────────
+    const themeToggleBtn = document.getElementById('themeToggleBtn');
+    const themeIcon      = document.getElementById('themeIcon');
+
+    function actualizarIconoTema(theme) {
+        if (!themeIcon) return;
+        if (theme === 'dark') {
+            themeIcon.className = 'bi bi-sun-fill text-warning';
+        } else {
+            themeIcon.className = 'bi bi-moon-stars';
+        }
+    }
+
+    // Inicializar ícono según tema actual
+    const currentTheme = document.documentElement.getAttribute('data-theme') || 'light';
+    actualizarIconoTema(currentTheme);
+
+    if (themeToggleBtn) {
+        themeToggleBtn.addEventListener('click', () => {
+            const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+            const newTheme = isDark ? 'light' : 'dark';
+
+            document.documentElement.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+            actualizarIconoTema(newTheme);
+        });
+    }
+
+    // ── 🔴 MENU SIDEBAR MOBILE TOGGLE ──────────────────────────────
+    const sidebarToggle  = document.getElementById('sidebarToggle');
+    const sidebarOverlay = document.getElementById('sidebarOverlay');
+    const sidebar        = document.getElementById('shadcnSidebar');
+
+    function toggleSidebar() {
+        if (sidebar) {
+            sidebar.classList.toggle('open');
+            sidebar.classList.toggle('mobile-open');
+        }
+        if (sidebarOverlay) {
+            sidebarOverlay.classList.toggle('active');
+            sidebarOverlay.classList.toggle('mobile-open');
+        }
+    }
+
+    if (sidebarToggle) {
+        sidebarToggle.addEventListener('click', toggleSidebar);
+    }
+    if (sidebarOverlay) {
+        sidebarOverlay.addEventListener('click', toggleSidebar);
+    }
+
     // ── Auto-cerrar alertas de éxito después de 4s ──────────────
     document.querySelectorAll('.alert-success, .alert-info').forEach(alert => {
         setTimeout(() => {
-            const bsAlert = bootstrap.Alert.getOrCreateInstance(alert);
-            bsAlert?.close();
+            if (window.bootstrap && bootstrap.Alert) {
+                const bsAlert = bootstrap.Alert.getOrCreateInstance(alert);
+                bsAlert?.close();
+            } else {
+                alert.style.display = 'none';
+            }
         }, 4000);
     });
 
@@ -27,7 +82,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 const txt = btn.innerHTML;
                 btn.innerHTML = `<span class="spinner-border spinner-border-sm me-2" role="status"></span>Procesando...`;
                 btn.disabled = true;
-                // Re-habilitar después de 8s (fallback)
                 setTimeout(() => {
                     btn.innerHTML = txt;
                     btn.disabled  = false;
@@ -36,21 +90,11 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // ── Resaltar fila de tabla al hacer clic ────────────────────
-    document.querySelectorAll('.table-hover tbody tr').forEach(row => {
-        row.style.cursor = 'default';
-    });
-
-    // ── Tooltip de Bootstrap en elementos [title] ───────────────
-    const tooltipEls = document.querySelectorAll('[title]');
-    tooltipEls.forEach(el => new bootstrap.Tooltip(el, { trigger: 'hover' }));
-
     // ── RFID: auto-focus en campo rfid_uid si existe ─────────────
     const rfidInput = document.getElementById('rfid_uid');
     if (rfidInput) {
         rfidInput.focus();
 
-        // Si el lector envía Enter al final, submit automático
         rfidInput.addEventListener('keydown', e => {
             if (e.key === 'Enter') {
                 e.preventDefault();
