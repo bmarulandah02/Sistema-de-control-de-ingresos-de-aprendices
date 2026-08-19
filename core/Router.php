@@ -11,6 +11,7 @@ require_once __DIR__ . '/../models/AprendizModel.php';
 require_once __DIR__ . '/../models/HorarioModel.php';
 require_once __DIR__ . '/../models/ExcusaModel.php';
 require_once __DIR__ . '/../controllers/AsistenciaController.php';
+require_once __DIR__ . '/../controllers/ReporteController.php';
 
 class Router {
 
@@ -173,7 +174,13 @@ if ($datosAprendiz && isset($datosAprendiz['id_aprendiz'])) {
                 break;
             case 'reportes':
             case 'excusas-admin':
-                require __DIR__ . '/../views/admin/reportes.php';
+                (new ReporteController())->index();
+                break;
+            case 'reporte-pdf':
+                (new ReporteController())->exportarPDF();
+                break;
+            case 'reporte-excel':
+                (new ReporteController())->exportarExcel();
                 break;
             case 'mi-perfil':
                 require __DIR__ . '/../views/aprendiz/perfil.php';
