@@ -78,6 +78,15 @@ $esEdicion = isset($ficha) && $ficha !== null;
                         <label style="display:block; font-size:0.875rem; font-weight:500; margin-bottom:0.375rem;">Fecha Fin</label>
                         <input type="date" name="fecha_fin" class="shadcn-input" value="<?= htmlspecialchars($ficha['fecha_fin'] ?? '') ?>">
                     </div>
+
+                    <div>
+                        <label style="display:block; font-size:0.875rem; font-weight:500; margin-bottom:0.375rem;">Estado de la Ficha *</label>
+                        <select name="estado" class="shadcn-select" required>
+                            <option value="Activo" <?= (($ficha['estado'] ?? 'Activo') === 'Activo') ? 'selected' : '' ?>>Activo</option>
+                            <option value="Inactivo" <?= (($ficha['estado'] ?? '') === 'Inactivo') ? 'selected' : '' ?>>Inactivo</option>
+                            <option value="Finalizado" <?= (($ficha['estado'] ?? '') === 'Finalizado') ? 'selected' : '' ?>>Finalizado</option>
+                        </select>
+                    </div>
                 </div>
 
                 <div style="display:flex; justify-content:flex-end; gap:0.75rem; border-top:1px solid var(--border); padding-top:1.25rem;">

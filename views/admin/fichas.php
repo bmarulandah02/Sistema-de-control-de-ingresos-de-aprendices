@@ -64,7 +64,11 @@ require __DIR__ . '/../../views/layouts/header.php';
                     <td><?= htmlspecialchars($f['fecha_inicio'] ?? '—') ?></td>
                     <td><?= htmlspecialchars($f['fecha_fin'] ?? '—') ?></td>
                     <td>
-                        <?php $bClass = ($f['estado'] === 'Activo') ? 'badge-activo' : 'badge-inactivo'; ?>
+                        <?php 
+                            $bClass = 'badge-activo';
+                            if ($f['estado'] === 'Inactivo') $bClass = 'badge-inactivo';
+                            elseif ($f['estado'] === 'Finalizado') $bClass = 'badge-secondary';
+                        ?>
                         <span class="shadcn-badge <?= $bClass ?>">
                             <i class="bi bi-dot"></i><?= htmlspecialchars($f['estado']) ?>
                         </span>

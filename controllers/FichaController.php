@@ -53,6 +53,7 @@ class FichaController {
             $jornada       = trim($_POST['jornada'] ?? 'Mañana');
             $fecha_inicio  = trim($_POST['fecha_inicio'] ?? '');
             $fecha_fin     = trim($_POST['fecha_fin'] ?? '');
+            $estado        = trim($_POST['estado'] ?? 'Activo');
             $esEdicion     = !empty($_POST['id']);
 
             if (empty($numero_ficha) || empty($programa) || empty($instructor_id)) {
@@ -66,7 +67,8 @@ class FichaController {
                 'instructor_id' => $instructor_id,
                 'jornada'       => $jornada,
                 'fecha_inicio'  => $fecha_inicio,
-                'fecha_fin'     => $fecha_fin
+                'fecha_fin'     => $fecha_fin,
+                'estado'        => $estado
             ];
 
             if ($esEdicion) {

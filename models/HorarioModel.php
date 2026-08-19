@@ -17,6 +17,9 @@ class HorarioModel {
         try {
             $conexion->exec("ALTER TABLE ficha ADD COLUMN fecha_fin DATE NULL");
         } catch (Exception $e) {}
+        try {
+            $conexion->exec("ALTER TABLE ficha ADD COLUMN estado VARCHAR(20) DEFAULT 'Activo'");
+        } catch (Exception $e) {}
     }
 
     /**
@@ -65,7 +68,7 @@ class HorarioModel {
                 self::asegurarColumnasFechas($conexion);
 
                 $sql = "SELECT f.id_ficha, f.nombre_programa, f.jornada, f.fk_usuario AS instructor_id,
-                               f.fecha_inicio, f.fecha_fin,
+                               f.fecha_inicio, f.fecha_fin, f.estado,
                                CONCAT(u.nombre, ' ', u.apellido) AS instructor,
                                (SELECT COUNT(*) FROM aprendiz a WHERE a.fk_ficha = f.id_ficha) AS total_aprendices
                         FROM ficha f
@@ -84,7 +87,7 @@ class HorarioModel {
                         'total_aprendices' => (int) $row['total_aprendices'],
                         'fecha_inicio'     => (!empty($row['fecha_inicio']) && $row['fecha_inicio'] !== '0000-00-00') ? $row['fecha_inicio'] : '—',
                         'fecha_fin'        => (!empty($row['fecha_fin']) && $row['fecha_fin'] !== '0000-00-00') ? $row['fecha_fin'] : '—',
-                        'estado'           => 'Activo'
+                        'estado'           => $row['estado'] ?: 'Activo'
                     ];
                 }
             }
@@ -109,7 +112,7 @@ class HorarioModel {
                 self::asegurarColumnasFechas($conexion);
 
                 $sql = "SELECT f.id_ficha, f.nombre_programa, f.jornada, f.fk_usuario AS instructor_id,
-                               f.fecha_inicio, f.fecha_fin,
+                               f.fecha_inicio, f.fecha_fin, f.estado,
                                CONCAT(u.nombre, ' ', u.apellido) AS instructor,
                                (SELECT COUNT(*) FROM aprendiz a WHERE a.fk_ficha = f.id_ficha) AS total_aprendices
                         FROM ficha f
@@ -130,7 +133,7 @@ class HorarioModel {
                         'total_aprendices' => (int) $row['total_aprendices'],
                         'fecha_inicio'     => (!empty($row['fecha_inicio']) && $row['fecha_inicio'] !== '0000-00-00') ? $row['fecha_inicio'] : '—',
                         'fecha_fin'        => (!empty($row['fecha_fin']) && $row['fecha_fin'] !== '0000-00-00') ? $row['fecha_fin'] : '—',
-                        'estado'           => 'Activo'
+                        'estado'           => $row['estado'] ?: 'Activo'
                     ];
                 }
             }
@@ -154,7 +157,7 @@ class HorarioModel {
                 self::asegurarColumnasFechas($conexion);
 
                 $sql = "SELECT f.id_ficha, f.nombre_programa, f.jornada, f.fk_usuario AS instructor_id,
-                               f.fecha_inicio, f.fecha_fin,
+                               f.fecha_inicio, f.fecha_fin, f.estado,
                                CONCAT(u.nombre, ' ', u.apellido) AS instructor
                         FROM ficha f
                         LEFT JOIN usuario u ON f.fk_usuario = u.id_usuario
@@ -174,7 +177,7 @@ class HorarioModel {
                         'instructor'    => $row['instructor'],
                         'fecha_inicio'  => $row['fecha_inicio'],
                         'fecha_fin'     => $row['fecha_fin'],
-                        'estado'        => 'Activo'
+                        'estado'        => $row['estado'] ?: 'Activo'
                     ];
                 }
             }
@@ -253,8 +256,8 @@ class HorarioModel {
             if ($conexion) {
                 self::asegurarColumnasFechas($conexion);
 
-                $sql = "INSERT INTO ficha (id_ficha, nombre_programa, jornada, fk_usuario, fecha_inicio, fecha_fin)
-                        VALUES (:id_ficha, :nombre_programa, :jornada, :fk_usuario, :fecha_inicio, :fecha_fin)";
+                $sql = "INSERT INTO ficha (id_ficha, nombre_programa, jornada, fk_usuario, fecha_inicio, fecha_fin, estado)
+                        VALUES (:id_ficha, :nombre_programa, :jornada, :fk_usuario, :fecha_inicio, :fecha_fin, :estado)";
                 $stmt = $conexion->prepare($sql);
                 $exito = $stmt->execute([
                     ':id_ficha'        => (int) $datos['numero_ficha'],
@@ -262,7 +265,8 @@ class HorarioModel {
                     ':jornada'         => $datos['jornada'] ?? 'Mañana',
                     ':fk_usuario'      => (int) $datos['instructor_id'],
                     ':fecha_inicio'    => !empty($datos['fecha_inicio']) ? $datos['fecha_inicio'] : null,
-                    ':fecha_fin'       => !empty($datos['fecha_fin']) ? $datos['fecha_fin'] : null
+                    ':fecha_fin'       => !empty($datos['fecha_fin']) ? $datos['fecha_fin'] : null,
+                    ':estado'          => $datos['estado'] ?? 'Activo'
                 ]);
 
                 if ($exito) {
@@ -278,7 +282,7 @@ class HorarioModel {
     }
 
     /**
-     * Actualiza una ficha existente guardando fechas de inicio/fin y su horario en la BD
+     * Actualiza una ficha existente guardando fechas de inicio/fin, estado y su horario en la BD
      */
     public static function actualizarFicha(array $datos): bool {
         try {
@@ -294,7 +298,8 @@ class HorarioModel {
                             jornada = :jornada, 
                             fk_usuario = :fk_usuario,
                             fecha_inicio = :fecha_inicio,
-                            fecha_fin = :fecha_fin
+                            fecha_fin = :fecha_fin,
+                            estado = :estado
                         WHERE id_ficha = :id_ficha";
                 $stmt = $conexion->prepare($sql);
                 $exito = $stmt->execute([
@@ -303,6 +308,7 @@ class HorarioModel {
                     ':fk_usuario'      => (int) $datos['instructor_id'],
                     ':fecha_inicio'    => !empty($datos['fecha_inicio']) ? $datos['fecha_inicio'] : null,
                     ':fecha_fin'       => !empty($datos['fecha_fin']) ? $datos['fecha_fin'] : null,
+                    ':estado'          => $datos['estado'] ?? 'Activo',
                     ':id_ficha'        => (int) $datos['numero_ficha']
                 ]);
 
