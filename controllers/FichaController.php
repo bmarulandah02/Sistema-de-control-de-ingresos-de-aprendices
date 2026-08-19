@@ -8,26 +8,44 @@ require_once __DIR__ . '/../models/HorarioModel.php';
 class FichaController {
 
     /**
-     * Muestra la lista de fichas de formación
+     * Muestra la lista de fichas de formación (filtradas si es Instructor)
      */
     public function index(): void {
-        $fichas = HorarioModel::obtenerTodasFichas();
+        $rolSesion       = $_SESSION['rol'] ?? '';
+        $usuarioIdSesion = (int) ($_SESSION['usuario_id'] ?? 0);
+
+        if ($rolSesion === 'Instructor') {
+            $fichas = HorarioModel::obtenerFichasPorInstructor($usuarioIdSesion);
+        } else {
+            $fichas = HorarioModel::obtenerTodasFichas();
+        }
+
         require __DIR__ . '/../views/admin/fichas.php';
     }
 
     /**
-     * Muestra el formulario para crear o editar una ficha
+     * Muestra el formulario para crear o editar una ficha (Solo Administrador)
      */
     public function formulario(?int $id = null, ?string $error = null): void {
+        if (($_SESSION['rol'] ?? '') !== 'Administrador') {
+            header('Location: index.php?action=fichas&error=sin_permiso');
+            exit();
+        }
+
         $instructores = HorarioModel::obtenerInstructores();
         $ficha = $id ? HorarioModel::obtenerFichaPorId($id) : null;
         require __DIR__ . '/../views/fichas/formulario.php';
     }
 
     /**
-     * Procesa la creación o actualización de una ficha
+     * Procesa la creación o actualización de una ficha (Solo Administrador)
      */
     public function guardar(): void {
+        if (($_SESSION['rol'] ?? '') !== 'Administrador') {
+            header('Location: index.php?action=fichas&error=sin_permiso');
+            exit();
+        }
+
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $numero_ficha  = (int) ($_POST['numero_ficha'] ?? 0);
             $programa      = trim($_POST['programa'] ?? '');
@@ -65,9 +83,14 @@ class FichaController {
     }
 
     /**
-     * Elimina una ficha por su ID
+     * Elimina una ficha por su ID (Solo Administrador)
      */
     public function eliminar(): void {
+        if (($_SESSION['rol'] ?? '') !== 'Administrador') {
+            header('Location: index.php?action=fichas&error=sin_permiso');
+            exit();
+        }
+
         $id = (int) ($_GET['id'] ?? 0);
         if ($id > 0) {
             HorarioModel::eliminarFicha($id);

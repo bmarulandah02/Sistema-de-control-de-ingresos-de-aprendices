@@ -8,9 +8,8 @@ require __DIR__ . '/../../views/layouts/header.php';
         <h1 class="page-header-title">Fichas de Formación</h1>
         <div class="page-header-subtitle">Gestión de fichas, programas e instructores encargados</div>
     </div>
-    <?php if (in_array($_SESSION['rol'] ?? '', ['Administrador', 'Instructor'])): ?>
+    <?php if (($_SESSION['rol'] ?? '') === 'Administrador'): ?>
     <div>
-        <!-- 🟢 EDITAR AQUÍ: Cambia el enlace según la ruta de creación de ficha -->
         <a href="index.php?action=ficha-crear" class="btn-shadcn btn-shadcn-primary">
             <i class="bi bi-plus-lg"></i>
             <span>+ Nueva Ficha</span>
@@ -70,23 +69,23 @@ require __DIR__ . '/../../views/layouts/header.php';
                             <i class="bi bi-dot"></i><?= htmlspecialchars($f['estado']) ?>
                         </span>
                     </td>
-                    <?php if (in_array($_SESSION['rol'] ?? '', ['Administrador', 'Instructor'])): ?>
                     <td>
+                        <?php if (($_SESSION['rol'] ?? '') === 'Administrador'): ?>
                         <div style="display:flex; gap:0.375rem;">
                             <a href="index.php?action=ficha-editar&id=<?= $f['id'] ?>"
                                class="btn-shadcn btn-shadcn-outline" style="padding:0.25rem 0.5rem; font-size:0.75rem;" title="Editar">
                                 <i class="bi bi-pencil"></i>
                             </a>
-                            <?php if ($_SESSION['rol'] === 'Administrador'): ?>
                             <button type="button"
                                     onclick="confirmarEliminarFicha(<?= $f['id'] ?>, '<?= htmlspecialchars(addslashes($f['numero_ficha'])) ?>')"
                                     class="btn-shadcn btn-shadcn-outline" style="padding:0.25rem 0.5rem; font-size:0.75rem; color:#dc2626; border-color:rgba(239,68,68,0.3);" title="Eliminar">
                                 <i class="bi bi-trash"></i>
                             </button>
-                            <?php endif; ?>
                         </div>
+                        <?php else: ?>
+                        <span style="color:var(--muted-foreground); font-size:0.75rem;"><i class="bi bi-eye me-1"></i>Solo Lectura</span>
+                        <?php endif; ?>
                     </td>
-                    <?php endif; ?>
                 </tr>
                 <?php endforeach; ?>
                 <?php endif; ?>

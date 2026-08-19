@@ -232,9 +232,9 @@ class UsuarioModel {
     }
 
     /**
-     * Obtiene el listado de usuarios filtrando Administradores si el rol en sesión es Instructor
+     * Obtiene el listado de usuarios filtrando aprendices por instructor si el rol en sesión es Instructor
      */
-    public static function obtenerTodosConRoles(?string $rolSesion = null): array {
+    public static function obtenerTodosConRoles(?string $rolSesion = null, ?int $usuarioIdSesion = null): array {
         $usuarios = [];
         try {
             $mysql = new MySQL();
@@ -242,11 +242,17 @@ class UsuarioModel {
             $conexion = $mysql->getConexion();
 
             if ($conexion) {
-                $where = "";
-                // Si la persona en sesión es Instructor, OCULTAR los Administradores
-                if ($rolSesion === 'Instructor') {
-                    $where = "WHERE r.nombre_rol != 'Administrador' AND u.fk_rol != 1";
+                $where = [];
+                $params = [];
+
+                // Si la persona en sesión es Instructor, solo ve a sus propios aprendices asignados a sus fichas y su propio usuario
+                if ($rolSesion === 'Instructor' && $usuarioIdSesion && $usuarioIdSesion > 0) {
+                    $where[] = "( (r.nombre_rol = 'Aprendiz' AND f.fk_usuario = :instId) OR u.id_usuario = :instSelf )";
+                    $params[':instId']   = $usuarioIdSesion;
+                    $params[':instSelf'] = $usuarioIdSesion;
                 }
+
+                $whereSql = !empty($where) ? "WHERE " . implode(" AND ", $where) : "";
 
                 $sql = "SELECT u.id_usuario, u.nombre_usuario, u.nombre, u.apellido, u.identificacion, u.telefono,
                                u.fk_rol, r.nombre_rol, a.codigo_rfid, f.id_ficha AS numero_ficha, f.nombre_programa
@@ -254,10 +260,11 @@ class UsuarioModel {
                         LEFT JOIN rol r ON u.fk_rol = r.id_rol
                         LEFT JOIN aprendiz a ON a.fk_usuario = u.id_usuario
                         LEFT JOIN ficha f ON a.fk_ficha = f.id_ficha
-                        {$where}
+                        {$whereSql}
                         ORDER BY u.id_usuario DESC";
 
-                $stmt = $conexion->query($sql);
+                $stmt = $conexion->prepare($sql);
+                $stmt->execute($params);
                 while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
                     $usuarios[] = [
                         'id_usuario'     => $row['id_usuario'],

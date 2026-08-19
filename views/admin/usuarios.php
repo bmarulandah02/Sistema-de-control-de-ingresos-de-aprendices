@@ -8,12 +8,14 @@ require __DIR__ . '/../../views/layouts/header.php';
         <h1 class="page-header-title">Gestión de Usuarios</h1>
         <div class="page-header-subtitle">Administra los Instructores, Aprendices y Usuarios registrados</div>
     </div>
+    <?php if (($_SESSION['rol'] ?? '') === 'Administrador'): ?>
     <div>
         <a href="index.php?action=usuario-crear" class="btn-shadcn btn-shadcn-primary">
             <i class="bi bi-person-plus-fill"></i>
             <span>+ Nuevo Usuario</span>
         </a>
     </div>
+    <?php endif; ?>
 </div>
 
 <?php if (isset($_GET['error']) && $_GET['error'] === 'sin_permiso'): ?>
@@ -83,11 +85,8 @@ require __DIR__ . '/../../views/layouts/header.php';
                         <?php endif; ?>
                     </td>
                     <td>
-                        <?php 
-                            $puedeEditar = ($_SESSION['rol'] === 'Administrador') || 
-                                           ($_SESSION['rol'] === 'Instructor' && ($u['rol'] === 'Aprendiz' || $u['id_usuario'] == $_SESSION['usuario_id']));
-                        ?>
-                        <?php if ($puedeEditar): ?>
+                        <?php $esAdmin = (($_SESSION['rol'] ?? '') === 'Administrador'); ?>
+                        <?php if ($esAdmin): ?>
                         <div style="display:flex; gap:0.375rem;">
                             <a href="index.php?action=usuario-editar&id=<?= $u['id_usuario'] ?>" 
                                class="btn-shadcn btn-shadcn-outline" 
@@ -107,7 +106,7 @@ require __DIR__ . '/../../views/layouts/header.php';
                             <?php endif; ?>
                         </div>
                         <?php else: ?>
-                        <span style="color:var(--muted-foreground); font-size:0.75rem;">Protegido</span>
+                        <span style="color:var(--muted-foreground); font-size:0.75rem;"><i class="bi bi-eye me-1"></i>Solo Lectura</span>
                         <?php endif; ?>
                     </td>
                 </tr>
