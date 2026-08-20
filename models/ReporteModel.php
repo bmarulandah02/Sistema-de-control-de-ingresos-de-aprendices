@@ -68,10 +68,14 @@ class ReporteModel {
                     $idAprendiz = (int)$app['id_aprendiz'];
 
                     // Obtener todos los ingresos en el rango para este aprendiz
-                    $sqlIngresos = "SELECT fecha_registro, entrada, salida, estado_asistencia 
-                                    FROM ingresos 
-                                    WHERE fk_aprendiz = :idAprendiz 
-                                      AND fecha_registro BETWEEN :fInicio AND :fFin";
+                    //la consulta que esta en el parentesis es una consulta correlacionada que se hace para 
+                    //verificaar si se cuenta con una excusa o no 
+                    $sqlIngresos = "SELECT i.fecha_registro, i.entrada, i.salida, i.estado_asistencia,
+                    (select count(*) from excusa e
+                                    where e.fk_ingreso=i.id_ingresos and e.estado='Aprobada') AS excusa_aprobada
+                                    FROM ingresos i
+                                    WHERE i.fk_aprendiz = :idAprendiz 
+                                      AND i.fecha_registro BETWEEN :fInicio AND :fFin";
                     $stmtIng = $conexion->prepare($sqlIngresos);
                     $stmtIng->execute([
                         ':idAprendiz' => $idAprendiz,
@@ -104,19 +108,32 @@ class ReporteModel {
                     }
 
                     // Identificar inasistencias en los días transcurridos
-                    $diasFaltados = [];
-                    foreach ($periodoFechas as $fDia) {
-                        // Si no hay marcación de asistencia registrada ese día
-                        if (!isset($ingresosMap[$fDia])) {
-                            // Verificar si el día ya pasó o es hoy
-                            if ($fDia <= date('Y-m-d')) {
-                                $diasFaltados[] = [
-                                    'fecha'      => $fDia,
-                                    'instructor' => !empty(trim($app['instructor_encargado'])) ? $app['instructor_encargado'] : 'Sin asignar'
-                                ];
+                   // Identificar inasistencias en los días transcurridos
+                            $diasFaltados = [];
+                            foreach ($periodoFechas as $fDia) {
+                                // Solo evaluamos días que ya pasaron o es hoy (no días futuros)
+                                if ($fDia > date('Y-m-d')) {
+                                    continue;
+                                }
+
+                                $filaDelDia = $ingresosMap[$fDia] ?? null;
+
+                                // Caso 1: no existe ninguna fila ese día -> inasistencia (sin excusar)
+                                $sinRegistro = ($filaDelDia === null);
+
+                                // Caso 2: existe la fila (se creó al radicar la excusa), quedó marcada
+                                // como 'Inasistencia', pero la excusa todavía no está Aprobada
+                                $sinJustificar = $filaDelDia !== null
+                                    && ($filaDelDia['estado_asistencia'] ?? '') === 'Inasistencia'
+                                    && (int) ($filaDelDia['excusa_aprobada'] ?? 0) === 0;
+
+                                if ($sinRegistro || $sinJustificar) {
+                                    $diasFaltados[] = [
+                                        'fecha'      => $fDia,
+                                        'instructor' => !empty(trim($app['instructor_encargado'])) ? $app['instructor_encargado'] : 'Sin asignar'
+                                    ];
+                                }
                             }
-                        }
-                    }
 
                     $reporte[] = [
                         'id_aprendiz'         => $idAprendiz,
