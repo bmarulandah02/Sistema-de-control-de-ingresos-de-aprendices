@@ -44,7 +44,11 @@ class Router {
                 return;
             } else {
                 if ($estaAutenticado) {
-                    header('Location: index.php?action=dashboard');
+                    if (($_SESSION['rol'] ?? '') === 'Aprendiz') {
+                        header('Location: index.php?action=mi-perfil');
+                    } else {
+                        header('Location: index.php?action=dashboard');
+                    }
                     exit();
                 }
                 $authController->mostrarLogin();

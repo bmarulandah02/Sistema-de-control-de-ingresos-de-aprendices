@@ -41,8 +41,12 @@ class AuthController {
                 $_SESSION['correo']     = $usuario['correo'];
                 $_SESSION['rol']        = $usuario['rol'];
 
-                // Redireccionar al dashboard según el rol o panel general
-                header('Location: index.php?action=dashboard');
+                // Redireccionar a su sección correspondiente según el rol
+                if ($usuario['rol'] === 'Aprendiz') {
+                    header('Location: index.php?action=mi-perfil');
+                } else {
+                    header('Location: index.php?action=dashboard');
+                }
                 exit();
             } else {
                 $this->mostrarLogin('Usuario/Correo o contraseña incorrectos.');
