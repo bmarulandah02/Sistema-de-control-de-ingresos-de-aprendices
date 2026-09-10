@@ -1,0 +1,10 @@
+# ──────────────────────────────────────────────
+#  Configuración Apache .htaccess — Sistema Control de Ingresos
+# ──────────────────────────────────────────────
+
+# Configurar páginas de error personalizadas de Apache
+ErrorDocument 404 /sistema-ingreso/Sistema-de-control-de-ingresos-de-aprendices/index.php?action=404
+ErrorDocument 403 /sistema-ingreso/Sistema-de-control-de-ingresos-de-aprendices/index.php?action=403
+
+# Desactivar la vista de directorios por seguridad
+Options -Indexes
