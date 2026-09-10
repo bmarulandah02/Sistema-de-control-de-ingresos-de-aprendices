@@ -27,14 +27,14 @@
     <!-- Overlay móvil -->
     <div class="sidebar-overlay" id="sidebarOverlay"></div>
 
-    <!-- ── 🟢 NAVEGACIÓN Y SIDEBAR SHADCN ────────────────────────────── -->
+    <!-- ──  NAVEGACIÓN Y SIDEBAR SHADCN ────────────────────────────── -->
     <aside class="shadcn-sidebar" id="shadcnSidebar">
         <div class="sidebar-header">
             <div class="sidebar-logo-icon">
                 <i class="bi bi-building-check"></i>
             </div>
             <div>
-                <!-- 🟢 EDITAR AQUÍ: Título de tu sistema -->
+                <!--   Título de tu sistema -->
                 <div class="sidebar-brand-name">Ingreso</div>
                 <div class="sidebar-brand-sub">SENA ADSO</div>
             </div>
@@ -103,7 +103,7 @@
         </div>
     </aside>
 
-    <!-- ── 🟢 BARRA SUPERIOR (TOPBAR) ────────────────────────────────── -->
+    <!-- ── BARRA SUPERIOR (TOPBAR) ────────────────────────────────── -->
     <div class="shadcn-main">
         <header class="shadcn-topbar">
             <div class="topbar-left">
@@ -122,7 +122,7 @@
                     <i class="bi bi-moon-stars" id="themeIcon"></i>
                 </button>
 
-                <!-- 🟢 EDITAR AQUÍ: Muestra el nombre y rol del usuario conectado -->
+                <!--  Muestra el nombre y rol del usuario conectado -->
                 <div class="d-flex align-items-center gap-2">
                     <div class="user-avatar-badge">
                         <?= strtoupper(substr($_SESSION['nombre'] ?? 'U', 0, 1)) ?>

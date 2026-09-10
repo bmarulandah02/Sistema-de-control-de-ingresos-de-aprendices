@@ -38,7 +38,7 @@ class AprendizModel {
     /**
      * Inserta un nuevo registro en la tabla aprendiz asociando código RFID, ficha y usuario
      */
-    public static function crearAprendiz(?int $codigoRfid, int $fkFicha, int $fkUsuario): bool {
+    public static function crearAprendiz(?string $codigoRfid, int $fkFicha, int $fkUsuario): bool {
         try {
             $mysql = new MySQL();
             $mysql->conectarBD();
@@ -63,7 +63,7 @@ class AprendizModel {
     /**
      * Actualiza o crea los datos de un aprendiz (RFID y Ficha)
      */
-    public static function actualizarAprendiz(?int $codigoRfid, int $fkFicha, int $fkUsuario): bool {
+    public static function actualizarAprendiz(?string $codigoRfid, int $fkFicha, int $fkUsuario): bool {
         try {
             $mysql = new MySQL();
             $mysql->conectarBD();

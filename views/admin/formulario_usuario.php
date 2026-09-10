@@ -127,7 +127,7 @@ require __DIR__ . '/../../views/layouts/header.php';
 
                     <div>
                         <label style="display:block; font-size:0.875rem; font-weight:500; margin-bottom:0.375rem;">Código RFID (Tag o Tarjeta)</label>
-                        <input type="number" name="codigo_rfid" class="shadcn-input" placeholder="Ej. 1029384" 
+                        <input type="text" inputmode="numeric" name="codigo_rfid" class="shadcn-input" placeholder="Ej. 0002252118" 
                                value="<?= htmlspecialchars($_POST['codigo_rfid'] ?? ($usuarioEditar['codigo_rfid'] ?? '')) ?>">
                     </div>
                 </div>

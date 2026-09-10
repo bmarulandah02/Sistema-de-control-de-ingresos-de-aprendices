@@ -18,7 +18,7 @@ require __DIR__ . '/../../views/layouts/header.php';
     <?php endif; ?>
 </div>
 
-<!-- ── 🟢 TABLA DE FICHAS ───────────────────────────────────────── -->
+<!-- ── TABLA DE FICHAS ───────────────────────────────────────── -->
 <div class="shadcn-card">
     <div class="card-header-shadcn">
         <h3><i class="bi bi-journal-bookmark me-2"></i>Fichas Registradas</h3>

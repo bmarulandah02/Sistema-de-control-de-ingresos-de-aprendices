@@ -57,7 +57,7 @@ class UsuarioController {
             $password       = trim($_POST['password'] ?? '');
             $fk_rol         = (int) ($_POST['fk_rol'] ?? 0);
             $fk_ficha       = (int) ($_POST['fk_ficha'] ?? 0);
-            $codigo_rfid    = !empty($_POST['codigo_rfid']) ? (int) $_POST['codigo_rfid'] : null;
+            $codigo_rfid    = (isset($_POST['codigo_rfid']) && trim($_POST['codigo_rfid']) !== '') ? trim($_POST['codigo_rfid']) : null;
             $esEdicion      = !empty($idUsuario);
 
             if (empty($nombre) || empty($apellido) || empty($identificacion) || empty($correo) || empty($fk_rol)) {
