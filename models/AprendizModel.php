@@ -38,19 +38,20 @@ class AprendizModel {
     /**
      * Inserta un nuevo registro en la tabla aprendiz asociando código RFID, ficha y usuario
      */
-    public static function crearAprendiz(?string $codigoRfid, int $fkFicha, int $fkUsuario): bool {
+    public static function crearAprendiz(?string $codigoRfid, int $fkFicha, int $fkUsuario, string $estado = 'Activo'): bool {
         try {
             $mysql = new MySQL();
             $mysql->conectarBD();
             $conexion = $mysql->getConexion();
 
             if ($conexion) {
-                $sql = "INSERT INTO aprendiz (codigo_rfid, fk_ficha, fk_usuario) VALUES (:rfid, :ficha, :usuario)";
+                $sql = "INSERT INTO aprendiz (codigo_rfid, fk_ficha, fk_usuario, estado) VALUES (:rfid, :ficha, :usuario, :estado)";
                 $stmt = $conexion->prepare($sql);
                 return $stmt->execute([
                     ':rfid'    => $codigoRfid,
                     ':ficha'   => $fkFicha,
-                    ':usuario' => $fkUsuario
+                    ':usuario' => $fkUsuario,
+                    ':estado'  => $estado
                 ]);
             }
         } catch (Exception $e) {
@@ -61,9 +62,9 @@ class AprendizModel {
     }
 
     /**
-     * Actualiza o crea los datos de un aprendiz (RFID y Ficha)
+     * Actualiza o crea los datos de un aprendiz (RFID, Ficha y Estado)
      */
-    public static function actualizarAprendiz(?string $codigoRfid, int $fkFicha, int $fkUsuario): bool {
+    public static function actualizarAprendiz(?string $codigoRfid, int $fkFicha, int $fkUsuario, string $estado = 'Activo'): bool {
         try {
             $mysql = new MySQL();
             $mysql->conectarBD();
@@ -72,15 +73,16 @@ class AprendizModel {
             if ($conexion) {
                 $check = (int) $conexion->query("SELECT COUNT(*) FROM aprendiz WHERE fk_usuario = " . (int)$fkUsuario)->fetchColumn();
                 if ($check > 0) {
-                    $sql = "UPDATE aprendiz SET codigo_rfid = :rfid, fk_ficha = :ficha WHERE fk_usuario = :usuario";
+                    $sql = "UPDATE aprendiz SET codigo_rfid = :rfid, fk_ficha = :ficha, estado = :estado WHERE fk_usuario = :usuario";
                 } else {
-                    $sql = "INSERT INTO aprendiz (codigo_rfid, fk_ficha, fk_usuario) VALUES (:rfid, :ficha, :usuario)";
+                    $sql = "INSERT INTO aprendiz (codigo_rfid, fk_ficha, fk_usuario, estado) VALUES (:rfid, :ficha, :usuario, :estado)";
                 }
                 $stmt = $conexion->prepare($sql);
                 return $stmt->execute([
                     ':rfid'    => $codigoRfid,
                     ':ficha'   => $fkFicha,
-                    ':usuario' => $fkUsuario
+                    ':usuario' => $fkUsuario,
+                    ':estado'  => $estado
                 ]);
             }
         } catch (Exception $e) {
@@ -100,7 +102,7 @@ class AprendizModel {
             $conexion = $mysql->getConexion();
 
             if ($conexion) {
-                $sql = "SELECT a.id_aprendiz, a.codigo_rfid, a.fk_ficha,
+                $sql = "SELECT a.id_aprendiz, a.codigo_rfid, a.fk_ficha, a.estado AS estado_aprendiz,
                                u.id_usuario, u.nombre, u.apellido, u.identificacion, u.telefono, u.nombre_usuario AS correo,
                                f.id_ficha AS numero_ficha, f.nombre_programa AS programa
                         FROM aprendiz a
@@ -121,7 +123,7 @@ class AprendizModel {
                         'correo'        => $datos['correo'],
                         'numero_ficha'  => $datos['numero_ficha'] ?? 'N/A',
                         'programa'      => $datos['programa'] ?? 'Sin programa',
-                        'estado'        => 'Activo'
+                        'estado'        => !empty($datos['estado_aprendiz']) ? $datos['estado_aprendiz'] : 'Activo'
                     ];
                 }
             }

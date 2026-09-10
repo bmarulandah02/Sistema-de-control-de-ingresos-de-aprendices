@@ -130,6 +130,19 @@ require __DIR__ . '/../../views/layouts/header.php';
                         <input type="text" inputmode="numeric" name="codigo_rfid" class="shadcn-input" placeholder="Ej. 0002252118" 
                                value="<?= htmlspecialchars($_POST['codigo_rfid'] ?? ($usuarioEditar['codigo_rfid'] ?? '')) ?>">
                     </div>
+
+                    <div>
+                        <label style="display:block; font-size:0.875rem; font-weight:500; margin-bottom:0.375rem;">Estado del Aprendiz</label>
+                        <?php 
+                            $estAprendiz = $_POST['estado_aprendiz'] ?? ($usuarioEditar['estado_aprendiz'] ?? 'Activo');
+                        ?>
+                        <select name="estado_aprendiz" class="shadcn-select">
+                            <option value="Activo" <?= ($estAprendiz === 'Activo') ? 'selected' : '' ?>>Activo</option>
+                            <option value="Aplazado" <?= ($estAprendiz === 'Aplazado') ? 'selected' : '' ?>>Aplazado</option>
+                            <option value="Suspendido" <?= ($estAprendiz === 'Suspendido') ? 'selected' : '' ?>>Suspendido</option>
+                            <option value="Retirado" <?= ($estAprendiz === 'Retirado') ? 'selected' : '' ?>>Retirado</option>
+                        </select>
+                    </div>
                 </div>
             </div>
 

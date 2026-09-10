@@ -58,6 +58,7 @@ class UsuarioController {
             $fk_rol         = (int) ($_POST['fk_rol'] ?? 0);
             $fk_ficha       = (int) ($_POST['fk_ficha'] ?? 0);
             $codigo_rfid    = (isset($_POST['codigo_rfid']) && trim($_POST['codigo_rfid']) !== '') ? trim($_POST['codigo_rfid']) : null;
+            $estadoAprendiz = trim($_POST['estado_aprendiz'] ?? 'Activo');
             $esEdicion      = !empty($idUsuario);
 
             if (empty($nombre) || empty($apellido) || empty($identificacion) || empty($correo) || empty($fk_rol)) {
@@ -87,13 +88,13 @@ class UsuarioController {
 
             if ($esEdicion) {
                 UsuarioModel::actualizarUsuario($idUsuario, $datosUsuario);
-                if ($fk_rol === 3 || $fk_rol === 2 && !empty($fk_ficha)) {
-                    AprendizModel::actualizarAprendiz($codigo_rfid, $fk_ficha, $idUsuario);
+                if (($fk_rol === 3 || $fk_rol === 2) && !empty($fk_ficha)) {
+                    AprendizModel::actualizarAprendiz($codigo_rfid, $fk_ficha, $idUsuario, $estadoAprendiz);
                 }
             } else {
                 $idInsertado = UsuarioModel::crearUsuario($datosUsuario);
                 if ($idInsertado && (!empty($fk_ficha))) {
-                    AprendizModel::crearAprendiz($codigo_rfid, $fk_ficha, $idInsertado);
+                    AprendizModel::crearAprendiz($codigo_rfid, $fk_ficha, $idInsertado, $estadoAprendiz);
                 }
             }
 

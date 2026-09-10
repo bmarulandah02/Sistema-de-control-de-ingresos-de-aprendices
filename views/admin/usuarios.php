@@ -75,6 +75,16 @@ require __DIR__ . '/../../views/layouts/header.php';
                             <span class="shadcn-badge badge-secondary" title="Ficha">
                                 Ficha: <?= htmlspecialchars($u['numero_ficha'] ?? 'N/A') ?>
                             </span>
+                            <?php 
+                                $st = $u['estado_aprendiz'] ?? 'Activo';
+                                $stBadge = 'badge-puntual';
+                                if ($st === 'Aplazado') $stBadge = 'badge-retardo';
+                                elseif ($st === 'Suspendido') $stBadge = 'badge-secondary';
+                                elseif ($st === 'Retirado') $stBadge = 'badge-destructive';
+                            ?>
+                            <span class="shadcn-badge <?= $stBadge ?>" title="Estado del Aprendiz">
+                                <i class="bi bi-dot"></i><?= htmlspecialchars($st) ?>
+                            </span>
                             <?php if (!empty($u['codigo_rfid'])): ?>
                             <span class="shadcn-badge badge-outline" title="Código RFID Tag">
                                 RFID: <?= htmlspecialchars($u['codigo_rfid']) ?>

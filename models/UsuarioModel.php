@@ -199,7 +199,7 @@ class UsuarioModel {
 
             if ($conexion) {
                 $sql = "SELECT u.id_usuario, u.nombre_usuario, u.nombre, u.apellido, u.identificacion, u.telefono,
-                               u.fk_rol, r.nombre_rol, a.codigo_rfid, a.fk_ficha
+                               u.fk_rol, r.nombre_rol, a.codigo_rfid, a.fk_ficha, a.estado AS estado_aprendiz
                         FROM usuario u
                         LEFT JOIN rol r ON u.fk_rol = r.id_rol
                         LEFT JOIN aprendiz a ON a.fk_usuario = u.id_usuario
@@ -221,7 +221,8 @@ class UsuarioModel {
                         'fk_rol'         => $row['fk_rol'],
                         'rol'            => $row['nombre_rol'] ?? 'Administrador',
                         'codigo_rfid'    => $row['codigo_rfid'],
-                        'fk_ficha'       => $row['fk_ficha']
+                        'fk_ficha'       => $row['fk_ficha'],
+                        'estado_aprendiz' => !empty($row['estado_aprendiz']) ? $row['estado_aprendiz'] : 'Activo'
                     ];
                 }
             }
@@ -255,7 +256,7 @@ class UsuarioModel {
                 $whereSql = !empty($where) ? "WHERE " . implode(" AND ", $where) : "";
 
                 $sql = "SELECT u.id_usuario, u.nombre_usuario, u.nombre, u.apellido, u.identificacion, u.telefono,
-                               u.fk_rol, r.nombre_rol, a.codigo_rfid, f.id_ficha AS numero_ficha, f.nombre_programa
+                               u.fk_rol, r.nombre_rol, a.codigo_rfid, a.estado AS estado_aprendiz, f.id_ficha AS numero_ficha, f.nombre_programa
                         FROM usuario u
                         LEFT JOIN rol r ON u.fk_rol = r.id_rol
                         LEFT JOIN aprendiz a ON a.fk_usuario = u.id_usuario
@@ -277,6 +278,7 @@ class UsuarioModel {
                         'fk_rol'         => $row['fk_rol'],
                         'rol'            => $row['nombre_rol'] ?? 'Administrador',
                         'codigo_rfid'    => $row['codigo_rfid'] ?? null,
+                        'estado_aprendiz' => !empty($row['estado_aprendiz']) ? $row['estado_aprendiz'] : 'Activo',
                         'numero_ficha'   => $row['numero_ficha'] ?? null,
                         'programa'       => $row['nombre_programa'] ?? null
                     ];

@@ -27,8 +27,18 @@ require __DIR__ . '/../layouts/header.php';
             <h3 style="font-size:1.1rem; font-weight:700; margin:0;"><?= htmlspecialchars($_SESSION['nombre'] ?? 'Usuario') ?></h3>
             <div style="font-size:0.875rem; color:var(--muted-foreground); margin-top:0.25rem;"><?= htmlspecialchars($_SESSION['correo'] ?? '') ?></div>
 
-            <div style="margin-top:0.75rem;">
+            <div style="margin-top:0.75rem; display:flex; justify-content:center; gap:0.375rem; align-items:center;">
                 <span class="shadcn-badge badge-activo"><i class="bi bi-shield-check me-1"></i><?= htmlspecialchars($_SESSION['rol'] ?? 'Rol') ?></span>
+                <?php if (isset($aprendiz)): ?>
+                    <?php 
+                        $estAp = $aprendiz['estado'] ?? 'Activo';
+                        $stBadgeAp = 'badge-puntual';
+                        if ($estAp === 'Aplazado') $stBadgeAp = 'badge-retardo';
+                        elseif ($estAp === 'Suspendido') $stBadgeAp = 'badge-secondary';
+                        elseif ($estAp === 'Retirado') $stBadgeAp = 'badge-destructive';
+                    ?>
+                    <span class="shadcn-badge <?= $stBadgeAp ?>"><i class="bi bi-dot"></i><?= htmlspecialchars($estAp) ?></span>
+                <?php endif; ?>
             </div>
 
             <?php if (isset($aprendiz)): ?>
