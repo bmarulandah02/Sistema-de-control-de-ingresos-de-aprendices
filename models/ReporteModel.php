@@ -54,12 +54,15 @@ class ReporteModel {
                 $stmtAprendices->execute($paramsAprendiz);
                 $aprendices = $stmtAprendices->fetchAll(PDO::FETCH_ASSOC);
 
-                // 2. Generar lista de días en el rango (excluyendo sábados y domingos si es diurno/normal)
+                // 2. Generar lista de días en el rango (excluyendo domingos )
                 $periodoFechas = [];
                 $cursor = new DateTime($fechaInicio);
                 $fin    = new DateTime($fechaFin);
                 while ($cursor <= $fin) {
-                    $periodoFechas[] = $cursor->format('Y-m-d');
+                    // ISO-8601: 7 representa el Domingo (día de descanso)
+                    if ($cursor->format('N') != 7) {
+                        $periodoFechas[] = $cursor->format('Y-m-d');
+                    }
                     $cursor->modify('+1 day');
                 }
 
