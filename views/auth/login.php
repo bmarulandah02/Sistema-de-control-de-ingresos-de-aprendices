@@ -19,7 +19,7 @@
         <p class="auth-subtitle">Ingresa tus credenciales para acceder a la plataforma</p>
     </div>
 
-    <!-- 🟢 EDITAR AQUÍ: Muestra mensaje de error si las credenciales fallan -->
+    <!--  Muestra mensaje de error si las credenciales fallan -->
     <?php if (!empty($error)): ?>
     <div style="background-color:rgba(239,68,68,0.1); color:#dc2626; padding:0.75rem 1rem; border-radius:var(--radius); font-size:0.875rem; margin-bottom:1.25rem; border:1px solid rgba(239,68,68,0.2); display:flex; align-items:center; gap:0.5rem;">
         <i class="bi bi-exclamation-circle-fill"></i>
@@ -27,7 +27,7 @@
     </div>
     <?php endif; ?>
 
-    <!-- 🟢 EDITAR AQUÍ: Formulario de inicio de sesión -->
+    <!-- Formulario de inicio de sesión -->
     <form method="POST" action="index.php?action=login">
         <div style="margin-bottom: 1.25rem;">
             <label style="display:block; font-size:0.875rem; font-weight:500; margin-bottom:0.375rem;">Usuario, correo o identificación</label>
