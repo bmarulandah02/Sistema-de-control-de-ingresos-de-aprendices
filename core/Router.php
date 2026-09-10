@@ -26,7 +26,17 @@ class Router {
             return;
         }
 
-        // 2. Manejo del Inicio de Sesión
+        // 2. Manejo de Errores explícitos 403 y 404
+        if ($action === '403') {
+            require __DIR__ . '/../views/errors/403.php';
+            return;
+        }
+        if ($action === '404') {
+            require __DIR__ . '/../views/errors/404.php';
+            return;
+        }
+
+        // 3. Manejo del Inicio de Sesión
         if ($action === 'login') {
             $authController = new AuthController();
             if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -42,32 +52,59 @@ class Router {
             }
         }
 
-        // 3. Protección de Rutas: Si no está autenticado, fuerza la pantalla de Login
+        // 4. Protección de Rutas: Si no está autenticado, fuerza la pantalla de Login
         if (!$estaAutenticado) {
             $authController = new AuthController();
             $authController->mostrarLogin();
             return;
         }
 
-        // 4. Determinar vista por defecto y restringir acceso a Aprendices
-        if (($_SESSION['rol'] ?? '') === 'Aprendiz') {
-            $rutasProhibidasAprendiz = ['dashboard', 'asistencia', 'usuarios', 'usuario-crear', 'usuario-editar', 'fichas', 'ficha-crear', 'ficha-editar', 'excusas-admin', 'reportes','cerrar-jornada'];
-            if (empty($action) || in_array($action, $rutasProhibidasAprendiz)) {
+        // 5. Validación de Rutas Existentes (404)
+        $rutasValidas = [
+            'login', 'logout', 'dashboard', 'usuarios', 'usuario-crear', 'usuario-editar',
+            'usuario-actualizar', 'usuario-eliminar', 'asistencia', 'registrar-ingreso',
+            'cerrar-jornada', 'historial', 'fichas', 'ficha-crear', 'ficha-editar',
+            'ficha-guardar', 'ficha-eliminar', 'reportes', 'excusas-admin', 'reporte-pdf',
+            'reporte-excel', 'mi-perfil', 'mi-perfil-guardar', 'mis-excusas', '403', '404'
+        ];
+
+        if (!empty($action) && !in_array($action, $rutasValidas)) {
+            require __DIR__ . '/../views/errors/404.php';
+            return;
+        }
+
+        // 6. Restricciones por Rol (403 Prohibido)
+        $rolSesion = $_SESSION['rol'] ?? '';
+
+        if ($rolSesion === 'Aprendiz') {
+            $rutasPermitidasAprendiz = ['mi-perfil', 'mi-perfil-guardar', 'mis-excusas', 'logout'];
+            if (empty($action)) {
                 $action = 'mi-perfil';
+            } elseif (!in_array($action, $rutasPermitidasAprendiz)) {
+                require __DIR__ . '/../views/errors/403.php';
+                return;
+            }
+        } elseif ($rolSesion === 'Instructor') {
+            $rutasSoloAdmin = ['usuario-crear', 'usuario-editar', 'usuario-actualizar', 'usuario-eliminar', 'ficha-crear', 'ficha-editar', 'ficha-guardar', 'ficha-eliminar'];
+            if (in_array($action, $rutasSoloAdmin)) {
+                require __DIR__ . '/../views/errors/403.php';
+                return;
+            }
+            if (empty($action)) {
+                $action = 'dashboard';
             }
         } else if (empty($action)) {
             $action = 'dashboard';
         }
 
         // Saneo y permisos por Rol
-        $rolSesion          = $_SESSION['rol'] ?? '';
         $usuarioIdSesion    = filter_var($_SESSION['usuario_id'] ?? 0, FILTER_VALIDATE_INT);
         $usuarioIdSesion    = ($usuarioIdSesion !== false && $usuarioIdSesion > 0) ? $usuarioIdSesion : 0;
 
         $fichaSeleccionada  = !empty($_GET['ficha_id']) ? (int)$_GET['ficha_id'] : null;
         $instructorIdFiltro = ($rolSesion === 'Instructor') ? $usuarioIdSesion : null;
 
-        // 5. Carga de datos desde la Base de Datos para las vistas
+        // 7. Carga de datos desde la Base de Datos para las vistas
         $statsHoy      = IngresoModel::obtenerEstadisticasHoy($fichaSeleccionada, $instructorIdFiltro);
         $statsAprendiz = ['activos' => AprendizModel::contarActivos($fichaSeleccionada, $instructorIdFiltro)];
         $ultimos       = IngresoModel::obtenerUltimosMovimientos(8, $fichaSeleccionada, $instructorIdFiltro);
@@ -91,41 +128,35 @@ class Router {
         $registros = IngresoModel::obtenerHistorialConFiltros($filtros);
         $excusas   = ExcusaModel::obtenerTodas();
 
-$ficha       = null;
-$mensaje     = null;
-//guardo el mensaje y lo elimino para queluego no se reputa cada que recargue la pantalla
+        $ficha   = null;
+        $mensaje = null;
 
-if(isset($_SESSION['mensaje'])){
-    $mensaje=$_SESSION['mensaje'];
-    unset($_SESSION['mensaje']);
-}
+        if (isset($_SESSION['mensaje'])) {
+            $mensaje = $_SESSION['mensaje'];
+            unset($_SESSION['mensaje']);
+        }
 
-// Saneo: fuerzo a entero el id de sesión antes de usarlo en cualquier consulta
-$usuarioIdSesion = filter_var($_SESSION['usuario_id'] ?? 0, FILTER_VALIDATE_INT);
-$usuarioIdSesion = ($usuarioIdSesion !== false && $usuarioIdSesion > 0) ? $usuarioIdSesion : 0;
+        $datosAprendiz = AprendizModel::obtenerPorUsuarioId($usuarioIdSesion);
+        $aprendiz      = $datosAprendiz ?? [
+            'nombre'       => htmlspecialchars($_SESSION['nombre'] ?? 'Usuario', ENT_QUOTES, 'UTF-8'),
+            'documento'    => '—',
+            'estado'       => 'Activo',
+            'numero_ficha' => '—',
+            'programa'     => '—',
+            'correo'       => htmlspecialchars($_SESSION['correo'] ?? '—', ENT_QUOTES, 'UTF-8'),
+            'telefono'     => '—'
+        ];
 
-$datosAprendiz = AprendizModel::obtenerPorUsuarioId($usuarioIdSesion);
-$aprendiz      = $datosAprendiz ?? [
-    'nombre'       => htmlspecialchars($_SESSION['nombre'] ?? 'Usuario', ENT_QUOTES, 'UTF-8'),
-    'documento'    => '—',
-    'estado'       => 'Activo',
-    'numero_ficha' => '—',
-    'programa'     => '—',
-    'correo'       => htmlspecialchars($_SESSION['correo'] ?? '—', ENT_QUOTES, 'UTF-8'),
-    'telefono'     => '—'
-];
+        if ($datosAprendiz && isset($datosAprendiz['id_aprendiz'])) {
+            $idAprendizSesion = filter_var($datosAprendiz['id_aprendiz'], FILTER_VALIDATE_INT);
+            $asistencias = ($idAprendizSesion !== false && $idAprendizSesion > 0)
+                ? IngresoModel::HistorialAprendiz($idAprendizSesion)
+                : [];
+        } else {
+            $asistencias = $registros;
+        }
 
-// Si el usuario logueado es un aprendiz, su tabla de "Mis Asistencias" debe ser SOLO la suya.
-// Si es admin/instructor viendo el historial general, se usa la lista completa.
-if ($datosAprendiz && isset($datosAprendiz['id_aprendiz'])) {
-    $idAprendizSesion = filter_var($datosAprendiz['id_aprendiz'], FILTER_VALIDATE_INT);
-    $asistencias = ($idAprendizSesion !== false && $idAprendizSesion > 0)
-        ? IngresoModel::HistorialAprendiz($idAprendizSesion)
-        : [];
-} else {
-    $asistencias = $registros;
-}
-        // 6. Despacho de Vistas
+        // 8. Despacho de Vistas
         switch ($action) {
             case 'usuarios':
                 (new UsuarioController())->index();
@@ -148,12 +179,12 @@ if ($datosAprendiz && isset($datosAprendiz['id_aprendiz'])) {
             case 'asistencia':
                 require __DIR__ . '/../views/asistencia/registro.php';
                 break;
-                case'registrar-ingreso':
-                    (new AsistenciaController())->lecturaCodigoRfid();
-                    break;
-                    case'cerrar-jornada':
-                        (new AsistenciaController())->cerrarJornada();
-                        break;
+            case 'registrar-ingreso':
+                (new AsistenciaController())->lecturaCodigoRfid();
+                break;
+            case 'cerrar-jornada':
+                (new AsistenciaController())->cerrarJornada();
+                break;
             case 'historial':
                 require __DIR__ . '/../views/asistencia/historial.php';
                 break;
@@ -189,8 +220,14 @@ if ($datosAprendiz && isset($datosAprendiz['id_aprendiz'])) {
                 require __DIR__ . '/../views/aprendiz/excusas.php';
                 break;
             case 'dashboard':
-            default:
                 require __DIR__ . '/../views/admin/dashboard.php';
+                break;
+            case '403':
+                require __DIR__ . '/../views/errors/403.php';
+                break;
+            case '404':
+            default:
+                require __DIR__ . '/../views/errors/404.php';
                 break;
         }
     }
