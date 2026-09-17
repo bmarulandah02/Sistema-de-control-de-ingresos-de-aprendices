@@ -56,7 +56,10 @@ class HorarioModel {
     /**
      * Obtiene el listado de fichas registradas en la base de datos
      */
-    public static function obtenerTodasFichas(): array {
+    /**
+     * Obtiene el listado de fichas registradas en la base de datos con filtros dinámicos
+     */
+    public static function obtenerTodasFichas(array $filtros = []): array {
         $fichas = [];
 
         try {
@@ -67,27 +70,43 @@ class HorarioModel {
             if ($conexion) {
                 self::asegurarColumnasFechas($conexion);
 
+                $where = [];
+                $params = [];
+
+                if (!empty($filtros['q'])) {
+                    $where[] = "(f.id_ficha LIKE :q OR f.nombre_programa LIKE :q OR u.nombre LIKE :q OR u.apellido LIKE :q OR CONCAT(u.nombre, ' ', u.apellido) LIKE :q OR u.identificacion LIKE :q)";
+                    $params[':q'] = '%' . trim($filtros['q']) . '%';
+                }
+
+                $whereSql = !empty($where) ? "WHERE " . implode(" AND ", $where) : "";
+
                 $sql = "SELECT f.id_ficha, f.nombre_programa, f.jornada, f.fk_usuario AS instructor_id,
                                f.fecha_inicio, f.fecha_fin, f.estado,
                                CONCAT(u.nombre, ' ', u.apellido) AS instructor,
+                               u.identificacion AS instructor_identificacion,
+                               u.nombre_usuario AS instructor_correo,
                                (SELECT COUNT(*) FROM aprendiz a WHERE a.fk_ficha = f.id_ficha) AS total_aprendices
                         FROM ficha f
                         LEFT JOIN usuario u ON f.fk_usuario = u.id_usuario
+                        {$whereSql}
                         ORDER BY f.id_ficha DESC";
 
-                $stmt = $conexion->query($sql);
+                $stmt = $conexion->prepare($sql);
+                $stmt->execute($params);
                 while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
                     $fichas[] = [
-                        'id'               => $row['id_ficha'],
-                        'numero_ficha'     => $row['id_ficha'],
-                        'programa'         => $row['nombre_programa'],
-                        'jornada'          => $row['jornada'] ?: 'Diurna',
-                        'instructor_id'    => $row['instructor_id'],
-                        'instructor'       => !empty(trim($row['instructor'])) ? $row['instructor'] : 'Por asignar',
-                        'total_aprendices' => (int) $row['total_aprendices'],
-                        'fecha_inicio'     => (!empty($row['fecha_inicio']) && $row['fecha_inicio'] !== '0000-00-00') ? $row['fecha_inicio'] : '—',
-                        'fecha_fin'        => (!empty($row['fecha_fin']) && $row['fecha_fin'] !== '0000-00-00') ? $row['fecha_fin'] : '—',
-                        'estado'           => $row['estado'] ?: 'Activo'
+                        'id'                       => $row['id_ficha'],
+                        'numero_ficha'             => $row['id_ficha'],
+                        'programa'                 => $row['nombre_programa'],
+                        'jornada'                  => $row['jornada'] ?: 'Diurna',
+                        'instructor_id'            => $row['instructor_id'],
+                        'instructor'               => !empty(trim($row['instructor'])) ? $row['instructor'] : 'Por asignar',
+                        'instructor_identificacion'=> $row['instructor_identificacion'] ?? '—',
+                        'instructor_correo'        => $row['instructor_correo'] ?? '—',
+                        'total_aprendices'         => (int) $row['total_aprendices'],
+                        'fecha_inicio'             => (!empty($row['fecha_inicio']) && $row['fecha_inicio'] !== '0000-00-00') ? $row['fecha_inicio'] : '—',
+                        'fecha_fin'                => (!empty($row['fecha_fin']) && $row['fecha_fin'] !== '0000-00-00') ? $row['fecha_fin'] : '—',
+                        'estado'                   => $row['estado'] ?: 'Activo'
                     ];
                 }
             }
@@ -101,7 +120,7 @@ class HorarioModel {
     /**
      * Obtiene el listado de fichas pertenecientes a un instructor específico
      */
-    public static function obtenerFichasPorInstructor(int $instructorId): array {
+    public static function obtenerFichasPorInstructor(int $instructorId, array $filtros = []): array {
         $fichas = [];
         try {
             $mysql = new MySQL();
@@ -111,29 +130,43 @@ class HorarioModel {
             if ($conexion) {
                 self::asegurarColumnasFechas($conexion);
 
+                $where = ["f.fk_usuario = :instructorId"];
+                $params = [':instructorId' => $instructorId];
+
+                if (!empty($filtros['q'])) {
+                    $where[] = "(f.id_ficha LIKE :q OR f.nombre_programa LIKE :q)";
+                    $params[':q'] = '%' . trim($filtros['q']) . '%';
+                }
+
+                $whereSql = "WHERE " . implode(" AND ", $where);
+
                 $sql = "SELECT f.id_ficha, f.nombre_programa, f.jornada, f.fk_usuario AS instructor_id,
                                f.fecha_inicio, f.fecha_fin, f.estado,
                                CONCAT(u.nombre, ' ', u.apellido) AS instructor,
+                               u.identificacion AS instructor_identificacion,
+                               u.nombre_usuario AS instructor_correo,
                                (SELECT COUNT(*) FROM aprendiz a WHERE a.fk_ficha = f.id_ficha) AS total_aprendices
                         FROM ficha f
                         LEFT JOIN usuario u ON f.fk_usuario = u.id_usuario
-                        WHERE f.fk_usuario = :instructorId
+                        {$whereSql}
                         ORDER BY f.id_ficha DESC";
 
                 $stmt = $conexion->prepare($sql);
-                $stmt->execute([':instructorId' => $instructorId]);
+                $stmt->execute($params);
                 while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
                     $fichas[] = [
-                        'id'               => $row['id_ficha'],
-                        'numero_ficha'     => $row['id_ficha'],
-                        'programa'         => $row['nombre_programa'],
-                        'jornada'          => $row['jornada'] ?: 'Diurna',
-                        'instructor_id'    => $row['instructor_id'],
-                        'instructor'       => !empty(trim($row['instructor'])) ? $row['instructor'] : 'Por asignar',
-                        'total_aprendices' => (int) $row['total_aprendices'],
-                        'fecha_inicio'     => (!empty($row['fecha_inicio']) && $row['fecha_inicio'] !== '0000-00-00') ? $row['fecha_inicio'] : '—',
-                        'fecha_fin'        => (!empty($row['fecha_fin']) && $row['fecha_fin'] !== '0000-00-00') ? $row['fecha_fin'] : '—',
-                        'estado'           => $row['estado'] ?: 'Activo'
+                        'id'                       => $row['id_ficha'],
+                        'numero_ficha'             => $row['id_ficha'],
+                        'programa'                 => $row['nombre_programa'],
+                        'jornada'                  => $row['jornada'] ?: 'Diurna',
+                        'instructor_id'            => $row['instructor_id'],
+                        'instructor'               => !empty(trim($row['instructor'])) ? $row['instructor'] : 'Por asignar',
+                        'instructor_identificacion'=> $row['instructor_identificacion'] ?? '—',
+                        'instructor_correo'        => $row['instructor_correo'] ?? '—',
+                        'total_aprendices'         => (int) $row['total_aprendices'],
+                        'fecha_inicio'             => (!empty($row['fecha_inicio']) && $row['fecha_inicio'] !== '0000-00-00') ? $row['fecha_inicio'] : '—',
+                        'fecha_fin'                => (!empty($row['fecha_fin']) && $row['fecha_fin'] !== '0000-00-00') ? $row['fecha_fin'] : '—',
+                        'estado'                   => $row['estado'] ?: 'Activo'
                     ];
                 }
             }

@@ -18,6 +18,34 @@ require __DIR__ . '/../../views/layouts/header.php';
     <?php endif; ?>
 </div>
 
+<!-- ── BARRA DE FILTROS ────────────────────────────────────── -->
+<div class="shadcn-card" style="margin-bottom: 1.5rem; padding: 1.25rem;">
+    <form method="GET" action="index.php" style="display:flex; flex-wrap:wrap; gap:1rem; align-items:flex-end;">
+        <input type="hidden" name="action" value="fichas">
+
+        <!-- Buscar -->
+        <div style="flex:1; min-width:240px;">
+            <label style="display:block; font-size:0.8125rem; font-weight:500; margin-bottom:0.375rem; color:var(--muted-foreground);">
+                <i class="bi bi-search me-1"></i>Buscar Ficha, Programa o Instructor
+            </label>
+            <input type="text" name="q" class="shadcn-input" placeholder="Ej: 2554321, ADSO, Carlos..." 
+                   value="<?= htmlspecialchars($_GET['q'] ?? '') ?>">
+        </div>
+
+        <!-- Botones -->
+        <div style="display:flex; gap:0.5rem;">
+            <button type="submit" class="btn-shadcn btn-shadcn-primary">
+                <i class="bi bi-funnel-fill me-1"></i>Filtrar
+            </button>
+            <?php if (!empty($_GET['q'])): ?>
+                <a href="index.php?action=fichas" class="btn-shadcn btn-shadcn-outline" title="Limpiar filtro">
+                    <i class="bi bi-x-circle me-1"></i>Limpiar
+                </a>
+            <?php endif; ?>
+        </div>
+    </form>
+</div>
+
 <!-- ── TABLA DE FICHAS ───────────────────────────────────────── -->
 <div class="shadcn-card">
     <div class="card-header-shadcn">
@@ -46,7 +74,7 @@ require __DIR__ . '/../../views/layouts/header.php';
                 <?php if (empty($fichas)): ?>
                 <tr>
                     <td colspan="9" style="text-align:center; padding:2.5rem; color:var(--muted-foreground);">
-                        No existen fichas registradas aún.
+                        No se encontraron fichas registradas con los criterios ingresados.
                     </td>
                 </tr>
                 <?php else: ?>
@@ -55,7 +83,23 @@ require __DIR__ . '/../../views/layouts/header.php';
                     <td style="font-weight:700; color:var(--sena-brand);"><?= htmlspecialchars($f['numero_ficha']) ?></td>
                     <td><?= htmlspecialchars($f['programa']) ?></td>
                     <td><span class="shadcn-badge badge-outline"><?= htmlspecialchars($f['jornada'] ?? 'Diurna') ?></span></td>
-                    <td><?= htmlspecialchars($f['instructor'] ?? '—') ?></td>
+                    <td>
+                        <?php if (!empty($f['instructor'])): ?>
+                            <div style="font-weight: 600; line-height: 1.2;"><?= htmlspecialchars($f['instructor']) ?></div>
+                            <?php if (!empty($f['instructor_identificacion']) || !empty($f['instructor_correo'])): ?>
+                                <div style="font-size:0.75rem; color:var(--muted-foreground); margin-top:2px;">
+                                    <?php if (!empty($f['instructor_identificacion'])): ?>
+                                        <span><i class="bi bi-card-text me-1"></i><?= htmlspecialchars($f['instructor_identificacion']) ?></span>
+                                    <?php endif; ?>
+                                    <?php if (!empty($f['instructor_correo'])): ?>
+                                        <span style="margin-left: 6px;"><i class="bi bi-envelope me-1"></i><?= htmlspecialchars($f['instructor_correo']) ?></span>
+                                    <?php endif; ?>
+                                </div>
+                            <?php endif; ?>
+                        <?php else: ?>
+                            <span class="shadcn-badge badge-outline" style="color:var(--muted-foreground);">Sin instructor</span>
+                        <?php endif; ?>
+                    </td>
                     <td>
                         <span class="shadcn-badge badge-secondary">
                             <?= (int) $f['total_aprendices'] ?> aprendices

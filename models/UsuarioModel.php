@@ -233,9 +233,9 @@ class UsuarioModel {
     }
 
     /**
-     * Obtiene el listado de usuarios filtrando aprendices por instructor si el rol en sesión es Instructor
+     * Obtiene el listado de usuarios filtrando aprendices por instructor si el rol en sesión es Instructor, y aplicando filtros dinámicos
      */
-    public static function obtenerTodosConRoles(?string $rolSesion = null, ?int $usuarioIdSesion = null): array {
+    public static function obtenerTodosConRoles(?string $rolSesion = null, ?int $usuarioIdSesion = null, array $filtros = []): array {
         $usuarios = [];
         try {
             $mysql = new MySQL();
@@ -251,6 +251,30 @@ class UsuarioModel {
                     $where[] = "( (r.nombre_rol = 'Aprendiz' AND f.fk_usuario = :instId) OR u.id_usuario = :instSelf )";
                     $params[':instId']   = $usuarioIdSesion;
                     $params[':instSelf'] = $usuarioIdSesion;
+                }
+
+                // Filtro por texto de búsqueda (nombre, apellido, identificacion, correo, rfid)
+                if (!empty($filtros['q'])) {
+                    $where[] = "(u.nombre LIKE :q OR u.apellido LIKE :q OR CONCAT(u.nombre, ' ', u.apellido) LIKE :q OR u.identificacion LIKE :q OR u.nombre_usuario LIKE :q OR a.codigo_rfid LIKE :q)";
+                    $params[':q'] = '%' . trim($filtros['q']) . '%';
+                }
+
+                // Filtro por Ficha
+                if (!empty($filtros['ficha_id'])) {
+                    $where[] = "f.id_ficha = :fichaId";
+                    $params[':fichaId'] = (int)$filtros['ficha_id'];
+                }
+
+                // Filtro por Rol
+                if (!empty($filtros['rol'])) {
+                    $where[] = "r.nombre_rol = :nombreRol";
+                    $params[':nombreRol'] = trim($filtros['rol']);
+                }
+
+                // Filtro por Estado de Aprendiz
+                if (!empty($filtros['estado'])) {
+                    $where[] = "a.estado = :estadoAprendiz";
+                    $params[':estadoAprendiz'] = trim($filtros['estado']);
                 }
 
                 $whereSql = !empty($where) ? "WHERE " . implode(" AND ", $where) : "";

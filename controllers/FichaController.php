@@ -14,10 +14,14 @@ class FichaController {
         $rolSesion       = $_SESSION['rol'] ?? '';
         $usuarioIdSesion = (int) ($_SESSION['usuario_id'] ?? 0);
 
+        $filtros = [
+            'q' => trim($_GET['q'] ?? '')
+        ];
+
         if ($rolSesion === 'Instructor') {
-            $fichas = HorarioModel::obtenerFichasPorInstructor($usuarioIdSesion);
+            $fichas = HorarioModel::obtenerFichasPorInstructor($usuarioIdSesion, $filtros);
         } else {
-            $fichas = HorarioModel::obtenerTodasFichas();
+            $fichas = HorarioModel::obtenerTodasFichas($filtros);
         }
 
         require __DIR__ . '/../views/admin/fichas.php';

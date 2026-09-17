@@ -25,6 +25,81 @@ require __DIR__ . '/../../views/layouts/header.php';
 </div>
 <?php endif; ?>
 
+<!-- ── BARRA DE FILTROS DE BÚSQUEDA Y SELECCIÓN DE FICHA ──────────────── -->
+<div class="shadcn-card mb-4" style="margin-bottom: 1.5rem;">
+    <form method="GET" action="index.php" style="padding: 1.25rem;">
+        <input type="hidden" name="action" value="usuarios">
+        
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; align-items: end;">
+            <!-- Búsqueda General por Texto -->
+            <div>
+                <label style="display:block; font-size:0.8125rem; font-weight:600; margin-bottom:0.35rem; color:var(--muted-foreground);">
+                    <i class="bi bi-search me-1"></i>Buscar Usuario / Aprendiz
+                </label>
+                <input type="text" name="q" class="shadcn-input" placeholder="Nombre, cédula, correo o RFID..." 
+                       value="<?= htmlspecialchars($filtros['q'] ?? '') ?>">
+            </div>
+
+            <!-- Filtro por Ficha de Formación -->
+            <div>
+                <label style="display:block; font-size:0.8125rem; font-weight:600; margin-bottom:0.35rem; color:var(--muted-foreground);">
+                    <i class="bi bi-journal-bookmark me-1"></i>Ficha de Formación
+                </label>
+                <select name="ficha_id" class="shadcn-select">
+                    <option value="">Todas las Fichas</option>
+                    <?php if (!empty($fichas)): ?>
+                        <?php foreach ($fichas as $f): ?>
+                            <option value="<?= $f['id'] ?>" <?= (($filtros['ficha_id'] ?? null) == $f['id']) ? 'selected' : '' ?>>
+                                Ficha <?= htmlspecialchars($f['numero_ficha']) ?> — <?= htmlspecialchars($f['programa']) ?>
+                            </option>
+                        <?php endforeach; ?>
+                    <?php endif; ?>
+                </select>
+            </div>
+
+            <!-- Filtro por Rol -->
+            <div>
+                <label style="display:block; font-size:0.8125rem; font-weight:600; margin-bottom:0.35rem; color:var(--muted-foreground);">
+                    <i class="bi bi-shield-lock me-1"></i>Rol
+                </label>
+                <select name="rol" class="shadcn-select">
+                    <option value="">Todos los Roles</option>
+                    <option value="Administrador" <?= (($filtros['rol'] ?? '') === 'Administrador') ? 'selected' : '' ?>>Administrador</option>
+                    <option value="Instructor" <?= (($filtros['rol'] ?? '') === 'Instructor') ? 'selected' : '' ?>>Instructor</option>
+                    <option value="Aprendiz" <?= (($filtros['rol'] ?? '') === 'Aprendiz') ? 'selected' : '' ?>>Aprendiz</option>
+                </select>
+            </div>
+
+            <!-- Filtro por Estado del Aprendiz -->
+            <div>
+                <label style="display:block; font-size:0.8125rem; font-weight:600; margin-bottom:0.35rem; color:var(--muted-foreground);">
+                    <i class="bi bi-person-badge me-1"></i>Estado del Aprendiz
+                </label>
+                <select name="estado" class="shadcn-select">
+                    <option value="">Todos los Estados</option>
+                    <option value="Activo" <?= (($filtros['estado'] ?? '') === 'Activo') ? 'selected' : '' ?>>Activo</option>
+                    <option value="Aplazado" <?= (($filtros['estado'] ?? '') === 'Aplazado') ? 'selected' : '' ?>>Aplazado</option>
+                    <option value="Suspendido" <?= (($filtros['estado'] ?? '') === 'Suspendido') ? 'selected' : '' ?>>Suspendido</option>
+                    <option value="Retirado" <?= (($filtros['estado'] ?? '') === 'Retirado') ? 'selected' : '' ?>>Retirado</option>
+                </select>
+            </div>
+
+            <!-- Botones de Acción -->
+            <div style="display: flex; gap: 0.5rem;">
+                <button type="submit" class="btn-shadcn btn-shadcn-primary" style="flex:1;">
+                    <i class="bi bi-funnel-fill"></i>
+                    <span>Filtrar</span>
+                </button>
+                <?php if (!empty($filtros['q']) || !empty($filtros['ficha_id']) || !empty($filtros['rol']) || !empty($filtros['estado'])): ?>
+                <a href="index.php?action=usuarios" class="btn-shadcn btn-shadcn-outline" title="Limpiar Filtros">
+                    <i class="bi bi-x-lg"></i>
+                </a>
+                <?php endif; ?>
+            </div>
+        </div>
+    </form>
+</div>
+
 <!-- ── TABLA DE USUARIOS ────────────────────── -->
 <div class="shadcn-card">
     <div class="card-header-shadcn">

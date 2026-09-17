@@ -15,7 +15,22 @@ class UsuarioController {
     public function index(): void {
         $rolSesion       = $_SESSION['rol'] ?? null;
         $usuarioIdSesion = (int) ($_SESSION['usuario_id'] ?? 0);
-        $usuarios        = UsuarioModel::obtenerTodosConRoles($rolSesion, $usuarioIdSesion);
+
+        $filtros = [
+            'q'        => trim($_GET['q'] ?? ''),
+            'ficha_id' => !empty($_GET['ficha_id']) ? (int)$_GET['ficha_id'] : null,
+            'rol'      => trim($_GET['rol'] ?? ''),
+            'estado'   => trim($_GET['estado'] ?? '')
+        ];
+
+        $usuarios = UsuarioModel::obtenerTodosConRoles($rolSesion, $usuarioIdSesion, $filtros);
+
+        if ($rolSesion === 'Instructor') {
+            $fichas = HorarioModel::obtenerFichasPorInstructor($usuarioIdSesion);
+        } else {
+            $fichas = HorarioModel::obtenerTodasFichas();
+        }
+
         require __DIR__ . '/../views/admin/usuarios.php';
     }
 
