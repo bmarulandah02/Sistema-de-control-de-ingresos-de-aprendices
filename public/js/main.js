@@ -4,7 +4,7 @@
 
 document.addEventListener('DOMContentLoaded', () => {
 
-    // ── 🔴 MODO OSCURO / CLARO (THEME TOGGLE) ─────────────────────
+    // ──  MODO OSCURO / CLARO (THEME TOGGLE) ─────────────────────
     const themeToggleBtn = document.getElementById('themeToggleBtn');
     const themeIcon      = document.getElementById('themeIcon');
 
@@ -118,5 +118,100 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
+
+    // ──  PAGINACIÓN INTELIGENTE DE TABLAS (10 REGISTROS POR PÁGINA) ────
+    function inicializarPaginacionTablas(itemsPorPagina = 10) {
+        const tablas = document.querySelectorAll('.shadcn-table');
+
+        tablas.forEach(tabla => {
+            const tbody = tabla.querySelector('tbody');
+            if (!tbody) return;
+
+            // Obtener filas de datos (ignorando filas vacías o de sin resultados)
+            const filas = Array.from(tbody.querySelectorAll('tr')).filter(row => {
+                const td = row.querySelector('td[colspan]');
+                return !td;
+            });
+
+            const totalFilas = filas.length;
+            let paginadorWrapper = tabla.closest('.shadcn-card')?.querySelector('.shadcn-pagination-bar');
+
+            // Si hay 10 o menos filas, se muestran todas y no se crea barra de botones
+            if (totalFilas <= itemsPorPagina) {
+                filas.forEach(f => f.style.display = '');
+                if (paginadorWrapper) paginadorWrapper.remove();
+                return;
+            }
+
+            // Si sobresalen de 10 personas, se crean/reutilizan los botones de paginación
+            const totalPaginas = Math.ceil(totalFilas / itemsPorPagina);
+            let paginaActual = 1;
+
+            if (!paginadorWrapper) {
+                paginadorWrapper = document.createElement('div');
+                paginadorWrapper.className = 'shadcn-pagination-bar';
+                paginadorWrapper.style.cssText = 'display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; padding:0.875rem 1.25rem; border-top:1px solid var(--border); background:var(--card); font-size:0.8125rem; gap:0.75rem;';
+                
+                const card = tabla.closest('.shadcn-card');
+                if (card) {
+                    card.appendChild(paginadorWrapper);
+                } else {
+                    tabla.parentElement.appendChild(paginadorWrapper);
+                }
+            }
+
+            function renderizarPagina(pagina) {
+                paginaActual = Math.max(1, Math.min(pagina, totalPaginas));
+                const inicio = (paginaActual - 1) * itemsPorPagina;
+                const fin = inicio + itemsPorPagina;
+
+                filas.forEach((row, idx) => {
+                    if (idx >= inicio && idx < fin) {
+                        row.style.display = '';
+                    } else {
+                        row.style.display = 'none';
+                    }
+                });
+
+                const mostrandoDesde = totalFilas > 0 ? inicio + 1 : 0;
+                const mostrandoHasta = Math.min(fin, totalFilas);
+
+                // Renderizar HTML del paginador
+                let btnsHtml = '';
+                for (let i = 1; i <= totalPaginas; i++) {
+                    const btnClass = (i === paginaActual) ? 'btn-shadcn btn-shadcn-primary' : 'btn-shadcn btn-shadcn-outline';
+                    btnsHtml += `<button type="button" class="${btnClass} btn-pag" data-page="${i}" style="padding:0.25rem 0.625rem; font-size:0.75rem;">${i}</button>`;
+                }
+
+                paginadorWrapper.innerHTML = `
+                    <div style="color:var(--muted-foreground); font-weight:500;">
+                        Mostrando <strong style="color:var(--foreground);">${mostrandoDesde}–${mostrandoHasta}</strong> de <strong style="color:var(--foreground);">${totalFilas}</strong> registros
+                    </div>
+                    <div style="display:flex; gap:0.375rem; align-items:center;">
+                        <button type="button" class="btn-shadcn btn-shadcn-outline btn-prev" ${paginaActual === 1 ? 'disabled style="opacity:0.5; cursor:not-allowed;"' : ''} style="padding:0.25rem 0.5rem; font-size:0.75rem;">
+                            <i class="bi bi-chevron-left me-1"></i>Anterior
+                        </button>
+                        <div style="display:flex; gap:0.25rem; flex-wrap:wrap;">
+                            ${btnsHtml}
+                        </div>
+                        <button type="button" class="btn-shadcn btn-shadcn-outline btn-next" ${paginaActual === totalPaginas ? 'disabled style="opacity:0.5; cursor:not-allowed;"' : ''} style="padding:0.25rem 0.5rem; font-size:0.75rem;">
+                            Siguiente<i class="bi bi-chevron-right ms-1"></i>
+                        </button>
+                    </div>
+                `;
+
+                // Listeners de los botones
+                paginadorWrapper.querySelector('.btn-prev')?.addEventListener('click', () => renderizarPagina(paginaActual - 1));
+                paginadorWrapper.querySelector('.btn-next')?.addEventListener('click', () => renderizarPagina(paginaActual + 1));
+                paginadorWrapper.querySelectorAll('.btn-pag').forEach(btn => {
+                    btn.addEventListener('click', () => renderizarPagina(parseInt(btn.getAttribute('data-page'))));
+                });
+            }
+
+            renderizarPagina(1);
+        });
+    }
+
+    inicializarPaginacionTablas(10);
 
 });

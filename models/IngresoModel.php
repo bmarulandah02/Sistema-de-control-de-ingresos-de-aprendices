@@ -67,7 +67,7 @@ class IngresoModel {
     /**
      * Obtiene los últimos movimientos del día para el Dashboard filtrando opcionalmente por Ficha o Instructor
      */
-    public static function obtenerUltimosMovimientos(int $limite = 8, ?int $idFicha = null, ?int $instructorId = null): array {
+    public static function obtenerUltimosMovimientos(int $limite = 10, ?int $idFicha = null, ?int $instructorId = null): array {
         $registros = [];
 
         try {

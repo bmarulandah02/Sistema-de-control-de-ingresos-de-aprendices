@@ -111,7 +111,7 @@ class Router {
         // 7. Carga de datos desde la Base de Datos para las vistas
         $statsHoy      = IngresoModel::obtenerEstadisticasHoy($fichaSeleccionada, $instructorIdFiltro);
         $statsAprendiz = ['activos' => AprendizModel::contarActivos($fichaSeleccionada, $instructorIdFiltro)];
-        $ultimos       = IngresoModel::obtenerUltimosMovimientos(8, $fichaSeleccionada, $instructorIdFiltro);
+        $ultimos       = IngresoModel::obtenerUltimosMovimientos(10, $fichaSeleccionada, $instructorIdFiltro);
 
         // Captura de filtros de la URL para consultas en el historial
         $filtros = [
