@@ -18,7 +18,7 @@ require __DIR__ . '/../layouts/header.php';
 <?php endif; ?>
 
 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
-    <!-- ── 🟢 TARJETA DE INFORMACIÓN DEL USUARIO ───────────────────── -->
+    <!-- ──  TARJETA DE INFORMACIÓN DEL USUARIO ───────────────────── -->
     <div class="shadcn-card" style="align-self: start;">
         <div class="card-body-shadcn" style="text-align: center; padding:1.5rem;">
             <div style="width:72px; height:72px; border-radius:50%; background:var(--sena-brand-subtle); color:var(--sena-brand); display:flex; align-items:center; justify-content:center; font-size:2rem; margin: 0 auto 1rem; font-weight:700;">
@@ -52,7 +52,7 @@ require __DIR__ . '/../layouts/header.php';
         </div>
     </div>
 
-    <!-- ── 🟢 FORMULARIO PARA ACTUALIZAR TELÉFONO Y CLAVE ───────────── -->
+    <!-- ──  FORMULARIO PARA ACTUALIZAR TELÉFONO Y CLAVE ───────────── -->
     <div class="shadcn-card">
         <div class="card-header-shadcn">
             <h3><i class="bi bi-gear me-2"></i>Editar Datos de Contacto y Clave</h3>

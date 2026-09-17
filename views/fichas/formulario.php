@@ -26,7 +26,7 @@ $esEdicion = isset($ficha) && $ficha !== null;
     </div>
     <?php endif; ?>
 
-    <!-- ── 🟢 FORMULARIO DE FICHA ──────────────────────────────────── -->
+    <!-- ──  FORMULARIO DE FICHA ──────────────────────────────────── -->
     <div class="shadcn-card">
         <div class="card-body-shadcn" style="padding: 1.5rem;">
             <form method="POST" action="index.php?action=ficha-guardar">

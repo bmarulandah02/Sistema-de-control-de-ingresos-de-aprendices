@@ -9,7 +9,7 @@ require __DIR__ . '/../../views/layouts/header.php';
         <div class="page-header-subtitle">Consulta y exporta el registro de ingresos de aprendices</div>
     </div>
     <div>
-        <!-- 🟢 EDITAR AQUÍ: Enlace o acción para exportar el CSV/Excel -->
+        <!--  EDITAR AQUÍ: Enlace o acción para exportar el CSV/Excel -->
         <a href="index.php?action=reporte-excel&fecha_inicio=<?= htmlspecialchars($filtros['fecha_inicio']) ?>&fecha_fin=<?= htmlspecialchars($filtros['fecha_fin']) ?>"
            class="btn-shadcn btn-shadcn-outline">
             <i class="bi bi-filetype-csv"></i>
@@ -18,8 +18,8 @@ require __DIR__ . '/../../views/layouts/header.php';
     </div>
 </div>
 
-<!-- ── 🟢 FILTROS DE BÚSQUEDA ─────────────────────────────────── -->
-<div class="shadcn-card" style="margin-bottom: 1.5rem;">
+<!--   FILTROS DE BÚSQUEDA ─────────────────────────────────── -->
+<div class="shadcn-card filter-card-wrapper">
     <div class="card-body-shadcn">
         <form method="GET" action="index.php" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; align-items: end;">
             <input type="hidden" name="action" value="historial">
@@ -65,7 +65,7 @@ require __DIR__ . '/../../views/layouts/header.php';
     </div>
 </div>
 
-<!-- ── 🟢 TABLA DE REGISTROS DE ASISTENCIA ────────────────────── -->
+<!-- ──  TABLA DE REGISTROS DE ASISTENCIA ────────────────────── -->
 <div class="shadcn-card">
     <div class="card-header-shadcn">
         <h3><i class="bi bi-table me-2"></i>Registros de Ingreso</h3>
@@ -87,7 +87,7 @@ require __DIR__ . '/../../views/layouts/header.php';
                 </tr>
             </thead>
             <tbody>
-                <!-- 🟢 EDITAR AQUÍ: Itera sobre tus registros traídos de la base de datos -->
+                <!-- EDITAR AQUÍ: Itera sobre tus registros traídos de la base de datos -->
                 <?php if (empty($registros)): ?>
                 <tr>
                     <td colspan="8" style="text-align:center; padding: 2.5rem; color:var(--muted-foreground);">

@@ -10,7 +10,7 @@ require __DIR__ . '/../layouts/header.php';
     </div>
 </div>
 
-<!-- 🟢 EDITAR AQUÍ: Alertas de error o éxito -->
+<!--  EDITAR AQUÍ: Alertas de error o éxito -->
 <?php if (!empty($error)): ?>
 <div style="background-color:rgba(239,68,68,0.12); color:#dc2626; padding:0.75rem 1rem; border-radius:var(--radius); font-size:0.875rem; margin-bottom:1.25rem; border:1px solid rgba(239,68,68,0.2);">
     <i class="bi bi-exclamation-triangle-fill me-1"></i> <?= htmlspecialchars($error) ?>
@@ -23,13 +23,13 @@ require __DIR__ . '/../layouts/header.php';
 </div>
 <?php endif; ?>
 
-<!-- ── 🟢 FORMULARIO DE RADICACIÓN DE EXCUSAS ───────────────────── -->
+<!-- ──  FORMULARIO DE RADICACIÓN DE EXCUSAS ───────────────────── -->
 <div class="shadcn-card" style="margin-bottom: 1.75rem;">
     <div class="card-header-shadcn">
         <h3><i class="bi bi-cloud-upload me-2"></i>Radicar Nueva Excusa Médica</h3>
     </div>
     <div class="card-body-shadcn">
-        <!-- 🟢 EDITAR AQUÍ: Cambia action= por tu ruta de envío POST -->
+        <!--  EDITAR AQUÍ: Cambia action= por tu ruta de envío POST -->
         <form method="POST" action="index.php?action=excusa-subir" enctype="multipart/form-data">
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1rem;">
                 <div style="grid-column: 1 / -1;">
@@ -61,7 +61,7 @@ require __DIR__ . '/../layouts/header.php';
     </div>
 </div>
 
-<!-- ── 🟢 TABLA DE EXCUSAS RADICADAS ────────────────────────────── -->
+<!-- ── TABLA DE EXCUSAS RADICADAS ────────────────────────────── -->
 <div class="shadcn-card">
     <div class="card-header-shadcn">
         <h3><i class="bi bi-file-earmark-medical me-2"></i>Historial de Excusas Radicadas</h3>
@@ -80,7 +80,7 @@ require __DIR__ . '/../layouts/header.php';
                 </tr>
             </thead>
             <tbody>
-                <!-- 🟢 EDITAR AQUÍ: Recorre con foreach($excusas as $e) los datos del aprendiz -->
+                <!--  EDITAR AQUÍ: Recorre con foreach($excusas as $e) los datos del aprendiz -->
                 <?php if (empty($excusas)): ?>
                 <tr>
                     <td colspan="6" style="text-align:center; padding:2.5rem; color:var(--muted-foreground);">

@@ -10,8 +10,8 @@ require __DIR__ . '/../layouts/header.php';
     </div>
 </div>
 
-<!-- ── 🟢 FILTROS RÁPIDOS Y GENERADOR DE REPORTES ───────────────────────── -->
-<div class="shadcn-card" style="margin-bottom: 1.75rem;">
+<!-- ── FILTROS RÁPIDOS Y GENERADOR DE REPORTES ───────────────────────── -->
+<div class="shadcn-card card-mb-lg">
     <div class="card-header-shadcn">
         <h3><i class="bi bi-funnel me-2"></i>Generador y Filtro de Reportes</h3>
     </div>
@@ -66,7 +66,7 @@ require __DIR__ . '/../layouts/header.php';
     </div>
 </div>
 
-<!-- ── 🟢 CONSOLIDADO EN PANTALLA: RETARDOS E INASISTENCIAS ───────────────── -->
+<!-- ──  CONSOLIDADO EN PANTALLA: RETARDOS E INASISTENCIAS ───────────────── -->
 <div class="shadcn-card" style="margin-bottom: 1.75rem;">
     <div class="card-header-shadcn">
         <h3><i class="bi bi-calculator me-2"></i>Consolidado de Inasistencias y Retardos</h3>
