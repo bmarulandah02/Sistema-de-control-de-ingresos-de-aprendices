@@ -6,6 +6,15 @@
 require_once __DIR__ . '/../config/database.php';
 
 class ExcusaModel {
+    //esta funcion la estoy utilizando para agregar columnas y modificarlas en las tablas de excusas directamente en la base de datos 
+    //si algo ya existe lo ignora y sigue gi
+    private static function asegurarColumnas($conexion): void {
+    try { $conexion->exec("ALTER TABLE excusa MODIFY COLUMN observacion VARCHAR(500) NULL"); } catch (Exception $e) {}
+    try { $conexion->exec("ALTER TABLE excusa ADD COLUMN fecha_inicio DATE NULL AFTER observacion"); } catch (Exception $e) {}
+    try { $conexion->exec("ALTER TABLE excusa ADD COLUMN fecha_fin DATE NULL AFTER fecha_inicio"); } catch (Exception $e) {}
+    try { $conexion->exec("ALTER TABLE excusa ADD COLUMN fk_aprendiz INT NULL AFTER fk_ingreso"); } catch (Exception $e) {}
+    // ...
+}
 
     /**
      * Obtiene el listado de excusas médicas registradas
