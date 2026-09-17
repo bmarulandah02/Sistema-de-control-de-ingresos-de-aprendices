@@ -118,6 +118,16 @@ class HorarioModel {
                 $where = [];
                 $params = [];
 
+                if (!empty($filtros['estado'])) {
+                    if ($filtros['estado'] === 'Activo') {
+                        $where[] = "(f.estado = 'Activo' OR f.estado IS NULL OR f.estado = '')";
+                    } elseif ($filtros['estado'] === 'Finalizado') {
+                        $where[] = "f.estado IN ('Finalizado', 'Inactivo')";
+                    }
+                } else {
+                    $where[] = "(f.estado = 'Activo' OR f.estado IS NULL OR f.estado = '')";
+                }
+
                 if (!empty($filtros['q'])) {
                     $where[] = "(f.id_ficha LIKE :q OR f.nombre_programa LIKE :q OR u.nombre LIKE :q OR u.apellido LIKE :q OR CONCAT(u.nombre, ' ', u.apellido) LIKE :q OR u.identificacion LIKE :q)";
                     $params[':q'] = '%' . trim($filtros['q']) . '%';
@@ -177,6 +187,16 @@ class HorarioModel {
 
                 $where = ["f.fk_usuario = :instructorId"];
                 $params = [':instructorId' => $instructorId];
+
+                if (!empty($filtros['estado'])) {
+                    if ($filtros['estado'] === 'Activo') {
+                        $where[] = "(f.estado = 'Activo' OR f.estado IS NULL OR f.estado = '')";
+                    } elseif ($filtros['estado'] === 'Finalizado') {
+                        $where[] = "f.estado IN ('Finalizado', 'Inactivo')";
+                    }
+                } else {
+                    $where[] = "(f.estado = 'Activo' OR f.estado IS NULL OR f.estado = '')";
+                }
 
                 if (!empty($filtros['q'])) {
                     $where[] = "(f.id_ficha LIKE :q OR f.nombre_programa LIKE :q)";
@@ -399,6 +419,57 @@ class HorarioModel {
         } catch (Exception $e) {
             // Silencioso
         }
+        return false;
+    }
+
+    /**
+     * Cuenta el número de aprendices asociados a una ficha
+     */
+    public static function contarAprendicesEnFicha(int $idFicha): int {
+        try {
+            $mysql = new MySQL();
+            $mysql->conectarBD();
+            $conexion = $mysql->getConexion();
+            if ($conexion) {
+                $stmt = $conexion->prepare("SELECT COUNT(*) FROM aprendiz WHERE fk_ficha = :id");
+                $stmt->execute([':id' => $idFicha]);
+                return (int) $stmt->fetchColumn();
+            }
+        } catch (Exception $e) {}
+        return 0;
+    }
+
+    /**
+     * Finaliza (oculta/soft-delete) una ficha por su ID cambiando su estado a Finalizado
+     */
+    public static function finalizarFicha(int $idFicha): bool {
+        try {
+            $mysql = new MySQL();
+            $mysql->conectarBD();
+            $conexion = $mysql->getConexion();
+            if ($conexion) {
+                $sql = "UPDATE ficha SET estado = 'Finalizado' WHERE id_ficha = :id";
+                $stmt = $conexion->prepare($sql);
+                return $stmt->execute([':id' => $idFicha]);
+            }
+        } catch (Exception $e) {}
+        return false;
+    }
+
+    /**
+     * Reactiva una ficha cambiándola a estado Activo
+     */
+    public static function reactivarFicha(int $idFicha): bool {
+        try {
+            $mysql = new MySQL();
+            $mysql->conectarBD();
+            $conexion = $mysql->getConexion();
+            if ($conexion) {
+                $sql = "UPDATE ficha SET estado = 'Activo' WHERE id_ficha = :id";
+                $stmt = $conexion->prepare($sql);
+                return $stmt->execute([':id' => $idFicha]);
+            }
+        } catch (Exception $e) {}
         return false;
     }
 

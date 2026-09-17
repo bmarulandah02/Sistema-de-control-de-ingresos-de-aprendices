@@ -15,7 +15,8 @@ class FichaController {
         $usuarioIdSesion = (int) ($_SESSION['usuario_id'] ?? 0);
 
         $filtros = [
-            'q' => trim($_GET['q'] ?? '')
+            'q'      => trim($_GET['q'] ?? ''),
+            'estado' => trim($_GET['estado'] ?? 'Activo')
         ];
 
         if ($rolSesion === 'Instructor') {
@@ -89,7 +90,7 @@ class FichaController {
     }
 
     /**
-     * Elimina una ficha por su ID (Solo Administrador)
+     * Oculta / Finaliza una ficha por su ID (Solo Administrador)
      */
     public function eliminar(): void {
         if (($_SESSION['rol'] ?? '') !== 'Administrador') {
@@ -99,9 +100,34 @@ class FichaController {
 
         $id = (int) ($_GET['id'] ?? 0);
         if ($id > 0) {
-            HorarioModel::eliminarFicha($id);
+            $cantAprendices = HorarioModel::contarAprendicesEnFicha($id);
+            if ($cantAprendices > 0) {
+                $ficha = HorarioModel::obtenerFichaPorId($id);
+                $numFicha = $ficha ? $ficha['numero_ficha'] : $id;
+                header('Location: index.php?action=fichas&error=ficha_con_aprendices&cant=' . $cantAprendices . '&num=' . urlencode($numFicha));
+                exit();
+            }
+
+            HorarioModel::finalizarFicha($id);
         }
-        header('Location: index.php?action=fichas&ok=1');
+        header('Location: index.php?action=fichas&ok=finalizada');
+        exit();
+    }
+
+    /**
+     * Reactiva una ficha finalizada cambiándola a estado Activo (Solo Administrador)
+     */
+    public function reactivar(): void {
+        if (($_SESSION['rol'] ?? '') !== 'Administrador') {
+            header('Location: index.php?action=fichas&error=sin_permiso');
+            exit();
+        }
+
+        $id = (int) ($_GET['id'] ?? 0);
+        if ($id > 0) {
+            HorarioModel::reactivarFicha($id);
+        }
+        header('Location: index.php?action=fichas&ok=reactivada');
         exit();
     }
 }

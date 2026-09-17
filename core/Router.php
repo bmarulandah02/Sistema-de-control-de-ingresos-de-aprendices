@@ -68,7 +68,7 @@ class Router {
             'login', 'logout', 'dashboard', 'usuarios', 'usuario-crear', 'usuario-editar',
             'usuario-actualizar', 'usuario-eliminar', 'asistencia', 'registrar-ingreso',
             'abrir-sesion-asistencia', 'cerrar-jornada', 'historial', 'fichas', 'ficha-crear', 'ficha-editar',
-            'ficha-guardar', 'ficha-eliminar', 'reportes', 'excusas-admin', 'reporte-pdf',
+            'ficha-guardar', 'ficha-eliminar', 'ficha-reactivar', 'reportes', 'excusas-admin', 'reporte-pdf',
             'reporte-excel', 'mi-perfil', 'mi-perfil-guardar', 'mis-excusas', '403', '404'
         ];
 
@@ -89,7 +89,7 @@ class Router {
                 return;
             }
         } elseif ($rolSesion === 'Instructor') {
-            $rutasSoloAdmin = ['usuario-crear', 'usuario-editar', 'usuario-actualizar', 'usuario-eliminar', 'ficha-crear', 'ficha-editar', 'ficha-guardar', 'ficha-eliminar'];
+            $rutasSoloAdmin = ['usuario-crear', 'usuario-editar', 'usuario-actualizar', 'usuario-eliminar', 'ficha-crear', 'ficha-editar', 'ficha-guardar', 'ficha-eliminar', 'ficha-reactivar'];
             if (in_array($action, $rutasSoloAdmin)) {
                 require __DIR__ . '/../views/errors/403.php';
                 return;
@@ -209,6 +209,9 @@ class Router {
                 break;
             case 'ficha-eliminar':
                 (new FichaController())->eliminar();
+                break;
+            case 'ficha-reactivar':
+                (new FichaController())->reactivar();
                 break;
             case 'reportes':
             case 'excusas-admin':
