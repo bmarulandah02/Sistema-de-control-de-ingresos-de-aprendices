@@ -67,7 +67,7 @@ class Router {
         $rutasValidas = [
             'login', 'logout', 'dashboard', 'usuarios', 'usuario-crear', 'usuario-editar',
             'usuario-actualizar', 'usuario-eliminar', 'asistencia', 'registrar-ingreso',
-            'cerrar-jornada', 'historial', 'fichas', 'ficha-crear', 'ficha-editar',
+            'abrir-sesion-asistencia', 'cerrar-jornada', 'historial', 'fichas', 'ficha-crear', 'ficha-editar',
             'ficha-guardar', 'ficha-eliminar', 'reportes', 'excusas-admin', 'reporte-pdf',
             'reporte-excel', 'mi-perfil', 'mi-perfil-guardar', 'mis-excusas', '403', '404'
         ];
@@ -181,10 +181,13 @@ class Router {
                 (new UsuarioController())->guardarPerfilPersonal();
                 break;
             case 'asistencia':
-                require __DIR__ . '/../views/asistencia/registro.php';
+                (new AsistenciaController())->index($mensaje);
                 break;
             case 'registrar-ingreso':
                 (new AsistenciaController())->lecturaCodigoRfid();
+                break;
+            case 'abrir-sesion-asistencia':
+                (new AsistenciaController())->abrirVentanaAsistencia();
                 break;
             case 'cerrar-jornada':
                 (new AsistenciaController())->cerrarJornada();

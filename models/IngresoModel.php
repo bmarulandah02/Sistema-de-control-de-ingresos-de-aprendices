@@ -229,7 +229,7 @@ class IngresoModel {
 
     } 
     //funcion para insertar las filas al marcar una entrada 
-    public function registrarEntrada($fechaActual,$horaActual,$estadoAsistencia,$identificadorAprendiz)
+    public function registrarEntrada($fechaActual,$horaActual,$estadoAsistencia,$identificadorAprendiz,$materia = null,$bloqueHorario = null)
     {
         try{
             $mysql= new MySQL();
@@ -241,13 +241,21 @@ class IngresoModel {
                     try {
                         $conexion->exec("ALTER TABLE ingresos MODIFY COLUMN salida DATETIME NULL DEFAULT NULL");
                     } catch (Exception $e) {}
+                    try {
+                        $conexion->exec("ALTER TABLE ingresos ADD COLUMN materia VARCHAR(100) NULL");
+                    } catch (Exception $e) {}
+                    try {
+                        $conexion->exec("ALTER TABLE ingresos ADD COLUMN bloque_horario VARCHAR(100) NULL");
+                    } catch (Exception $e) {}
 
-                    $consulta="INSERT INTO ingresos (fecha_registro, entrada, salida, estado_asistencia, fk_aprendiz) VALUES (:FA, :HA, NULL, :EA, :IA)";
+                    $consulta="INSERT INTO ingresos (fecha_registro, entrada, salida, estado_asistencia, fk_aprendiz, materia, bloque_horario) VALUES (:FA, :HA, NULL, :EA, :IA, :MAT, :BLOQ)";
                     $stmt=$conexion->prepare($consulta);
                     $stmt->bindParam(':FA',$fechaActual,PDO::PARAM_STR);
                     $stmt->bindParam(':HA',$horaActual,PDO::PARAM_STR);
                     $stmt->bindParam(':EA',$estadoAsistencia,PDO::PARAM_STR);
                     $stmt->bindParam(':IA',$identificadorAprendiz,PDO::PARAM_INT);
+                    $stmt->bindParam(':MAT',$materia,PDO::PARAM_STR);
+                    $stmt->bindParam(':BLOQ',$bloqueHorario,PDO::PARAM_STR);
                     return $stmt->execute();
                 }
         }catch(PDOException $e)

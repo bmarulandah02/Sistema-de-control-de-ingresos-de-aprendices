@@ -23,6 +23,51 @@ class HorarioModel {
     }
 
     /**
+     * Retorna el catálogo de bloques u horarios separados según la jornada
+     */
+    public static function obtenerBloquesPorJornada(string $jornada = 'Mañana'): array {
+        $jornadaNorm = mb_strtolower(trim($jornada));
+
+        if (str_contains($jornadaNorm, 'mañana') || str_contains($jornadaNorm, 'diurna')) {
+            return [
+                'completa' => ['id' => '6-12', 'nombre' => 'Jornada Completa (06:00 - 12:00)', 'entrada' => '06:00:00', 'salida' => '12:00:00'],
+                'bloque1'   => ['id' => '6-9',  'nombre' => 'Bloque 1 (06:00 - 09:00)',        'entrada' => '06:00:00', 'salida' => '09:00:00'],
+                'bloque2'   => ['id' => '9-12', 'nombre' => 'Bloque 2 (09:00 - 12:00)',        'entrada' => '09:00:00', 'salida' => '12:00:00'],
+            ];
+        } elseif (str_contains($jornadaNorm, 'tarde') || str_contains($jornadaNorm, 'vespertina')) {
+            return [
+                'completa' => ['id' => '12-18', 'nombre' => 'Jornada Completa (12:00 - 18:00)', 'entrada' => '12:00:00', 'salida' => '18:00:00'],
+                'bloque1'   => ['id' => '12-15', 'nombre' => 'Bloque 1 (12:00 - 15:00)',        'entrada' => '12:00:00', 'salida' => '15:00:00'],
+                'bloque2'   => ['id' => '15-18', 'nombre' => 'Bloque 2 (15:00 - 18:00)',        'entrada' => '15:00:00', 'salida' => '18:00:00'],
+            ];
+        } elseif (str_contains($jornadaNorm, 'noche') || str_contains($jornadaNorm, 'nocturna')) {
+            return [
+                'completa' => ['id' => '18-22', 'nombre' => 'Jornada Completa (18:00 - 22:00)', 'entrada' => '18:00:00', 'salida' => '22:00:00'],
+                'bloque1'   => ['id' => '18-20', 'nombre' => 'Bloque 1 (18:00 - 20:00)',        'entrada' => '18:00:00', 'salida' => '20:00:00'],
+                'bloque2'   => ['id' => '20-22', 'nombre' => 'Bloque 2 (20:00 - 22:00)',        'entrada' => '20:00:00', 'salida' => '22:00:00'],
+            ];
+        } else {
+            return [
+                'completa' => ['id' => '7-17',  'nombre' => 'Jornada Completa (07:00 - 17:00)', 'entrada' => '07:00:00', 'salida' => '17:00:00'],
+                'bloque1'   => ['id' => '7-12',  'nombre' => 'Bloque 1 (07:00 - 12:00)',        'entrada' => '07:00:00', 'salida' => '12:00:00'],
+                'bloque2'   => ['id' => '12-17', 'nombre' => 'Bloque 2 (12:00 - 17:00)',        'entrada' => '12:00:00', 'salida' => '17:00:00'],
+            ];
+        }
+    }
+
+    /**
+     * Devuelve la lista consolidada de todos los bloques posibles para seleccionar en la terminal
+     */
+    public static function obtenerTodosLosBloques(): array {
+        return [
+            'Mañana (Diurna)' => self::obtenerBloquesPorJornada('Mañana'),
+            'Tarde (Vespertina)' => self::obtenerBloquesPorJornada('Tarde'),
+            'Noche (Nocturna)' => self::obtenerBloquesPorJornada('Noche'),
+            'Mixta / Especial' => self::obtenerBloquesPorJornada('Mixta'),
+        ];
+    }
+
+    /**
      * Obtiene el listado de Instructores registrados en la base de datos para el combo box
      */
     public static function obtenerInstructores(): array {
