@@ -60,4 +60,36 @@ class ExcusaModel {
 
         return $excusas;
     }
+    //genero la funcion que guarda la excusa
+    //registra una nueva exusa medica para el aprendiz indicado 
+    public static function crearExcusa(int $idAprendiz, string $motivo,string $fechaInicio, string $fechaFin,?string $archivo): bool{
+
+    try{ 
+    $mysql= new MySQL();
+    $mysql->conectarBD();
+    $conexion=$mysql->getConexion();
+    if($conexion){
+        self::asegurarColumnas($conexion);
+        $sql="INSERT INTO excusa(documento,observacion,fecha_inicio,fecha_fin,estado,fk_aprendiz, fecha_registro)
+        values (:documento,:observacion:fecha_inicio,:fecha_fin,'Pendiente',:fk_aprendiz,NOW())";
+
+        $stmt=$conexion->prepare($sql);
+        return $stmt->execute([
+            ':documento'=> $archivo,
+            ':observacion'=> $motivo,
+            ':fecha_inicio'=> $fechaInicio,
+            ':fecha_fin'=> $fechaFin,
+            ':fk_aprendiz'=> $idAprendiz
+            
+
+        ]);
+    }
+
+    }
+    catch(PDOException $e){
+        error_log("Error al crear la excusa: " . $e->getMessage());
+
+    }
+    return false;
+    }
 }
