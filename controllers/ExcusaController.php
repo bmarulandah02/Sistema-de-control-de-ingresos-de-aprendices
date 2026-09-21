@@ -53,6 +53,58 @@ class ExcusaController{
             }
             exit();
     }
+    public function editar(): void {
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST' || (($_SESSION['rol'] ?? '') !== 'Aprendiz')) {
+        header('Location: index.php?action=403');
+        exit();
+    }
+
+    $idUsuario = (int) ($_SESSION['usuario_id'] ?? 0);
+    $idExcusa  = (int) ($_POST['id_excusa'] ?? 0);
+
+    $excusa = ExcusaModel::obtenerPorId($idExcusa);
+
+    if (!$excusa || (int) $excusa['id_usuario_aprendiz'] !== $idUsuario) {
+        header('Location: index.php?action=403');
+        exit();
+    }
+        $motivo      = trim($_POST['motivo'] ?? '');
+    $fechaInicio = trim($_POST['fecha_inicio'] ?? '');
+    $fechaFin    = trim($_POST['fecha_fin'] ?? '');
+
+    if ($motivo === '' || $fechaInicio === '' || $fechaFin === '') {
+        header('Location: index.php?action=mis-excusas&error=' . urlencode('Debes completar el motivo y las fechas.'));
+        exit();
+    }
+
+    if (strtotime($fechaFin) < strtotime($fechaInicio)) {
+        header('Location: index.php?action=mis-excusas&error=' . urlencode('La fecha fin no puede ser anterior a la fecha inicio.'));
+        exit();
+    }
+      if ($excusa['estado'] !== 'Pendiente') {
+        header('Location: index.php?action=mis-excusas&error=' . urlencode('Solo puedes editar excusas que aún estén Pendientes.'));
+        exit();
+    }
+
+    $nombreArchivo = null;
+    if (!empty($_FILES['archivo']['name'])) {
+        $nombreArchivo = $this->guardarArchivo($_FILES['archivo']);
+        if ($nombreArchivo === false) {
+            header('Location: index.php?action=mis-excusas&error=' . urlencode('El archivo debe ser PDF, JPG o PNG y pesar máximo 5MB.'));
+            exit();
+        }
+    }
+
+    $ok = ExcusaModel::editarExcusa($idExcusa, $motivo, $fechaInicio, $fechaFin, $nombreArchivo);
+
+    if ($ok) {
+        header('Location: index.php?action=mis-excusas&ok=2');
+    } else {
+        header('Location: index.php?action=mis-excusas&error=' . urlencode('No se pudo actualizar la excusa.'));
+    }
+    exit();
+
+    }
     private const CARPETA_UPLOADS = __DIR__ . '/../public/uploads/excusas/';
     private const EXTENSIONES_PERMITIDAS = ['pdf', 'jpg', 'jpeg', 'png'];
     private const TAMANO_MAXIMO = 5 * 1024 * 1024; // 5 MB en bytes

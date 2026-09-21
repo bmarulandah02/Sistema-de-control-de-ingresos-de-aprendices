@@ -10,49 +10,49 @@ require __DIR__ . '/../layouts/header.php';
     </div>
 </div>
 
-<!--  EDITAR AQUÍ: Alertas de error o éxito -->
-<?php if (!empty($error)): ?>
+<?php $errorGet = $_GET['error'] ?? ($error ?? ''); ?>
+<?php if (!empty($errorGet)): ?>
 <div style="background-color:rgba(239,68,68,0.12); color:#dc2626; padding:0.75rem 1rem; border-radius:var(--radius); font-size:0.875rem; margin-bottom:1.25rem; border:1px solid rgba(239,68,68,0.2);">
-    <i class="bi bi-exclamation-triangle-fill me-1"></i> <?= htmlspecialchars($error) ?>
+    <i class="bi bi-exclamation-triangle-fill me-1"></i> <?= htmlspecialchars($errorGet) ?>
 </div>
 <?php endif; ?>
 
-<?php if (!empty($_GET['ok'])): ?>
+<?php if (($_GET['ok'] ?? '') == '1'): ?>
 <div style="background-color:rgba(34,197,94,0.12); color:#16a34a; padding:0.75rem 1rem; border-radius:var(--radius); font-size:0.875rem; margin-bottom:1.25rem; border:1px solid rgba(34,197,94,0.2);">
     <i class="bi bi-check-circle-fill me-1"></i> Excusa enviada con éxito. Pendiente de aprobación por tu instructor.
 </div>
 <?php endif; ?>
 
-<!-- ──  FORMULARIO DE RADICACIÓN DE EXCUSAS ───────────────────── -->
+<?php if (($_GET['ok'] ?? '') == '2'): ?>
+<div style="background-color:rgba(34,197,94,0.12); color:#16a34a; padding:0.75rem 1rem; border-radius:var(--radius); font-size:0.875rem; margin-bottom:1.25rem; border:1px solid rgba(34,197,94,0.2);">
+    <i class="bi bi-check-circle-fill me-1"></i> Excusa actualizada correctamente.
+</div>
+<?php endif; ?>
+
 <div class="shadcn-card" style="margin-bottom: 1.75rem;">
     <div class="card-header-shadcn">
         <h3><i class="bi bi-cloud-upload me-2"></i>Radicar Nueva Excusa Médica</h3>
     </div>
     <div class="card-body-shadcn">
-        <!--  EDITAR AQUÍ: Cambia action= por tu ruta de envío POST -->
         <form method="POST" action="index.php?action=excusa-subir" enctype="multipart/form-data">
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1rem;">
                 <div style="grid-column: 1 / -1;">
                     <label style="display:block; font-size:0.875rem; font-weight:500; margin-bottom:0.375rem;">Motivo de la Inasistencia *</label>
                     <textarea name="motivo" class="shadcn-input" rows="2" placeholder="Describe brevemente la incapacidad médica..." required></textarea>
                 </div>
-
                 <div>
                     <label style="display:block; font-size:0.875rem; font-weight:500; margin-bottom:0.375rem;">Fecha Inicio *</label>
                     <input type="date" name="fecha_inicio" class="shadcn-input" required>
                 </div>
-
                 <div>
                     <label style="display:block; font-size:0.875rem; font-weight:500; margin-bottom:0.375rem;">Fecha Fin *</label>
                     <input type="date" name="fecha_fin" class="shadcn-input" required>
                 </div>
-
                 <div>
                     <label style="display:block; font-size:0.875rem; font-weight:500; margin-bottom:0.375rem;">Adjunto (PDF, JPG, PNG) *</label>
                     <input type="file" name="archivo" class="shadcn-input" accept=".pdf,.jpg,.jpeg,.png" required>
                 </div>
             </div>
-
             <button type="submit" class="btn-shadcn btn-shadcn-primary">
                 <i class="bi bi-send"></i>
                 <span>Enviar Excusa</span>
@@ -61,7 +61,6 @@ require __DIR__ . '/../layouts/header.php';
     </div>
 </div>
 
-<!-- ── TABLA DE EXCUSAS RADICADAS ────────────────────────────── -->
 <div class="shadcn-card">
     <div class="card-header-shadcn">
         <h3><i class="bi bi-file-earmark-medical me-2"></i>Historial de Excusas Radicadas</h3>
@@ -77,13 +76,13 @@ require __DIR__ . '/../layouts/header.php';
                     <th>Estado</th>
                     <th>Enviada el</th>
                     <th>Aprobada/Revisada por</th>
+                    <th>Acciones</th>
                 </tr>
             </thead>
             <tbody>
-                <!--  EDITAR AQUÍ: Recorre con foreach($excusas as $e) los datos del aprendiz -->
                 <?php if (empty($excusas)): ?>
                 <tr>
-                    <td colspan="6" style="text-align:center; padding:2.5rem; color:var(--muted-foreground);">
+                    <td colspan="7" style="text-align:center; padding:2.5rem; color:var(--muted-foreground);">
                         No has radicado excusas médicas aún.
                     </td>
                 </tr>
@@ -109,6 +108,14 @@ require __DIR__ . '/../layouts/header.php';
                     </td>
                     <td><?= htmlspecialchars(substr($e['created_at'], 0, 10)) ?></td>
                     <td><?= htmlspecialchars($e['aprobado_por'] ?? '—') ?></td>
+                    <td>
+                        <?php if ($e['estado'] === 'Pendiente'): ?>
+                        <button type="button" class="btn-shadcn btn-shadcn-outline" style="padding:0.25rem 0.5rem; font-size:0.75rem;"
+                                onclick="abrirEdicion(<?= (int)$e['id'] ?>, '<?= htmlspecialchars(addslashes($e['motivo']), ENT_QUOTES) ?>', '<?= htmlspecialchars(substr($e['fecha_inicio'],0,10)) ?>', '<?= htmlspecialchars(substr($e['fecha_fin'],0,10)) ?>')">
+                            <i class="bi bi-pencil"></i> Editar
+                        </button>
+                        <?php else: ?>—<?php endif; ?>
+                    </td>
                 </tr>
                 <?php endforeach; ?>
                 <?php endif; ?>
@@ -116,5 +123,55 @@ require __DIR__ . '/../layouts/header.php';
         </table>
     </div>
 </div>
+
+<div id="modalEditarExcusa" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:1000; align-items:center; justify-content:center;">
+    <div class="shadcn-card" style="width:100%; max-width:480px; margin:1rem;">
+        <div class="card-header-shadcn">
+            <h3><i class="bi bi-pencil-square me-2"></i>Editar Excusa Médica</h3>
+        </div>
+        <div class="card-body-shadcn">
+            <form method="POST" action="index.php?action=excusa-editar" enctype="multipart/form-data">
+                <input type="hidden" name="id_excusa" id="edit_id_excusa">
+                <div style="margin-bottom:1rem;">
+                    <label style="display:block; font-size:0.875rem; font-weight:500; margin-bottom:0.375rem;">Motivo de la Inasistencia *</label>
+                    <textarea name="motivo" id="edit_motivo" class="shadcn-input" rows="2" required></textarea>
+                </div>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:1rem;">
+                    <div>
+                        <label style="display:block; font-size:0.875rem; font-weight:500; margin-bottom:0.375rem;">Fecha Inicio *</label>
+                        <input type="date" name="fecha_inicio" id="edit_fecha_inicio" class="shadcn-input" required>
+                    </div>
+                    <div>
+                        <label style="display:block; font-size:0.875rem; font-weight:500; margin-bottom:0.375rem;">Fecha Fin *</label>
+                        <input type="date" name="fecha_fin" id="edit_fecha_fin" class="shadcn-input" required>
+                    </div>
+                </div>
+                <div style="margin-bottom:1.25rem;">
+                    <label style="display:block; font-size:0.875rem; font-weight:500; margin-bottom:0.375rem;">Reemplazar Adjunto (opcional)</label>
+                    <input type="file" name="archivo" class="shadcn-input" accept=".pdf,.jpg,.jpeg,.png">
+                </div>
+                <div style="display:flex; gap:0.5rem; justify-content:flex-end;">
+                    <button type="button" class="btn-shadcn btn-shadcn-outline" onclick="cerrarEdicion()">Cancelar</button>
+                    <button type="submit" class="btn-shadcn btn-shadcn-primary">
+                        <i class="bi bi-save"></i> <span>Guardar Cambios</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+function abrirEdicion(id, motivo, fechaInicio, fechaFin) {
+    document.getElementById('edit_id_excusa').value = id;
+    document.getElementById('edit_motivo').value = motivo;
+    document.getElementById('edit_fecha_inicio').value = fechaInicio;
+    document.getElementById('edit_fecha_fin').value = fechaFin;
+    document.getElementById('modalEditarExcusa').style.display = 'flex';
+}
+function cerrarEdicion() {
+    document.getElementById('modalEditarExcusa').style.display = 'none';
+}
+</script>
 
 <?php require __DIR__ . '/../layouts/footer.php'; ?>

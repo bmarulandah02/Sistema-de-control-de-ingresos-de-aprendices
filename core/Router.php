@@ -12,7 +12,7 @@ require_once __DIR__ . '/../models/HorarioModel.php';
 require_once __DIR__ . '/../models/ExcusaModel.php';
 require_once __DIR__ . '/../controllers/AsistenciaController.php';
 require_once __DIR__ . '/../controllers/ReporteController.php';
-
+require_once __DIR__ . '/../controllers/ExcusaController.php';
 class Router {
 
     public static function dispatch(): void {
@@ -69,7 +69,7 @@ class Router {
             'usuario-actualizar', 'usuario-eliminar', 'asistencia', 'registrar-ingreso',
             'abrir-sesion-asistencia', 'cerrar-jornada', 'historial', 'fichas', 'ficha-crear', 'ficha-editar',
             'ficha-guardar', 'ficha-eliminar', 'ficha-reactivar', 'reportes', 'excusas-admin', 'reporte-pdf',
-            'reporte-excel', 'mi-perfil', 'mi-perfil-guardar', 'mis-excusas', '403', '404'
+            'reporte-excel', 'mi-perfil', 'mi-perfil-guardar','excusa-subir','excusa-editar','excusa-aprobar','excusa-rechazar', 'mis-excusas', '403', '404'
         ];
 
         if (!empty($action) && !in_array($action, $rutasValidas)) {
@@ -81,7 +81,7 @@ class Router {
         $rolSesion = $_SESSION['rol'] ?? '';
 
         if ($rolSesion === 'Aprendiz') {
-            $rutasPermitidasAprendiz = ['mi-perfil', 'mi-perfil-guardar', 'mis-excusas', 'logout'];
+            $rutasPermitidasAprendiz = ['mi-perfil', 'mi-perfil-guardar', 'mis-excusas','excusa-subir','excusa-editar', 'logout'];
             if (empty($action)) {
                 $action = 'mi-perfil';
             } elseif (!in_array($action, $rutasPermitidasAprendiz)) {
@@ -130,7 +130,11 @@ class Router {
         }
 
         $registros = IngresoModel::obtenerHistorialConFiltros($filtros);
-        $excusas   = ExcusaModel::obtenerTodas();
+      if ($rolSesion === 'Aprendiz') {
+        $excusas = ExcusaModel::obtenerPorAprendiz($usuarioIdSesion);
+        } else {
+            $excusas = ExcusaModel::obtenerTodas();
+        }
 
         $ficha   = null;
         $mensaje = null;
@@ -234,6 +238,12 @@ class Router {
                 break;
             case '403':
                 require __DIR__ . '/../views/errors/403.php';
+                break;
+            case 'excusa-subir':
+                (new ExcusaController())->subir();
+                break;
+            case 'excusa-editar':
+                (new ExcusaController())->editar();
                 break;
             case '404':
             default:
