@@ -245,6 +245,12 @@ class Router {
             case 'excusa-editar':
                 (new ExcusaController())->editar();
                 break;
+                case 'excusa-aprobar':
+                (new ExcusaController())->aprobar();
+                break;
+            case 'excusa-rechazar':
+                (new ExcusaController())->rechazar();
+                break;
             case '404':
             default:
                 require __DIR__ . '/../views/errors/404.php';

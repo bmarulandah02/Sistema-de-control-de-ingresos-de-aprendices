@@ -48,7 +48,11 @@ class ReporteController {
         }
 
         $reporteConsolidado = ReporteModel::obtenerReporteConsolidado($filtros);
-        $excusas = ExcusaModel::obtenerTodas();
+       if ($rolSesion === 'Instructor') {
+            $excusas = ExcusaModel::obtenerPorInstructor($usuarioIdSesion, 'Pendiente');
+        } else {
+             $excusas = ExcusaModel::obtenerTodas();
+    }
 
         require __DIR__ . '/../views/admin/reportes.php';
     }

@@ -70,7 +70,7 @@ private static function asegurarColumnas($conexion): void {
     public static function obtenerPorAprendiz(int $idUsuarioAprendiz): array {
         $excusas=[];
         try{
-            $mysql= new MySQL;
+            $mysql= new MySQL();
             $mysql->conectarBD();
             $conexion=$mysql->getConexion();
             self::asegurarColumnas($conexion);
@@ -150,9 +150,10 @@ public static function obtenerPorId(int $idExcusa): ?array {
             self::asegurarColumnas($conexion);
 
             $sql = "SELECT e.id_excusa, e.observacion, e.fecha_inicio, e.fecha_fin, e.estado,
-                           a.fk_usuario AS id_usuario_aprendiz
+                           a.fk_usuario AS id_usuario_aprendiz, f.fk_usuario AS id_instructor_ficha
                     FROM excusa e
                     JOIN aprendiz a ON e.fk_aprendiz = a.id_aprendiz
+                    JOIN ficha f ON a.fk_ficha = f.id_ficha
                     WHERE e.id_excusa = :id
                     LIMIT 1";
 
@@ -200,4 +201,83 @@ public static function obtenerPorId(int $idExcusa): ?array {
     }
     return false;
     }
+    //funcion para que el instructor solo pueda ver las excusas el cual pertenecen a los aprendices de su ficha
+    public static function obtenerPorInstructor(int $idInstructor, ?string $estado=null):array{
+        $excusas=[];
+        try{
+            $mysql= new MySQL();
+            $mysql->conectarBD();
+            $conexion=$mysql->getConexion();
+            if($conexion){
+                self::asegurarColumnas($conexion);
+                    $sql = "SELECT e.id_excusa, e.documento, e.observacion, e.fecha_inicio, e.fecha_fin, e.estado,
+                           CONCAT(u.nombre, ' ', u.apellido) AS aprendiz, u.identificacion AS documento_aprendiz,
+                           a.fk_ficha AS numero_ficha
+                    FROM excusa e
+                    JOIN aprendiz a ON e.fk_aprendiz = a.id_aprendiz
+                    JOIN usuario u ON a.fk_usuario = u.id_usuario
+                    JOIN ficha f ON a.fk_ficha = f.id_ficha
+                    WHERE f.fk_usuario = :idInstructor";
+                    $parametros=[':idInstructor'=>$idInstructor];
+                    if(!empty($estado)){
+                        $sql.=" AND e.estado=:estado";
+                        $parametros[':estado']=$estado;
+                    }
+                    $sql.=" ORDER BY e.id_excusa DESC";
+                    $stmt= $conexion->prepare($sql);
+                    $stmt->execute($parametros);
+                    while($row=$stmt->fetch(PDO::FETCH_ASSOC)){
+                     $excusas[] = [
+                    'id'           => $row['id_excusa'],
+                    'aprendiz'     => !empty(trim($row['aprendiz'])) ? $row['aprendiz'] : $row['documento_aprendiz'],
+                    'documento'    => $row['documento_aprendiz'],
+                    'numero_ficha' => $row['numero_ficha'] ?? 'N/A',
+                    'motivo'       => $row['observacion'] ?? 'Excusa médica',
+                    'fecha_inicio' => $row['fecha_inicio'],
+                    'fecha_fin'    => $row['fecha_fin'],
+                    'archivo'      => $row['documento'] ?? '',
+                    'estado'       => $row['estado'] ?? 'Pendiente',
+                    'created_at'   => $row['fecha_inicio']
+                ];
+            
+                    }
+            }
+
+        }catch(Exception $e){
+
+        }
+        return $excusas;  
+    }
+//actualizo el estado de la excusa esta es la funcion que me permite cambiar el estado si fue aprobada o rechazada y deja la constancia que instructor lo decidio y cuando lo hizo
+public static function actualizarEstado(int $idExcusa,string $estado, int $idInstructor): bool{
+    if(!in_array($estado,['Aprobada','Rechazada'],true)){
+        return false;
+    }
+    try{
+        $mysql= new MySQL();
+        $mysql->conectarBD();
+        $conexion=$mysql->getConexion();
+        if($conexion){
+            self::asegurarColumnas($conexion);
+            $sql="UPDATE excusa SET estado=:estado,fk_usuario_instructor=:instructor,fecha_revision=now() WHERE id_excusa=:id";
+            $stmt=$conexion->prepare($sql);
+            return $stmt->execute([
+                ':estado'=>$estado,
+                ':instructor'=>$idInstructor,
+                ':id'=>$idExcusa
+            ]);
+
+        }
+       
+
+
+    }catch(Exception $e){
+        error_log("Error al actualizar el estado de excusa: ". $e->getMessage());
+        
+    }
+    return false;
+
+}
+
+
 }

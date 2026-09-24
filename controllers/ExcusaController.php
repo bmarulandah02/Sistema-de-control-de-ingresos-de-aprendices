@@ -105,6 +105,41 @@ class ExcusaController{
     exit();
 
     }
+    //estas funciones son diminutas toda la accion vive en $_get['id']
+    public function aprobar():void{
+        $this->cambiarEstado('Aprobada');
+    }
+    public function rechazar(): void{
+        $this->cambiarEstado('Rechazada');
+    }
+    private function cambiarEstado(string $estadoNuevo): void {
+    $rol = $_SESSION['rol'] ?? '';
+    if (!in_array($rol, ['Instructor', 'Administrador'], true)) {
+        header('Location: index.php?action=403');
+        exit();
+    }
+
+    $idExcusa     = (int) ($_GET['id'] ?? 0);
+    $idInstructor = (int) ($_SESSION['usuario_id'] ?? 0);
+
+    $excusa = ExcusaModel::obtenerPorId($idExcusa);
+
+    if (!$excusa) {
+        header('Location: index.php?action=excusas-admin&error=' . urlencode('La excusa no existe.'));
+        exit();
+    }
+
+    if ($rol === 'Instructor' && (int) $excusa['id_instructor_ficha'] !== $idInstructor) {
+        header('Location: index.php?action=403');
+        exit();
+    }
+
+    ExcusaModel::actualizarEstado($idExcusa, $estadoNuevo, $idInstructor);
+    header('Location: index.php?action=excusas-admin');
+    exit();
+    }
+    
+    
     private const CARPETA_UPLOADS = __DIR__ . '/../public/uploads/excusas/';
     private const EXTENSIONES_PERMITIDAS = ['pdf', 'jpg', 'jpeg', 'png'];
     private const TAMANO_MAXIMO = 5 * 1024 * 1024; // 5 MB en bytes
