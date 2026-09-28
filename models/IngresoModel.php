@@ -318,8 +318,6 @@ class IngresoModel {
                                 'hora_entrada' => $row['entrada'] ? date('H:i:s', strtotime($row['entrada'])) : '—',
                                 'hora_salida'  => ($row['salida'] && $row['salida'] !== '0000-00-00 00:00:00') ? date('H:i:s', strtotime($row['salida'])) : null,
                                 'estado'       => htmlspecialchars($row['estado']?? '',ENT_QUOTES,'UTF-8')
-
-
                             ];
                         }
                 }

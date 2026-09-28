@@ -66,6 +66,23 @@ CREATE TABLE `ficha` (
 -- --------------------------------------------------------
 
 --
+-- Estructura de tabla para la tabla `ficha_asignatura`
+--
+
+CREATE TABLE `ficha_asignatura` (
+  `id_ficha_asignatura` int(11) NOT NULL AUTO_INCREMENT,
+  `fk_ficha` int(11) NOT NULL,
+  `fk_usuario_instructor` int(11) NOT NULL,
+  `nombre_asignatura` varchar(100) NOT NULL,
+  `tipo` varchar(30) DEFAULT 'Técnica',
+  PRIMARY KEY (`id_ficha_asignatura`),
+  KEY `fk_fa_ficha` (`fk_ficha`),
+  KEY `fk_fa_usuario` (`fk_usuario_instructor`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+
+-- --------------------------------------------------------
+
+--
 -- Estructura de tabla para la tabla `horario`
 --
 

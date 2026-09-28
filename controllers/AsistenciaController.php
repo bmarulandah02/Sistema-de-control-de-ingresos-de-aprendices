@@ -19,6 +19,11 @@ class AsistenciaController {
             $fichas = HorarioModel::obtenerTodasFichas();
         }
 
+        foreach ($fichas as &$f) {
+            $f['asignaturas'] = HorarioModel::obtenerAsignaturasPorFicha((int)$f['id']);
+        }
+        unset($f);
+
         $bloques = HorarioModel::obtenerTodosLosBloques();
         if (!$mensaje && isset($_SESSION['mensaje'])) {
             $mensaje = $_SESSION['mensaje'];

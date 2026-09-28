@@ -87,12 +87,35 @@ require __DIR__ . '/../../views/layouts/header.php';
                             $valorOpcion  = $f['programa'] . ' - Ficha ' . $f['numero_ficha'];
                             $selected = ($materiaGuardada === $valorOpcion) ? 'selected' : '';
                             if ($selected) $materiaEsPersonalizada = false;
+                            $asignaturasFicha = $f['asignaturas'] ?? [];
                         ?>
-                            <option value="<?= htmlspecialchars($valorOpcion) ?>" 
-                                    data-jornada="<?= htmlspecialchars($f['jornada'] ?? 'Mañana') ?>"
-                                    <?= $selected ?>>
-                                <?= htmlspecialchars($nombreOpcion) ?> [<?= htmlspecialchars($f['jornada'] ?? 'Mañana') ?>]
-                            </option>
+                            <?php if (!empty($asignaturasFicha)): ?>
+                                <optgroup label="<?= htmlspecialchars($f['programa']) ?> — Ficha <?= htmlspecialchars($f['numero_ficha']) ?>">
+                                    <option value="<?= htmlspecialchars($valorOpcion) ?>" 
+                                            data-jornada="<?= htmlspecialchars($f['jornada'] ?? 'Mañana') ?>"
+                                            <?= $selected ?>>
+                                        📘 Formación Principal (Ficha <?= htmlspecialchars($f['numero_ficha']) ?>) [<?= htmlspecialchars($f['jornada'] ?? 'Mañana') ?>]
+                                    </option>
+                                    <?php foreach ($asignaturasFicha as $asig): 
+                                        $valAsig = $asig['nombre_asignatura'] . ' - Ficha ' . $f['numero_ficha'];
+                                        $selAsig = ($materiaGuardada === $valAsig) ? 'selected' : '';
+                                        if ($selAsig) $materiaEsPersonalizada = false;
+                                        $icono = ($asig['tipo'] === 'Transversal') ? '📙' : '📗';
+                                    ?>
+                                        <option value="<?= htmlspecialchars($valAsig) ?>" 
+                                                data-jornada="<?= htmlspecialchars($f['jornada'] ?? 'Mañana') ?>"
+                                                <?= $selAsig ?>>
+                                            <?= $icono ?> <?= htmlspecialchars($asig['nombre_asignatura']) ?> (<?= htmlspecialchars($asig['tipo']) ?> - <?= htmlspecialchars($asig['instructor_nombre'] ?? 'Instructor') ?>)
+                                        </option>
+                                    <?php endforeach; ?>
+                                </optgroup>
+                            <?php else: ?>
+                                <option value="<?= htmlspecialchars($valorOpcion) ?>" 
+                                        data-jornada="<?= htmlspecialchars($f['jornada'] ?? 'Mañana') ?>"
+                                        <?= $selected ?>>
+                                    <?= htmlspecialchars($nombreOpcion) ?> [<?= htmlspecialchars($f['jornada'] ?? 'Mañana') ?>]
+                                </option>
+                            <?php endif; ?>
                         <?php endforeach; ?>
                         <option value="__custom__" <?= ($materiaGuardada && $materiaEsPersonalizada) ? 'selected' : '' ?>>
                              Otra Asignatura (Escribir libremente...)

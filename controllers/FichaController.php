@@ -78,8 +78,16 @@ class FichaController {
 
             if ($esEdicion) {
                 HorarioModel::actualizarFicha($datos);
+                $idFichaFinal = (int) $_POST['id'];
             } else {
                 HorarioModel::crearFicha($datos);
+                $idFichaFinal = $numero_ficha;
+            }
+
+            // Guardar asignaturas técnicas y transversales si se enviaron
+            $asignaturasInput = $_POST['asignaturas'] ?? [];
+            if (is_array($asignaturasInput)) {
+                HorarioModel::guardarAsignaturasFicha($idFichaFinal, $asignaturasInput);
             }
 
             header('Location: index.php?action=fichas&ok=1');

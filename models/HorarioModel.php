@@ -173,7 +173,7 @@ class HorarioModel {
     }
 
     /**
-     * Obtiene el listado de fichas pertenecientes a un instructor específico
+     * Obtiene el listado de fichas pertenecientes o asignadas a un instructor específico
      */
     public static function obtenerFichasPorInstructor(int $instructorId, array $filtros = []): array {
         $fichas = [];
@@ -184,8 +184,9 @@ class HorarioModel {
 
             if ($conexion) {
                 self::asegurarColumnasFechas($conexion);
+                self::asegurarTablaFichaAsignatura($conexion);
 
-                $where = ["f.fk_usuario = :instructorId"];
+                $where = ["(f.fk_usuario = :instructorId OR f.id_ficha IN (SELECT fk_ficha FROM ficha_asignatura WHERE fk_usuario_instructor = :instructorId))"];
                 $params = [':instructorId' => $instructorId];
 
                 if (!empty($filtros['estado'])) {
@@ -243,7 +244,7 @@ class HorarioModel {
     }
 
     /**
-     * Obtiene los datos de una ficha específica por su ID/Número
+     * Obtiene los datos de una ficha específica por su ID/Número (incluyendo sus asignaturas/instructores)
      */
     public static function obtenerFichaPorId(int $idFicha): ?array {
         try {
@@ -253,6 +254,7 @@ class HorarioModel {
 
             if ($conexion) {
                 self::asegurarColumnasFechas($conexion);
+                self::asegurarTablaFichaAsignatura($conexion);
 
                 $sql = "SELECT f.id_ficha, f.nombre_programa, f.jornada, f.fk_usuario AS instructor_id,
                                f.fecha_inicio, f.fecha_fin, f.estado,
@@ -275,7 +277,8 @@ class HorarioModel {
                         'instructor'    => $row['instructor'],
                         'fecha_inicio'  => $row['fecha_inicio'],
                         'fecha_fin'     => $row['fecha_fin'],
-                        'estado'        => $row['estado'] ?: 'Activo'
+                        'estado'        => $row['estado'] ?: 'Activo',
+                        'asignaturas'   => self::obtenerAsignaturasPorFicha($idFicha)
                     ];
                 }
             }
@@ -567,5 +570,106 @@ public function obtenerHorarioFicha($identificadorFicha, $fechaActual)
     }
     return ['entrada' => '07:00:00', 'salida' => '18:00:00'];
 }
+
+    /**
+     * Asegura la creación de la tabla ficha_asignatura para soportar múltiples instructores y materias
+     */
+    private static function asegurarTablaFichaAsignatura($conexion): void {
+        try {
+            $sql = "CREATE TABLE IF NOT EXISTS ficha_asignatura (
+                id_ficha_asignatura INT AUTO_INCREMENT PRIMARY KEY,
+                fk_ficha INT NOT NULL,
+                fk_usuario_instructor INT NOT NULL,
+                nombre_asignatura VARCHAR(100) NOT NULL,
+                tipo VARCHAR(30) DEFAULT 'Técnica',
+                KEY fk_fa_ficha (fk_ficha),
+                KEY fk_fa_usuario (fk_usuario_instructor)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8";
+            $conexion->exec($sql);
+        } catch (Exception $e) {}
+    }
+
+    /**
+     * Obtiene el listado de asignaturas registradas para una ficha específica
+     */
+    public static function obtenerAsignaturasPorFicha(int $idFicha): array {
+        $asignaturas = [];
+        try {
+            $mysql = new MySQL();
+            $mysql->conectarBD();
+            $conexion = $mysql->getConexion();
+            if ($conexion) {
+                self::asegurarTablaFichaAsignatura($conexion);
+                $sql = "SELECT fa.id_ficha_asignatura, fa.fk_ficha, fa.fk_usuario_instructor, fa.nombre_asignatura, fa.tipo,
+                               CONCAT(u.nombre, ' ', u.apellido) AS instructor_nombre
+                        FROM ficha_asignatura fa
+                        LEFT JOIN usuario u ON fa.fk_usuario_instructor = u.id_usuario
+                        WHERE fa.fk_ficha = :idFicha
+                        ORDER BY fa.tipo ASC, fa.nombre_asignatura ASC";
+                $stmt = $conexion->prepare($sql);
+                $stmt->execute([':idFicha' => $idFicha]);
+                $asignaturas = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+            }
+        } catch (Exception $e) {}
+        return $asignaturas;
+    }
+
+    /**
+     * Guarda / actualiza las asignaturas e instructores asignados a una ficha
+     */
+    public static function guardarAsignaturasFicha(int $idFicha, array $asignaturas): void {
+        try {
+            $mysql = new MySQL();
+            $mysql->conectarBD();
+            $conexion = $mysql->getConexion();
+            if ($conexion) {
+                self::asegurarTablaFichaAsignatura($conexion);
+
+                // Eliminar asignaturas previas
+                $stmtDel = $conexion->prepare("DELETE FROM ficha_asignatura WHERE fk_ficha = :idFicha");
+                $stmtDel->execute([':idFicha' => $idFicha]);
+
+                // Insertar nuevas
+                $stmtIns = $conexion->prepare("INSERT INTO ficha_asignatura (fk_ficha, fk_usuario_instructor, nombre_asignatura, tipo) VALUES (:fk_ficha, :fk_usuario_instructor, :nombre_asignatura, :tipo)");
+                foreach ($asignaturas as $asig) {
+                    $nombre = trim($asig['nombre_asignatura'] ?? '');
+                    $instructorId = (int)($asig['fk_usuario_instructor'] ?? $asig['instructor_id'] ?? 0);
+                    $tipo = trim($asig['tipo'] ?? 'Técnica');
+                    if (!empty($nombre) && $instructorId > 0) {
+                        $stmtIns->execute([
+                            ':fk_ficha' => $idFicha,
+                            ':fk_usuario_instructor' => $instructorId,
+                            ':nombre_asignatura' => $nombre,
+                            ':tipo' => $tipo
+                        ]);
+                    }
+                }
+            }
+        } catch (Exception $e) {}
+    }
+
+    /**
+     * Obtiene todas las asignaturas asignadas a un instructor para sus distintas fichas
+     */
+    public static function obtenerAsignaturasParaInstructor(int $instructorId): array {
+        $lista = [];
+        try {
+            $mysql = new MySQL();
+            $mysql->conectarBD();
+            $conexion = $mysql->getConexion();
+            if ($conexion) {
+                self::asegurarTablaFichaAsignatura($conexion);
+                $sql = "SELECT fa.nombre_asignatura, fa.tipo, f.id_ficha, f.nombre_programa, f.jornada
+                        FROM ficha_asignatura fa
+                        INNER JOIN ficha f ON fa.fk_ficha = f.id_ficha
+                        WHERE fa.fk_usuario_instructor = :instructorId
+                        ORDER BY f.id_ficha DESC, fa.nombre_asignatura ASC";
+                $stmt = $conexion->prepare($sql);
+                $stmt->execute([':instructorId' => $instructorId]);
+                $lista = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+            }
+        } catch (Exception $e) {}
+        return $lista;
+    }
 }
 ?>
