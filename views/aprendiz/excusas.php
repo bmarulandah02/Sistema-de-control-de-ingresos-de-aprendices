@@ -42,11 +42,11 @@ require __DIR__ . '/../layouts/header.php';
                 </div>
                 <div>
                     <label style="display:block; font-size:0.875rem; font-weight:500; margin-bottom:0.375rem;">Fecha Inicio *</label>
-                    <input type="date" name="fecha_inicio" class="shadcn-input" required>
+                    <input type="date" name="fecha_inicio" class="shadcn-input" value="<?= htmlspecialchars($_GET['fecha'] ?? '') ?>" required>
                 </div>
                 <div>
                     <label style="display:block; font-size:0.875rem; font-weight:500; margin-bottom:0.375rem;">Fecha Fin *</label>
-                    <input type="date" name="fecha_fin" class="shadcn-input" required>
+                    <input type="date" name="fecha_fin" class="shadcn-input" value="<?= htmlspecialchars($_GET['fecha'] ?? '') ?>" required>
                 </div>
                 <div>
                     <label style="display:block; font-size:0.875rem; font-weight:500; margin-bottom:0.375rem;">Adjunto (PDF, JPG, PNG) *</label>

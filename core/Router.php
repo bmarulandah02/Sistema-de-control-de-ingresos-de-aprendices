@@ -69,7 +69,7 @@ class Router {
             'usuario-actualizar', 'usuario-eliminar', 'asistencia', 'registrar-ingreso',
             'abrir-sesion-asistencia', 'cerrar-jornada', 'historial', 'fichas', 'ficha-crear', 'ficha-editar',
             'ficha-guardar', 'ficha-eliminar', 'ficha-reactivar', 'reportes', 'excusas-admin', 'reporte-pdf',
-            'reporte-excel', 'mi-perfil', 'mi-perfil-guardar','excusa-subir','excusa-editar','excusa-aprobar','excusa-rechazar', 'mis-excusas', '403', '404'
+            'reporte-excel', 'mi-perfil', 'mi-perfil-guardar', 'reporte-faltas-aprendiz', 'excusa-subir', 'excusa-editar', 'excusa-aprobar', 'excusa-rechazar', 'mis-excusas', '403', '404'
         ];
 
         if (!empty($action) && !in_array($action, $rutasValidas)) {
@@ -81,7 +81,7 @@ class Router {
         $rolSesion = $_SESSION['rol'] ?? '';
 
         if ($rolSesion === 'Aprendiz') {
-            $rutasPermitidasAprendiz = ['mi-perfil', 'mi-perfil-guardar', 'mis-excusas','excusa-subir','excusa-editar', 'logout'];
+            $rutasPermitidasAprendiz = ['mi-perfil', 'mi-perfil-guardar', 'reporte-faltas-aprendiz', 'mis-excusas', 'excusa-subir', 'excusa-editar', 'logout'];
             if (empty($action)) {
                 $action = 'mi-perfil';
             } elseif (!in_array($action, $rutasPermitidasAprendiz)) {
@@ -228,7 +228,10 @@ class Router {
                 (new ReporteController())->exportarExcel();
                 break;
             case 'mi-perfil':
-                require __DIR__ . '/../views/aprendiz/perfil.php';
+                (new UsuarioController())->miPerfil();
+                break;
+            case 'reporte-faltas-aprendiz':
+                (new UsuarioController())->reporteFaltasPDF();
                 break;
             case 'mis-excusas':
                 require __DIR__ . '/../views/aprendiz/excusas.php';

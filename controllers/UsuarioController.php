@@ -6,6 +6,8 @@
 require_once __DIR__ . '/../models/UsuarioModel.php';
 require_once __DIR__ . '/../models/AprendizModel.php';
 require_once __DIR__ . '/../models/HorarioModel.php';
+require_once __DIR__ . '/../models/IngresoModel.php';
+require_once __DIR__ . '/../models/ReporteModel.php';
 
 class UsuarioController {
 
@@ -118,6 +120,55 @@ class UsuarioController {
         }
 
         $this->formulario();
+    }
+
+    /**
+     * Muestra la vista "Mi Perfil" cargando datos del aprendiz, asistencias y reporte de faltas mensuales
+     */
+    public function miPerfil(): void {
+        $usuarioId = (int) ($_SESSION['usuario_id'] ?? 0);
+        $aprendiz = AprendizModel::obtenerPorUsuarioId($usuarioId);
+        $asistencias = [];
+        $mesSeleccionado = $_GET['mes'] ?? date('Y-m');
+        $reporteFaltas = ['faltas' => [], 'total_faltas' => 0, 'mes' => $mesSeleccionado];
+
+        if ($aprendiz && !empty($aprendiz['id_aprendiz'])) {
+            $idAprendiz = (int)$aprendiz['id_aprendiz'];
+            $asistencias = IngresoModel::HistorialAprendiz($idAprendiz);
+            $reporteFaltas = ReporteModel::obtenerFaltasMesAprendiz($idAprendiz, $mesSeleccionado);
+        }
+
+        require __DIR__ . '/../views/aprendiz/perfil.php';
+    }
+
+    /**
+     * Genera el reporte en PDF de faltas / inasistencias del mes para el aprendiz
+     */
+    public function reporteFaltasPDF(): void {
+        $rolSesion = $_SESSION['rol'] ?? '';
+        $usuarioIdSesion = (int) ($_SESSION['usuario_id'] ?? 0);
+        $mes = $_GET['mes'] ?? date('Y-m');
+
+        $idAprendiz = 0;
+        if ($rolSesion === 'Aprendiz') {
+            $aprendiz = AprendizModel::obtenerPorUsuarioId($usuarioIdSesion);
+            $idAprendiz = (int)($aprendiz['id_aprendiz'] ?? 0);
+        } else {
+            $idAprendiz = (int)($_GET['id_aprendiz'] ?? 0);
+            if ($idAprendiz <= 0) {
+                $aprendiz = AprendizModel::obtenerPorUsuarioId($usuarioIdSesion);
+                $idAprendiz = (int)($aprendiz['id_aprendiz'] ?? 0);
+            }
+        }
+
+        if ($idAprendiz <= 0) {
+            header('Location: index.php?action=mi-perfil');
+            exit();
+        }
+
+        $reporteFaltas = ReporteModel::obtenerFaltasMesAprendiz($idAprendiz, $mes);
+        require __DIR__ . '/../views/aprendiz/reporte_faltas_pdf.php';
+        exit();
     }
 
     /**
