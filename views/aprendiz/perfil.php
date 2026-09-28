@@ -18,7 +18,7 @@ require __DIR__ . '/../layouts/header.php';
 <?php endif; ?>
 
 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
-    <!-- ──  TARJETA DE INFORMACIÓN DEL USUARIO ───────────────────── -->
+    <!-- ── TARJETA DE INFORMACIÓN DEL USUARIO ───────────────────── -->
     <div class="shadcn-card" style="align-self: start;">
         <div class="card-body-shadcn" style="text-align: center; padding:1.5rem;">
             <div style="width:72px; height:72px; border-radius:50%; background:var(--sena-brand-subtle); color:var(--sena-brand); display:flex; align-items:center; justify-content:center; font-size:2rem; margin: 0 auto 1rem; font-weight:700;">
@@ -52,7 +52,7 @@ require __DIR__ . '/../layouts/header.php';
         </div>
     </div>
 
-    <!-- ──  FORMULARIO PARA ACTUALIZAR TELÉFONO Y CLAVE ───────────── -->
+    <!-- ── FORMULARIO PARA ACTUALIZAR TELÉFONO Y CLAVE ───────────── -->
     <div class="shadcn-card">
         <div class="card-header-shadcn">
             <h3><i class="bi bi-gear me-2"></i>Editar Datos de Contacto y Clave</h3>
@@ -85,129 +85,131 @@ require __DIR__ . '/../layouts/header.php';
     </div>
 </div>
 
-<!-- ── SECCIÓN DE INASISTENCIAS / FALTAS DEL MES ─────────────── -->
+<!-- ── CONTENEDOR 2 COLUMNAS EN PANTALLAS GRANDES: FALTAS Y ASISTENCIAS ── -->
 <?php if (isset($aprendiz)): ?>
-<div class="shadcn-card" style="margin-bottom: 2rem;">
-    <div class="card-header-shadcn" style="flex-wrap: wrap; gap: 1rem; justify-content: space-between;">
-        <div style="display:flex; align-items:center; gap:0.5rem;">
-            <h3><i class="bi bi-calendar-x me-2" style="color:var(--destructive, #ef4444);"></i> Mis Inasistencias del Mes</h3>
-            <?php 
-                $cantFaltas = (int)($reporteFaltas['total_faltas'] ?? 0);
-                $badgeFaltaClass = ($cantFaltas > 0) ? 'badge-destructive' : 'badge-puntual';
-            ?>
-            <span class="shadcn-badge <?= $badgeFaltaClass ?>">
-                <?= $cantFaltas ?> <?= ($cantFaltas === 1) ? 'falta' : 'faltas' ?>
-            </span>
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 520px), 1fr)); gap: 1.5rem; margin-bottom: 2rem; align-items: start;">
+
+    <!-- ── COLUMNA 1: MIS INASISTENCIAS DEL MES ─────────────── -->
+    <div class="shadcn-card" style="display: flex; flex-direction: column;">
+        <div class="card-header-shadcn" style="flex-wrap: wrap; gap: 0.75rem; justify-content: space-between;">
+            <div style="display:flex; align-items:center; gap:0.5rem;">
+                <h3><i class="bi bi-calendar-x me-2" style="color:var(--destructive, #ef4444);"></i>Inasistencias del Mes</h3>
+                <?php 
+                    $cantFaltas = (int)($reporteFaltas['total_faltas'] ?? 0);
+                    $badgeFaltaClass = ($cantFaltas > 0) ? 'badge-destructive' : 'badge-puntual';
+                ?>
+                <span class="shadcn-badge <?= $badgeFaltaClass ?>">
+                    <?= $cantFaltas ?> <?= ($cantFaltas === 1) ? 'falta' : 'faltas' ?>
+                </span>
+            </div>
+
+            <!-- Selector de Mes y Botón PDF -->
+            <div style="display:flex; gap:0.375rem; align-items:center; flex-wrap:wrap;">
+                <form method="GET" action="index.php" style="display:flex; gap:0.25rem; align-items:center;">
+                    <input type="hidden" name="action" value="mi-perfil">
+                    <input type="month" name="mes" class="shadcn-input" style="padding:0.2rem 0.4rem; font-size:0.75rem;" 
+                           value="<?= htmlspecialchars($reporteFaltas['mes'] ?? date('Y-m')) ?>" onchange="this.form.submit()">
+                </form>
+
+                <a href="index.php?action=reporte-faltas-aprendiz&mes=<?= urlencode($reporteFaltas['mes'] ?? date('Y-m')) ?>" 
+                   target="_blank" class="btn-shadcn btn-shadcn-outline" style="font-size:0.75rem; padding:0.25rem 0.5rem;" title="Generar PDF de Faltas">
+                    <i class="bi bi-file-earmark-pdf me-1" style="color:#ef4444;"></i>
+                    <span>PDF</span>
+                </a>
+            </div>
         </div>
 
-        <!-- Selector de Mes y Botón PDF -->
-        <div style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap;">
-            <form method="GET" action="index.php" style="display:flex; gap:0.375rem; align-items:center;">
-                <input type="hidden" name="action" value="mi-perfil">
-                <input type="month" name="mes" class="shadcn-input" style="padding:0.25rem 0.5rem; font-size:0.8125rem;" 
-                       value="<?= htmlspecialchars($reporteFaltas['mes'] ?? date('Y-m')) ?>" onchange="this.form.submit()">
-            </form>
-
-            <a href="index.php?action=reporte-faltas-aprendiz&mes=<?= urlencode($reporteFaltas['mes'] ?? date('Y-m')) ?>" 
-               target="_blank" class="btn-shadcn btn-shadcn-outline" style="font-size:0.8125rem; padding:0.375rem 0.75rem;">
-                <i class="bi bi-file-earmark-pdf me-1" style="color:#ef4444;"></i>
-                <span>Generar PDF de Faltas</span>
-            </a>
+        <div class="shadcn-table-wrapper" style="flex: 1;">
+            <table class="shadcn-table">
+                <thead>
+                    <tr>
+                        <th>Fecha</th>
+                        <th>Día</th>
+                        <th>Estado</th>
+                        <th>Acción</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php if (empty($reporteFaltas['faltas'])): ?>
+                    <tr>
+                        <td colspan="4" style="text-align:center; padding:2.5rem; color:var(--muted-foreground);">
+                            <i class="bi bi-check-circle-fill me-1" style="color:#16a34a; font-size:1.25rem; vertical-align:middle;"></i>
+                            <span style="font-weight:600; color:#16a34a;">¡Al día!</span> No tienes inasistencias pendientes en este mes.
+                        </td>
+                    </tr>
+                    <?php else: ?>
+                    <?php foreach ($reporteFaltas['faltas'] as $f): ?>
+                    <tr>
+                        <td style="font-weight:700; color:var(--foreground);"><?= htmlspecialchars($f['fecha']) ?></td>
+                        <td><?= htmlspecialchars($f['dia_semana']) ?></td>
+                        <td>
+                            <?php if ($f['tiene_excusa']): ?>
+                                <span class="shadcn-badge badge-pendiente"><i class="bi bi-hourglass-split me-1"></i>En Revisión</span>
+                            <?php else: ?>
+                                <span class="shadcn-badge badge-destructive"><i class="bi bi-exclamation-circle me-1"></i>Sin Justificar</span>
+                            <?php endif; ?>
+                        </td>
+                        <td>
+                            <?php if ($f['tiene_excusa']): ?>
+                                <a href="index.php?action=mis-excusas" class="btn-shadcn btn-shadcn-ghost" style="padding:0.2rem 0.4rem; font-size:0.75rem;" title="Ver Excusa">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                            <?php else: ?>
+                                <a href="index.php?action=mis-excusas&fecha=<?= urlencode($f['fecha']) ?>" class="btn-shadcn btn-shadcn-primary" style="padding:0.2rem 0.5rem; font-size:0.75rem;" title="Radicar Excusa">
+                                    <i class="bi bi-file-earmark-medical me-1"></i>Radicar
+                                </a>
+                            <?php endif; ?>
+                        </td>
+                    </tr>
+                    <?php endforeach; ?>
+                    <?php endif; ?>
+                </tbody>
+            </table>
         </div>
     </div>
 
-    <div class="shadcn-table-wrapper">
-        <table class="shadcn-table">
-            <thead>
-                <tr>
-                    <th>Fecha</th>
-                    <th>Día</th>
-                    <th>Instructor Encargado</th>
-                    <th>Estado de Justificación</th>
-                    <th>Acción</th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php if (empty($reporteFaltas['faltas'])): ?>
-                <tr>
-                    <td colspan="5" style="text-align:center; padding:2.5rem; color:var(--muted-foreground);">
-                        <i class="bi bi-check-circle-fill me-1" style="color:#16a34a; font-size:1.25rem; vertical-align:middle;"></i>
-                        <span style="font-weight:600; color:#16a34a;">¡Al día!</span> No tienes inasistencias pendientes de justificar en este mes.
-                    </td>
-                </tr>
-                <?php else: ?>
-                <?php foreach ($reporteFaltas['faltas'] as $f): ?>
-                <tr>
-                    <td style="font-weight:700; color:var(--foreground);"><?= htmlspecialchars($f['fecha']) ?></td>
-                    <td><?= htmlspecialchars($f['dia_semana']) ?></td>
-                    <td><?= htmlspecialchars($f['instructor']) ?></td>
-                    <td>
-                        <?php if ($f['tiene_excusa']): ?>
-                            <span class="shadcn-badge badge-pendiente"><i class="bi bi-hourglass-split me-1"></i>Excusa en Revisión</span>
-                        <?php else: ?>
-                            <span class="shadcn-badge badge-destructive"><i class="bi bi-exclamation-circle me-1"></i>Sin Justificar</span>
-                        <?php endif; ?>
-                    </td>
-                    <td>
-                        <?php if ($f['tiene_excusa']): ?>
-                            <a href="index.php?action=mis-excusas" class="btn-shadcn btn-shadcn-ghost" style="padding:0.25rem 0.5rem; font-size:0.75rem;">
-                                <i class="bi bi-eye me-1"></i>Ver Excusa
-                            </a>
-                        <?php else: ?>
-                            <a href="index.php?action=mis-excusas&fecha=<?= urlencode($f['fecha']) ?>" class="btn-shadcn btn-shadcn-primary" style="padding:0.25rem 0.625rem; font-size:0.75rem;">
-                                <i class="bi bi-file-earmark-medical me-1"></i>Radicar Excusa
-                            </a>
-                        <?php endif; ?>
-                    </td>
-                </tr>
-                <?php endforeach; ?>
-                <?php endif; ?>
-            </tbody>
-        </table>
-    </div>
-</div>
-<?php endif; ?>
+    <!-- ── COLUMNA 2: MIS ASISTENCIAS RECIENTES ────────────────── -->
+    <div class="shadcn-card" style="display: flex; flex-direction: column;">
+        <div class="card-header-shadcn">
+            <h3><i class="bi bi-clock-history me-2"></i>Mis Asistencias Recientes</h3>
+            <span class="shadcn-badge badge-secondary"><?= count($asistencias) ?> registros</span>
+        </div>
 
-<!-- ── TABLA DE ASISTENCIAS RECIENTES (SI ES APRENDIZ) ────────── -->
-<?php if (isset($aprendiz)): ?>
-<div class="shadcn-card">
-    <div class="card-header-shadcn">
-        <h3><i class="bi bi-clock-history me-2"></i> Mis Asistencias Recientes</h3>
+        <div class="shadcn-table-wrapper" style="flex: 1;">
+            <table class="shadcn-table">
+                <thead>
+                    <tr>
+                        <th>Fecha</th>
+                        <th>Entrada</th>
+                        <th>Salida</th>
+                        <th>Estado</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php if (empty($asistencias)): ?>
+                    <tr>
+                        <td colspan="4" style="text-align:center; padding:2.5rem; color:var(--muted-foreground);">
+                            No tienes asistencias registradas aún.
+                        </td>
+                    </tr>
+                    <?php else: ?>
+                    <?php foreach ($asistencias as $a): ?>
+                    <tr>
+                        <td><strong><?= htmlspecialchars($a['fecha']) ?></strong></td>
+                        <td><?= htmlspecialchars($a['hora_entrada']) ?></td>
+                        <td><?= htmlspecialchars($a['hora_salida'] ?? '—') ?></td>
+                        <td>
+                            <?php $bClass = ($a['estado'] === 'Puntual') ? 'badge-puntual' : 'badge-retardo'; ?>
+                            <span class="shadcn-badge <?= $bClass ?>"><i class="bi bi-dot"></i><?= htmlspecialchars($a['estado']) ?></span>
+                        </td>
+                    </tr>
+                    <?php endforeach; ?>
+                    <?php endif; ?>
+                </tbody>
+            </table>
+        </div>
     </div>
 
-    <div class="shadcn-table-wrapper">
-        <table class="shadcn-table">
-            <thead>
-                <tr>
-                    <th>Fecha</th>
-                    <th>Entrada</th>
-                    <th>Salida</th>
-                    <th>Estado</th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php if (empty($asistencias)): ?>
-                <tr>
-                    <td colspan="4" style="text-align:center; padding:2rem; color:var(--muted-foreground);">
-                        No tienes asistencias registradas aún.
-                    </td>
-                </tr>
-                <?php else: ?>
-                <?php foreach ($asistencias as $a): ?>
-                <tr>
-                    <td><?= htmlspecialchars($a['fecha']) ?></td>
-                    <td><?= htmlspecialchars($a['hora_entrada']) ?></td>
-                    <td><?= htmlspecialchars($a['hora_salida'] ?? '—') ?></td>
-                    <td>
-                        <?php $bClass = ($a['estado'] === 'Puntual') ? 'badge-puntual' : 'badge-retardo'; ?>
-                        <span class="shadcn-badge <?= $bClass ?>"><i class="bi bi-dot"></i><?= htmlspecialchars($a['estado']) ?></span>
-                    </td>
-                </tr>
-                <?php endforeach; ?>
-                <?php endif; ?>
-            </tbody>
-        </table>
-    </div>
 </div>
 <?php endif; ?>
 
