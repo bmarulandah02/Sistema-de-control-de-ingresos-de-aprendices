@@ -83,6 +83,40 @@ CREATE TABLE `ficha_asignatura` (
 -- --------------------------------------------------------
 
 --
+-- Estructura de tabla para la tabla `ficha_instructor`
+--
+
+CREATE TABLE IF NOT EXISTS `ficha_instructor` (
+  `fk_ficha` int(11) NOT NULL,
+  `fk_usuario` int(11) NOT NULL,
+  PRIMARY KEY (`fk_ficha`, `fk_usuario`),
+  KEY `idx_fi_usuario` (`fk_usuario`),
+  CONSTRAINT `fk_fi_ficha` FOREIGN KEY (`fk_ficha`) REFERENCES `ficha` (`id_ficha`) ON DELETE CASCADE,
+  CONSTRAINT `fk_fi_usuario` FOREIGN KEY (`fk_usuario`) REFERENCES `usuario` (`id_usuario`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Estructura de tabla para la tabla `horario_bloque`
+--
+
+CREATE TABLE IF NOT EXISTS `horario_bloque` (
+  `id_horario_bloque` int(11) NOT NULL AUTO_INCREMENT,
+  `fk_ficha` int(11) NOT NULL,
+  `fecha` date NOT NULL,
+  `bloque` varchar(20) NOT NULL,
+  `fk_usuario_instructor` int(11) NOT NULL,
+  PRIMARY KEY (`id_horario_bloque`),
+  UNIQUE KEY `uq_ficha_fecha_bloque` (`fk_ficha`, `fecha`, `bloque`),
+  KEY `idx_hb_instructor` (`fk_usuario_instructor`),
+  CONSTRAINT `fk_hb_ficha` FOREIGN KEY (`fk_ficha`) REFERENCES `ficha` (`id_ficha`) ON DELETE CASCADE,
+  CONSTRAINT `fk_hb_instructor` FOREIGN KEY (`fk_usuario_instructor`) REFERENCES `usuario` (`id_usuario`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+
+-- --------------------------------------------------------
+
+--
 -- Estructura de tabla para la tabla `horario`
 --
 
