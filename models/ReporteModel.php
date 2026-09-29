@@ -33,7 +33,7 @@ class ReporteModel {
                     $paramsAprendiz[':ficha_id'] = $fichaId;
                 }
                 if ($instructorId) {
-                    $whereAprendiz[] = "f.fk_usuario = :instructor_id";
+                       $whereAprendiz[] = "(f.fk_usuario = :instructor_id OR EXISTS (SELECT 1 FROM ficha_instructor fi WHERE fi.fk_ficha = f.id_ficha AND fi.fk_usuario = :instructor_id))";
                     $paramsAprendiz[':instructor_id'] = $instructorId;
                 }
 

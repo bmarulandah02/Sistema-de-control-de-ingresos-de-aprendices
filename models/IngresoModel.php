@@ -26,7 +26,7 @@ class IngresoModel {
                     $whereClause .= " AND a.fk_ficha = :ficha";
                     $params[':ficha'] = $idFicha;
                 } else if ($instructorId && $instructorId > 0) {
-                    $whereClause .= " AND f.fk_usuario = :instructor";
+                    $whereClause .= " AND (f.fk_usuario = :instructor OR EXISTS (SELECT 1 FROM ficha_instructor fi WHERE fi.fk_ficha = f.id_ficha AND fi.fk_usuario = :instructor))";
                     $params[':instructor'] = $instructorId;
                 }
 
@@ -83,7 +83,7 @@ class IngresoModel {
                     $where[] = "f.id_ficha = :idFicha";
                     $params[':idFicha'] = $idFicha;
                 } else if ($instructorId && $instructorId > 0) {
-                    $where[] = "f.fk_usuario = :instructorId";
+                    $where[] = "(f.fk_usuario = :instructorId OR EXISTS (SELECT 1 FROM ficha_instructor fi WHERE fi.fk_ficha = f.id_ficha AND fi.fk_usuario = :instructorId))";
                     $params[':instructorId'] = $instructorId;
                 }
 
@@ -164,7 +164,7 @@ class IngresoModel {
                 }
 
                 if (!empty($filtros['instructor_id'])) {
-                    $where[] = "f.fk_usuario = :instructor_id";
+                    $where[] = "(f.fk_usuario = :instructor_id OR EXISTS (SELECT 1 FROM ficha_instructor fi WHERE fi.fk_ficha = f.id_ficha AND fi.fk_usuario = :instructor_id))";
                     $params[':instructor_id'] = (int) $filtros['instructor_id'];
                 }
 
@@ -266,7 +266,9 @@ class IngresoModel {
         }
     }
 
+
     ////funcion para actualizar la fila de la tabla para marcar la salida 
+    
 
     public function registrarSalida($id_ingreso,$horaActual,$estadoAsistencia)
     {
