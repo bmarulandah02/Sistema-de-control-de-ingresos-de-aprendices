@@ -76,11 +76,6 @@ require __DIR__ . '/../../views/layouts/header.php';
                 <div>
                     <label style="display:block; font-size:0.8125rem; font-weight:600; margin-bottom:0.375rem; color:var(--foreground);">
                         <i class="bi bi-book me-1" style="color:var(--sena-brand);"></i>Materia / Asignatura
-                        <?php if (($_SESSION['rol'] ?? '') === 'Instructor'): ?>
-                            <span class="shadcn-badge" style="font-size:0.6875rem; background:rgba(5,150,105,0.12); color:#059669; margin-left:0.375rem;">
-                                <i class="bi bi-lock-fill me-1"></i>Solo tus asignaturas
-                            </span>
-                        <?php endif; ?>
                     </label>
                     <select id="materia_select" class="shadcn-select" onchange="alCambiarMateria()">
                         <option value="">— Seleccionar Materia / Asignatura —</option>

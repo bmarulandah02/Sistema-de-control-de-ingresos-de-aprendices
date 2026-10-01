@@ -1383,5 +1383,25 @@ public function obtenerHorarioFicha($identificadorFicha, $fechaActual)
         } catch (Exception $e) {}
         return $instructores;
     }
+    /**
+     * Obtiene la ruta del archivo Excel original subido para la ficha especificada
+     */
+    public static function obtenerRutaArchivoExcelFicha(int $idFicha): ?string {
+        $dir = __DIR__ . "/../public/uploads/horario/";
+        $archivos = glob($dir . "horario_" . $idFicha . "_*.xlsx");
+        if (!empty($archivos)) {
+            usort($archivos, function($a, $b) {
+                return filemtime($b) - filemtime($a);
+            });
+            if (file_exists($archivos[0])) {
+                return $archivos[0];
+            }
+        }
+        $ejemplo = $dir . "horario-ejemplo.xlsx";
+        if (file_exists($ejemplo)) {
+            return $ejemplo;
+        }
+        return null;
+    }
 }
 ?>

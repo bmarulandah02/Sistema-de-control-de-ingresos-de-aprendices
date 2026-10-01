@@ -1,7 +1,7 @@
 <?php
 $ficha = $ficha ?? [];
 $id = (int)($id ?? $ficha['id'] ?? $_GET['id'] ?? 3234082);
-$pageTitle = 'Calendario de Formación — Ficha ' . ($ficha['numero_ficha'] ?? $id);
+$pageTitle = 'Horario de Formación (6am a 10pm) — Ficha ' . ($ficha['numero_ficha'] ?? $id);
 require __DIR__ . '/../../views/layouts/header.php';
 
 $bloques = $bloques ?? [];
@@ -17,12 +17,12 @@ $totalHorasSemestre = count($todosLosBloques) * 3;
 ?>
 
 <style>
-/* ─── ESTILOS CALENDARIO ESTILO GOOGLE CALENDAR ─── */
+/* ─── ESTILOS CALENDARIO ESTILO GOOGLE CALENDAR (6 AM A 10 PM) ─── */
 .gcal-container {
     background: var(--card);
     border: 1px solid var(--border);
     border-radius: var(--radius-lg);
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
     overflow: hidden;
     margin-bottom: 2rem;
 }
@@ -70,6 +70,7 @@ $totalHorasSemestre = count($todosLosBloques) * 3;
     border-radius: var(--radius-md);
     border: 1px solid var(--border);
     background: var(--background);
+    color: var(--foreground);
     font-size: 0.8125rem;
     font-weight: 600;
     cursor: pointer;
@@ -88,7 +89,7 @@ $totalHorasSemestre = count($todosLosBloques) * 3;
     min-width: 220px;
 }
 
-/* Conmutador de vistas (Mes, Semana, Día, Agenda) */
+/* Conmutador de vistas (Semana, Mes, Día, Agenda) */
 .gcal-view-switcher {
     display: flex;
     background: var(--muted);
@@ -112,7 +113,7 @@ $totalHorasSemestre = count($todosLosBloques) * 3;
 .gcal-view-btn.active {
     background: var(--background);
     color: var(--foreground);
-    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.12);
 }
 .gcal-view-btn:hover:not(.active) {
     color: var(--foreground);
@@ -147,7 +148,7 @@ $totalHorasSemestre = count($todosLosBloques) * 3;
 }
 .gcal-day-cell {
     background: var(--card);
-    min-height: 125px;
+    min-height: 120px;
     padding: 0.375rem 0.5rem;
     display: flex;
     flex-direction: column;
@@ -155,11 +156,11 @@ $totalHorasSemestre = count($todosLosBloques) * 3;
     transition: background 0.15s ease;
 }
 .gcal-day-cell.other-month {
-    background: rgba(0, 0, 0, 0.02);
-    opacity: 0.45;
+    background: rgba(0, 0, 0, 0.03);
+    opacity: 0.4;
 }
 .gcal-day-cell.is-today {
-    background: rgba(5, 150, 105, 0.03);
+    background: rgba(5, 150, 105, 0.06);
 }
 
 .gcal-day-num {
@@ -187,7 +188,7 @@ $totalHorasSemestre = count($todosLosBloques) * 3;
 }
 
 .gcal-event-pill {
-    padding: 0.2rem 0.45rem;
+    padding: 0.25rem 0.45rem;
     border-radius: 4px;
     font-size: 0.6875rem;
     font-weight: 600;
@@ -200,10 +201,10 @@ $totalHorasSemestre = count($todosLosBloques) * 3;
 }
 .gcal-event-pill:hover {
     transform: translateY(-1px);
-    box-shadow: 0 2px 6px rgba(0,0,0,0.12);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.15);
 }
 
-/* Colores de materias estilo Google Calendar */
+/* Colores de materias en Tema Claro */
 .ev-tecnica {
     background: #ecfdf5;
     color: #065f46;
@@ -225,17 +226,51 @@ $totalHorasSemestre = count($todosLosBloques) * 3;
     border-left-color: #8b5cf6;
 }
 
-/* ─── VISTA SEMANA ─── */
+/* Colores de materias en Tema Oscuro (Modo Dark SENA) */
+[data-theme="dark"] .ev-tecnica {
+    background: rgba(5, 150, 105, 0.22);
+    color: #6ee7b7;
+    border-left-color: #10b981;
+    border: 1px solid rgba(16, 185, 129, 0.35);
+}
+[data-theme="dark"] .ev-bilinguismo {
+    background: rgba(37, 99, 235, 0.22);
+    color: #93c5fd;
+    border-left-color: #3b82f6;
+    border: 1px solid rgba(59, 130, 246, 0.35);
+}
+[data-theme="dark"] .ev-transversal {
+    background: rgba(217, 119, 6, 0.22);
+    color: #fcd34d;
+    border-left-color: #f59e0b;
+    border: 1px solid rgba(245, 158, 11, 0.35);
+}
+[data-theme="dark"] .ev-social {
+    background: rgba(139, 92, 246, 0.22);
+    color: #c4b5fd;
+    border-left-color: #8b5cf6;
+    border: 1px solid rgba(139, 92, 246, 0.35);
+}
+
+/* ─── VISTA SEMANA (HORAS 6:00 AM A 10:00 PM) ─── */
 .gcal-week-container {
     display: flex;
     flex-direction: column;
     overflow-x: auto;
+    max-height: 760px;
+    overflow-y: auto;
+    position: relative;
 }
+
 .gcal-week-header-row {
     display: grid;
-    grid-template-columns: 60px repeat(7, 1fr);
+    grid-template-columns: 80px repeat(7, minmax(130px, 1fr));
     border-bottom: 1px solid var(--border);
     background: var(--muted);
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
 }
 .gcal-week-header-col {
     padding: 0.625rem 0.25rem;
@@ -271,22 +306,25 @@ $totalHorasSemestre = count($todosLosBloques) * 3;
 
 .gcal-week-body {
     display: grid;
-    grid-template-columns: 60px repeat(7, 1fr);
+    grid-template-columns: 80px repeat(7, minmax(130px, 1fr));
     position: relative;
-    min-height: 600px;
+    /* 17 franjas horarias (6 a 22) * 56px = 952px */
+    height: 952px;
 }
 .gcal-time-col {
     border-right: 1px solid var(--border);
     background: var(--background);
+    user-select: none;
 }
 .gcal-time-slot-label {
-    height: 60px;
+    height: 56px;
     font-size: 0.6875rem;
     font-weight: 600;
     color: var(--muted-foreground);
     text-align: right;
     padding-right: 0.5rem;
     transform: translateY(-8px);
+    box-sizing: border-box;
 }
 
 .gcal-week-day-col {
@@ -298,39 +336,45 @@ $totalHorasSemestre = count($todosLosBloques) * 3;
     border-right: none;
 }
 .gcal-grid-hour-line {
-    height: 60px;
-    border-bottom: 1px dashed rgba(0, 0, 0, 0.06);
+    height: 56px;
+    border-bottom: 1px dashed rgba(125, 125, 125, 0.18);
     box-sizing: border-box;
 }
 
+/* Tarjeta de bloque horario con horas visibles */
 .gcal-week-card {
     position: absolute;
     left: 4px;
     right: 4px;
     border-radius: 6px;
-    padding: 0.4rem 0.5rem;
+    padding: 0.4rem 0.55rem;
     cursor: pointer;
     overflow: hidden;
     transition: all 0.15s ease;
     border-left: 3px solid;
     z-index: 5;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
 }
 .gcal-week-card:hover {
-    z-index: 10;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    z-index: 15;
+    box-shadow: 0 6px 16px rgba(0,0,0,0.22);
     transform: translateY(-1px);
 }
 
-/* ─── VISTA DÍA ─── */
+/* ─── VISTA DÍA (HORAS 6:00 AM A 10:00 PM) ─── */
 .gcal-day-container {
     display: grid;
-    grid-template-columns: 80px 1fr;
+    grid-template-columns: 90px 1fr;
     position: relative;
-    min-height: 650px;
+    height: 952px;
+    max-height: 760px;
+    overflow-y: auto;
 }
 
-/* ─── MODAL DETALLES DEL EVENTO (ESTILO GOOGLE CALENDAR) ─── */
+/* ─── MODAL DETALLES DEL EVENTO ─── */
 .gcal-modal-backdrop {
     display: none;
     position: fixed;
@@ -338,7 +382,7 @@ $totalHorasSemestre = count($todosLosBloques) * 3;
     left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(0, 0, 0, 0.45);
+    background: rgba(0, 0, 0, 0.55);
     backdrop-filter: blur(4px);
     z-index: 9999;
     align-items: center;
@@ -351,7 +395,7 @@ $totalHorasSemestre = count($todosLosBloques) * 3;
     border-radius: var(--radius-lg);
     width: 100%;
     max-width: 520px;
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
     overflow: hidden;
     animation: gcalModalIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
@@ -367,6 +411,20 @@ $totalHorasSemestre = count($todosLosBloques) * 3;
 .gcal-modal-body {
     padding: 1.5rem;
 }
+
+/* Barra de referencia rápida de franjas horarias */
+.jornada-badge-bar {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    background: var(--muted);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 0.5rem 0.875rem;
+    margin-bottom: 1rem;
+    font-size: 0.8125rem;
+}
 </style>
 
 <div class="page-header" style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:1rem;">
@@ -376,16 +434,16 @@ $totalHorasSemestre = count($todosLosBloques) * 3;
                 <i class="bi bi-arrow-left me-1"></i>Fichas
             </a>
             <span style="color:var(--muted-foreground);">/</span>
-            <span style="font-size:0.875rem; color:var(--muted-foreground);">Horario Google Calendar</span>
+            <span style="font-size:0.875rem; color:var(--muted-foreground);">Horario de Formación</span>
         </div>
         <h1 class="page-header-title" style="display:flex; align-items:center; gap:0.625rem;">
             <span style="display:inline-flex; align-items:center; justify-content:center; width:2.5rem; height:2.5rem; border-radius:0.5rem; background:rgba(5,150,105,0.12); color:#059669;">
                 <i class="bi bi-calendar3" style="font-size:1.375rem;"></i>
             </span>
-            Calendario de Horario — Ficha <?= htmlspecialchars($ficha['numero_ficha'] ?? $id) ?>
+            Horario Oficial de Formación — Ficha <?= htmlspecialchars($ficha['numero_ficha'] ?? $id) ?>
         </h1>
         <div class="page-header-subtitle">
-            Programa: <strong><?= htmlspecialchars($ficha['programa'] ?? 'ADSO') ?></strong> — Jornada <?= htmlspecialchars($ficha['jornada'] ?? 'Mañana') ?> (06:00 – 12:00)
+            Programa: <strong><?= htmlspecialchars($ficha['programa'] ?? 'ADSO') ?></strong> — Jornadas: <strong>Mañana, Tarde y Noche (06:00 am – 10:00 pm)</strong>
         </div>
     </div>
 
@@ -402,8 +460,8 @@ $totalHorasSemestre = count($todosLosBloques) * 3;
     </div>
 </div>
 
-<!-- ── SELECTOR DE FICHA Y TARJETAS RESUMEN ─────────────────────────── -->
-<div class="shadcn-card" style="margin-bottom:1.5rem; padding:1.25rem;">
+<!-- ── SELECTOR DE FICHA Y FILTRO POR INSTRUCTOR ───────────────────── -->
+<div class="shadcn-card" style="margin-bottom:1rem; padding:1.25rem;">
     <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem;">
         
         <!-- Cambiar de ficha -->
@@ -423,7 +481,7 @@ $totalHorasSemestre = count($todosLosBloques) * 3;
         <!-- Filtro Rápido por Instructor en el Calendario -->
         <div style="display:flex; align-items:center; gap:0.5rem;">
             <label style="font-size:0.8125rem; font-weight:600; color:var(--muted-foreground); white-space:nowrap;">
-                <i class="bi bi-funnel me-1"></i>Filtrar Instructor:
+                <i class="bi bi-funnel me-1"></i>Instructor:
             </label>
             <select id="filtroInstructorCal" class="shadcn-select" style="min-width:220px;" onchange="alCambiarFiltroInstructor(this.value)">
                 <option value="">— Todos los Instructores —</option>
@@ -445,6 +503,26 @@ $totalHorasSemestre = count($todosLosBloques) * 3;
     </div>
 </div>
 
+<!-- ── BARRA GUÍA DE JORNADAS Y BLOQUES (6 AM A 10 PM) ──────────────── -->
+<div class="jornada-badge-bar">
+    <div style="font-weight:700; color:var(--foreground); display:flex; align-items:center; gap:0.35rem;">
+        <i class="bi bi-clock-history text-primary" style="color:var(--sena-brand);"></i>
+        <span>Franjas Horarias SENA:</span>
+    </div>
+    <span class="shadcn-badge" style="background:rgba(5,150,105,0.12); color:#059669; font-weight:600;">
+        🌅 Bloque 1: 06:00 am – 09:00 am
+    </span>
+    <span class="shadcn-badge" style="background:rgba(37,99,235,0.12); color:#2563eb; font-weight:600;">
+        ☀️ Bloque 2: 09:00 am – 12:00 pm
+    </span>
+    <span class="shadcn-badge" style="background:rgba(217,119,6,0.12); color:#d97706; font-weight:600;">
+        🌤️ Tarde: 12:00 pm – 06:00 pm
+    </span>
+    <span class="shadcn-badge" style="background:rgba(139,92,246,0.12); color:#8b5cf6; font-weight:600;">
+        🌙 Noche: 06:00 pm – 10:00 pm
+    </span>
+</div>
+
 <!-- ── COMPONENTE PRINCIPAL GOOGLE CALENDAR ─────────────────────────── -->
 <div class="gcal-container">
     
@@ -458,16 +536,16 @@ $totalHorasSemestre = count($todosLosBloques) * 3;
             <button type="button" class="gcal-btn-circle" onclick="gcalNavegar(1)" title="Siguiente">
                 <i class="bi bi-chevron-right"></i>
             </button>
-            <div id="gcalTitle" class="gcal-title">Cargando fecha...</div>
+            <div id="gcalTitle" class="gcal-title">Cargando horario...</div>
         </div>
 
-        <!-- Conmutador de Vistas Google Calendar -->
+        <!-- Conmutador de Vistas (Semana seleccionada por defecto para ver horas 6am a 10pm) -->
         <div class="gcal-view-switcher">
-            <button type="button" class="gcal-view-btn active" id="btnViewMes" onclick="gcalCambiarVista('mes')">
-                <i class="bi bi-grid-3x3 me-1"></i>Mes
+            <button type="button" class="gcal-view-btn active" id="btnViewSemana" onclick="gcalCambiarVista('semana')">
+                <i class="bi bi-columns-gap me-1"></i>Semana (Horario)
             </button>
-            <button type="button" class="gcal-view-btn" id="btnViewSemana" onclick="gcalCambiarVista('semana')">
-                <i class="bi bi-columns-gap me-1"></i>Semana
+            <button type="button" class="gcal-view-btn" id="btnViewMes" onclick="gcalCambiarVista('mes')">
+                <i class="bi bi-grid-3x3 me-1"></i>Mes
             </button>
             <button type="button" class="gcal-view-btn" id="btnViewDia" onclick="gcalCambiarVista('dia')">
                 <i class="bi bi-calendar-day me-1"></i>Día
@@ -479,7 +557,7 @@ $totalHorasSemestre = count($todosLosBloques) * 3;
     </div>
 
     <!-- Contenedor dinámico donde se renderizan las vistas -->
-    <div id="gcalViewArea" style="position:relative; min-height:500px;">
+    <div id="gcalViewArea" style="position:relative; min-height:550px;">
         <!-- Inyectado por JavaScript -->
     </div>
 
@@ -512,7 +590,7 @@ $totalHorasSemestre = count($todosLosBloques) * 3;
                     </div>
                     <div>
                         <div id="gcalModalFecha" style="font-weight:600;">Lunes, 14 de Julio de 2025</div>
-                        <div id="gcalModalHorario" style="color:var(--muted-foreground); font-size:0.8125rem;">06:00 – 09:00 (3 horas lectivas) • Bloque 1</div>
+                        <div id="gcalModalHorario" style="color:var(--muted-foreground); font-size:0.8125rem;">06:00 am – 09:00 am (3 horas lectivas) • Bloque 1</div>
                     </div>
                 </div>
 
@@ -534,7 +612,7 @@ $totalHorasSemestre = count($todosLosBloques) * 3;
                     </div>
                     <div>
                         <div style="font-weight:600;">Ficha <?= htmlspecialchars($ficha['numero_ficha'] ?? $id) ?> — <?= htmlspecialchars($ficha['programa'] ?? 'ADSO') ?></div>
-                        <div style="color:var(--muted-foreground); font-size:0.8125rem;">Jornada <?= htmlspecialchars($ficha['jornada'] ?? 'Mañana') ?></div>
+                        <div style="color:var(--muted-foreground); font-size:0.8125rem;">Jornada: 06:00 am – 10:00 pm (Según franja asignada)</div>
                     </div>
                 </div>
 
@@ -552,21 +630,21 @@ $totalHorasSemestre = count($todosLosBloques) * 3;
     </div>
 </div>
 
-<!-- ── SCRIPT COMPLETO MOTOR GOOGLE CALENDAR ────────────────────────── -->
+<!-- ── SCRIPT MOTOR GOOGLE CALENDAR (6 AM A 10 PM) ──────────────────── -->
 <script>
 // Datos completos del horario transferidos desde el controlador
 const GCAL_BLOQUES = <?= $bloquesJson ?: '[]' ?>;
 const ID_FICHA_ACTUAL = <?= (int)$id ?>;
 
-// Estado del Calendario
+// Estado del Calendario (Semana activada por defecto para ver la grilla horaria 6am a 10pm)
 let gcalEstado = {
-    vista: 'mes', // 'mes', 'semana', 'dia', 'agenda'
+    vista: 'semana', // 'semana', 'mes', 'dia', 'agenda'
     fechaActual: new Date(),
     filtroInstructor: ''
 };
 
-// Determinar fecha inicial: si hoy no cae dentro de los bloques registrados,
-// abrir en la primera fecha con clases (ej. Julio 2025) para que no abra vacío
+// Determinar fecha inicial inteligente: si hoy no cae dentro de los bloques,
+// abrir en la fecha donde hay clases (ej. Julio 2025) para que el horario se vea completo
 (function inicializarFechaPorDefecto() {
     if (GCAL_BLOQUES.length > 0) {
         const fechasOrdenadas = GCAL_BLOQUES.map(b => b.fecha).sort();
@@ -577,7 +655,6 @@ let gcalEstado = {
         if (hoyStr >= minFecha && hoyStr <= maxFecha) {
             gcalEstado.fechaActual = new Date();
         } else {
-            // Usar la primera fecha disponible
             const partes = minFecha.split('-');
             gcalEstado.fechaActual = new Date(parseInt(partes[0]), parseInt(partes[1]) - 1, parseInt(partes[2]));
         }
@@ -590,6 +667,29 @@ const NOMBRES_MESES = [
 ];
 const NOMBRES_DIAS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
 const NOMBRES_DIAS_CORTOS = ['DOM', 'LUN', 'MAR', 'MIÉ', 'JUE', 'VIE', 'SÁB'];
+
+// Limpiar nombres largos de materias para que se lean hermosas y claras
+function formatearNombreMateria(materia) {
+    if (!materia) return 'Formación Profesional';
+    let nombre = materia;
+    // Quitar boilerplates redundantes
+    nombre = nombre.replace(/\s*-\s*PRINCIPAL\s*-\s*CONVERGENTES\s*4/gi, '');
+    nombre = nombre.replace(/\s*-\s*CONVERGENTES\s*4/gi, '');
+    nombre = nombre.replace(/\s*-\s*PRINCIPAL/gi, '');
+    return nombre.trim();
+}
+
+// Formatear hora estilo 12h (am / pm)
+function formatearHora12(horaStr) {
+    if (!horaStr) return '';
+    const partes = horaStr.split(':');
+    let h = parseInt(partes[0]);
+    const m = partes[1] || '00';
+    const ampm = h >= 12 ? 'pm' : 'am';
+    h = h % 12;
+    h = h ? h : 12;
+    return `${h < 10 ? '0' : ''}${h}:${m} ${ampm}`;
+}
 
 // ─── CLASIFICACIÓN DE COLORES DE MATERIA ───
 function obtenerClaseColor(materia) {
@@ -621,8 +721,8 @@ function gcalCambiarVista(nuevaVista) {
 
     // Actualizar botones de conmutador
     document.querySelectorAll('.gcal-view-btn').forEach(btn => btn.classList.remove('active'));
-    if (nuevaVista === 'mes') document.getElementById('btnViewMes').classList.add('active');
-    else if (nuevaVista === 'semana') document.getElementById('btnViewSemana').classList.add('active');
+    if (nuevaVista === 'semana') document.getElementById('btnViewSemana').classList.add('active');
+    else if (nuevaVista === 'mes') document.getElementById('btnViewMes').classList.add('active');
     else if (nuevaVista === 'dia') document.getElementById('btnViewDia').classList.add('active');
     else if (nuevaVista === 'agenda') document.getElementById('btnViewAgenda').classList.add('active');
 
@@ -659,10 +759,10 @@ function gcalRenderizar() {
     const area = document.getElementById('gcalViewArea');
     const titleEl = document.getElementById('gcalTitle');
 
-    if (gcalEstado.vista === 'mes') {
-        renderizarVistaMes(area, titleEl);
-    } else if (gcalEstado.vista === 'semana') {
+    if (gcalEstado.vista === 'semana') {
         renderizarVistaSemana(area, titleEl);
+    } else if (gcalEstado.vista === 'mes') {
+        renderizarVistaMes(area, titleEl);
     } else if (gcalEstado.vista === 'dia') {
         renderizarVistaDia(area, titleEl);
     } else if (gcalEstado.vista === 'agenda') {
@@ -670,99 +770,7 @@ function gcalRenderizar() {
     }
 }
 
-// ─── 1. VISTA MES ESTILO GOOGLE CALENDAR ───
-function renderizarVistaMes(area, titleEl) {
-    const anio = gcalEstado.fechaActual.getFullYear();
-    const mes = gcalEstado.fechaActual.getMonth();
-
-    titleEl.textContent = `${NOMBRES_MESES[mes]} de ${anio}`;
-
-    const primerDiaMes = new Date(anio, mes, 1);
-    const ultimoDiaMes = new Date(anio, mes + 1, 0);
-
-    // Ajustar para que la semana empiece en Lunes (0: Domingo -> convertir a Lunes=0)
-    let diaInicioSemana = primerDiaMes.getDay() - 1;
-    if (diaInicioSemana === -1) diaInicioSemana = 6;
-
-    const fechaInicioGrid = new Date(primerDiaMes);
-    fechaInicioGrid.setDate(fechaInicioGrid.getDate() - diaInicioSemana);
-
-    const bloques = obtenerBloquesFiltrados();
-    // Indexar bloques por fecha YYYY-MM-DD
-    const bloquesPorFecha = {};
-    bloques.forEach(b => {
-        if (!bloquesPorFecha[b.fecha]) bloquesPorFecha[b.fecha] = [];
-        bloquesPorFecha[b.fecha].push(b);
-    });
-
-    const hoyStr = (new Date()).toISOString().split('T')[0];
-
-    let html = `
-        <div class="gcal-month-grid">
-            <div class="gcal-month-header">Lunes</div>
-            <div class="gcal-month-header">Martes</div>
-            <div class="gcal-month-header">Miércoles</div>
-            <div class="gcal-month-header">Jueves</div>
-            <div class="gcal-month-header">Viernes</div>
-            <div class="gcal-month-header">Sábado</div>
-            <div class="gcal-month-header">Domingo</div>
-        </div>
-        <div class="gcal-month-body">
-    `;
-
-    const fechaIter = new Date(fechaInicioGrid);
-    for (let c = 0; c < 35; c++) {
-        const fechaStr = fechaIter.toISOString().split('T')[0];
-        const numDia = fechaIter.getDate();
-        const esMesActual = (fechaIter.getMonth() === mes);
-        const esHoy = (fechaStr === hoyStr);
-
-        const clasesDelDia = bloquesPorFecha[fechaStr] || [];
-
-        html += `
-            <div class="gcal-day-cell ${!esMesActual ? 'other-month' : ''} ${esHoy ? 'is-today' : ''}" 
-                 onclick="gcalIrADia('${fechaStr}')" title="Clic para ver día ${numDia}">
-                <div class="gcal-day-num">${numDia}</div>
-                <div class="gcal-events-wrap">
-        `;
-
-        const maxVisibles = 3;
-        for (let i = 0; i < Math.min(clasesDelDia.length, maxVisibles); i++) {
-            const b = clasesDelDia[i];
-            const colorInfo = obtenerClaseColor(b.materia);
-            const horaIni = (b.hora_inicio || '06:00').substring(0, 5);
-            html += `
-                <div class="gcal-event-pill ${colorInfo.css}" 
-                     onclick="event.stopPropagation(); gcalAbrirModal(${b.id_horario_bloque})"
-                     title="${horaIni} ${b.materia} (${b.instructor_nombre})">
-                    <span>${horaIni}</span> <strong>${escaparHtml(b.materia)}</strong>
-                </div>
-            `;
-        }
-
-        if (clasesDelDia.length > maxVisibles) {
-            const restantes = clasesDelDia.length - maxVisibles;
-            html += `
-                <div style="font-size:0.6875rem; color:var(--sena-brand); font-weight:700; padding:0.125rem 0.25rem; cursor:pointer;"
-                     onclick="event.stopPropagation(); gcalIrADia('${fechaStr}')">
-                    +${restantes} más
-                </div>
-            `;
-        }
-
-        html += `
-                </div>
-            </div>
-        `;
-
-        fechaIter.setDate(fechaIter.getDate() + 1);
-    }
-
-    html += `</div>`;
-    area.innerHTML = html;
-}
-
-// ─── 2. VISTA SEMANA ESTILO GOOGLE CALENDAR ───
+// ─── 1. VISTA SEMANA COMPLETA (6:00 AM A 10:00 PM) ───
 function renderizarVistaSemana(area, titleEl) {
     const cur = new Date(gcalEstado.fechaActual);
     let dayOfWeek = cur.getDay() - 1;
@@ -796,7 +804,9 @@ function renderizarVistaSemana(area, titleEl) {
     let html = `
         <div class="gcal-week-container">
             <div class="gcal-week-header-row">
-                <div style="border-right:1px solid var(--border); padding:0.5rem; text-align:center; font-size:0.6875rem; font-weight:600; color:var(--muted-foreground);">GMT-5</div>
+                <div style="border-right:1px solid var(--border); padding:0.625rem 0.25rem; text-align:center; font-size:0.6875rem; font-weight:700; color:var(--muted-foreground);">
+                    HORARIO
+                </div>
     `;
 
     dias.forEach(d => {
@@ -816,10 +826,13 @@ function renderizarVistaSemana(area, titleEl) {
                 <div class="gcal-time-col">
     `;
 
-    // Horas de 06:00 a 18:00 (12 horas)
-    for (let h = 6; h <= 18; h++) {
-        const hStr = (h < 10 ? '0' : '') + h + ':00';
-        html += `<div class="gcal-time-slot-label">${hStr}</div>`;
+    // Horario exacto solicitado: Desde las 6:00 am hasta las 10:00 pm (h = 6 a h = 22)
+    for (let h = 6; h <= 22; h++) {
+        const ampm = h >= 12 ? 'pm' : 'am';
+        let h12 = h % 12;
+        h12 = h12 ? h12 : 12;
+        const labelHorario = `${h < 10 ? '0' : ''}${h}:00 (${h12} ${ampm})`;
+        html += `<div class="gcal-time-slot-label">${labelHorario}</div>`;
     }
 
     html += `</div>`;
@@ -829,11 +842,10 @@ function renderizarVistaSemana(area, titleEl) {
         const fStr = d.toISOString().split('T')[0];
         const clasesDia = bloques.filter(b => b.fecha === fStr);
 
-        html += `
-            <div class="gcal-week-day-col">
-        `;
+        html += `<div class="gcal-week-day-col">`;
 
-        for (let h = 6; h <= 18; h++) {
+        // 17 líneas guía de 56px cada una
+        for (let h = 6; h <= 22; h++) {
             html += `<div class="gcal-grid-hour-line"></div>`;
         }
 
@@ -845,27 +857,31 @@ function renderizarVistaSemana(area, titleEl) {
             const [iniH, iniM] = hIni.split(':').map(Number);
             const [finH, finM] = hFin.split(':').map(Number);
 
+            // Calcular posición top y altura basada en las 6:00 am (56px por hora)
             const minutosDesdeInicio = ((iniH - 6) * 60) + (iniM || 0);
             const duracionMinutos = ((finH - iniH) * 60) + ((finM || 0) - (iniM || 0));
 
-            const topPx = Math.max(0, (minutosDesdeInicio / 60) * 60);
-            const heightPx = Math.max(35, (duracionMinutos / 60) * 60 - 4);
+            const topPx = Math.max(0, (minutosDesdeInicio / 60) * 56);
+            const heightPx = Math.max(48, (duracionMinutos / 60) * 56 - 5);
 
             const colorInfo = obtenerClaseColor(b.materia);
+            const nombreLimpio = formatearNombreMateria(b.materia);
+            const nombreBloque = (b.bloque === 'bloque1') ? 'Bloque 1' : ((b.bloque === 'bloque2') ? 'Bloque 2' : (b.bloque || 'Bloque'));
 
             html += `
                 <div class="gcal-week-card ${colorInfo.css}" 
                      style="top:${topPx}px; height:${heightPx}px;"
                      onclick="gcalAbrirModal(${b.id_horario_bloque})"
-                     title="${hIni} - ${hFin}: ${b.materia}">
-                    <div style="font-size:0.6875rem; font-weight:700; display:flex; justify-content:space-between; margin-bottom:0.125rem;">
-                        <span>${hIni} – ${hFin}</span>
-                        <span style="opacity:0.8;">${colorInfo.label}</span>
+                     title="${hIni} a ${hFin}: ${b.materia}">
+                    <div>
+                        <div style="font-size:0.6875rem; font-weight:800; display:flex; justify-content:space-between; margin-bottom:0.125rem;">
+                            <span>${nombreBloque} • ${formatearHora12(hIni)} – ${formatearHora12(hFin)}</span>
+                        </div>
+                        <div style="font-size:0.75rem; font-weight:700; line-height:1.25; margin-bottom:0.25rem;">
+                            ${escaparHtml(nombreLimpio)}
+                        </div>
                     </div>
-                    <div style="font-size:0.75rem; font-weight:700; line-height:1.2; overflow:hidden; text-overflow:ellipsis;">
-                        ${escaparHtml(b.materia)}
-                    </div>
-                    <div style="font-size:0.6875rem; opacity:0.9; margin-top:0.25rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+                    <div style="font-size:0.6875rem; opacity:0.95; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-weight:500;">
                         👤 ${escaparHtml(b.instructor_nombre || 'Instructor')}
                     </div>
                 </div>
@@ -883,7 +899,99 @@ function renderizarVistaSemana(area, titleEl) {
     area.innerHTML = html;
 }
 
-// ─── 3. VISTA DÍA ESTILO GOOGLE CALENDAR ───
+// ─── 2. VISTA MES ESTILO GOOGLE CALENDAR ADAPTADA ───
+function renderizarVistaMes(area, titleEl) {
+    const anio = gcalEstado.fechaActual.getFullYear();
+    const mes = gcalEstado.fechaActual.getMonth();
+
+    titleEl.textContent = `${NOMBRES_MESES[mes]} de ${anio}`;
+
+    const primerDiaMes = new Date(anio, mes, 1);
+    let diaInicioSemana = primerDiaMes.getDay() - 1;
+    if (diaInicioSemana === -1) diaInicioSemana = 6;
+
+    const fechaInicioGrid = new Date(primerDiaMes);
+    fechaInicioGrid.setDate(fechaInicioGrid.getDate() - diaInicioSemana);
+
+    const bloques = obtenerBloquesFiltrados();
+    const bloquesPorFecha = {};
+    bloques.forEach(b => {
+        if (!bloquesPorFecha[b.fecha]) bloquesPorFecha[b.fecha] = [];
+        bloquesPorFecha[b.fecha].push(b);
+    });
+
+    const hoyStr = (new Date()).toISOString().split('T')[0];
+
+    let html = `
+        <div class="gcal-month-grid">
+            <div class="gcal-month-header">Lunes</div>
+            <div class="gcal-month-header">Martes</div>
+            <div class="gcal-month-header">Miércoles</div>
+            <div class="gcal-month-header">Jueves</div>
+            <div class="gcal-month-header">Viernes</div>
+            <div class="gcal-month-header">Sábado</div>
+            <div class="gcal-month-header">Domingo</div>
+        </div>
+        <div class="gcal-month-body">
+    `;
+
+    const fechaIter = new Date(fechaInicioGrid);
+    for (let c = 0; c < 35; c++) {
+        const fechaStr = fechaIter.toISOString().split('T')[0];
+        const numDia = fechaIter.getDate();
+        const esMesActual = (fechaIter.getMonth() === mes);
+        const esHoy = (fechaStr === hoyStr);
+
+        const clasesDelDia = bloquesPorFecha[fechaStr] || [];
+
+        html += `
+            <div class="gcal-day-cell ${!esMesActual ? 'other-month' : ''} ${esHoy ? 'is-today' : ''}" 
+                 onclick="gcalIrADia('${fechaStr}')" title="Clic para ver horario detallado del día ${numDia}">
+                <div class="gcal-day-num">${numDia}</div>
+                <div class="gcal-events-wrap">
+        `;
+
+        const maxVisibles = 3;
+        for (let i = 0; i < Math.min(clasesDelDia.length, maxVisibles); i++) {
+            const b = clasesDelDia[i];
+            const colorInfo = obtenerClaseColor(b.materia);
+            const horaIni = (b.hora_inicio || '06:00').substring(0, 5);
+            const horaFin = (b.hora_fin || '09:00').substring(0, 5);
+            const nombreLimpio = formatearNombreMateria(b.materia);
+            const bTag = (b.bloque === 'bloque1') ? 'B1' : ((b.bloque === 'bloque2') ? 'B2' : 'B');
+
+            html += `
+                <div class="gcal-event-pill ${colorInfo.css}" 
+                     onclick="event.stopPropagation(); gcalAbrirModal(${b.id_horario_bloque})"
+                     title="${bTag} (${horaIni} a ${horaFin}): ${b.materia} - ${b.instructor_nombre}">
+                    <span>[${bTag}] ${horaIni}</span> <strong>${escaparHtml(nombreLimpio)}</strong>
+                </div>
+            `;
+        }
+
+        if (clasesDelDia.length > maxVisibles) {
+            const restantes = clasesDelDia.length - maxVisibles;
+            html += `
+                <div style="font-size:0.6875rem; color:var(--sena-brand); font-weight:700; padding:0.125rem 0.25rem; cursor:pointer;"
+                     onclick="event.stopPropagation(); gcalIrADia('${fechaStr}')">
+                    +${restantes} más
+                </div>
+            `;
+        }
+
+        html += `
+                </div>
+            </div>
+        `;
+
+        fechaIter.setDate(fechaIter.getDate() + 1);
+    }
+
+    html += `</div>`;
+    area.innerHTML = html;
+}
+
+// ─── 3. VISTA DÍA COMPLETA (6:00 AM A 10:00 PM) ───
 function renderizarVistaDia(area, titleEl) {
     const cur = gcalEstado.fechaActual;
     const fStr = cur.toISOString().split('T')[0];
@@ -900,25 +1008,29 @@ function renderizarVistaDia(area, titleEl) {
     let html = `
         <div style="padding:1rem 1.25rem; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; background:var(--muted);">
             <div>
-                <span style="font-size:0.8125rem; font-weight:700; color:var(--sena-brand); text-transform:uppercase;">Programación del Día</span>
-                <div style="font-size:1.125rem; font-weight:800; color:var(--foreground);">${diaSemana} ${diaNum} de ${mesNombre}</div>
+                <span style="font-size:0.8125rem; font-weight:700; color:var(--sena-brand); text-transform:uppercase;">Programación del Día (06:00 am – 10:00 pm)</span>
+                <div style="font-size:1.125rem; font-weight:800; color:var(--foreground);">${diaSemana} ${diaNum} de ${mesNombre} de ${anio}</div>
             </div>
             <span class="shadcn-badge badge-secondary" style="font-size:0.8125rem;">
-                ${clasesDia.length} franja(s) programada(s)
+                ${clasesDia.length} bloque(s) programado(s)
             </span>
         </div>
         <div class="gcal-day-container">
             <div class="gcal-time-col">
     `;
 
-    for (let h = 6; h <= 18; h++) {
-        const hStr = (h < 10 ? '0' : '') + h + ':00';
-        html += `<div class="gcal-time-slot-label">${hStr}</div>`;
+    // 17 franjas de 6:00 am a 10:00 pm
+    for (let h = 6; h <= 22; h++) {
+        const ampm = h >= 12 ? 'pm' : 'am';
+        let h12 = h % 12;
+        h12 = h12 ? h12 : 12;
+        const labelHorario = `${h < 10 ? '0' : ''}${h}:00 (${h12} ${ampm})`;
+        html += `<div class="gcal-time-slot-label">${labelHorario}</div>`;
     }
 
-    html += `</div><div style="position:relative; background:var(--card);">`;
+    html += `</div><div style="position:relative; background:var(--card); height:952px;">`;
 
-    for (let h = 6; h <= 18; h++) {
+    for (let h = 6; h <= 22; h++) {
         html += `<div class="gcal-grid-hour-line"></div>`;
     }
 
@@ -926,8 +1038,8 @@ function renderizarVistaDia(area, titleEl) {
         html += `
             <div style="position:absolute; top:80px; left:20px; right:20px; text-align:center; padding:3rem; background:rgba(0,0,0,0.02); border:1px dashed var(--border); border-radius:var(--radius-lg); color:var(--muted-foreground);">
                 <i class="bi bi-calendar-check fs-2 d-block mb-2" style="color:var(--sena-brand);"></i>
-                <strong>No hay formación programada para este día</strong>
-                <p style="font-size:0.8125rem; margin:0.5rem 0 0 0;">Utiliza los botones de navegación o la vista mes para explorar las clases.</p>
+                <strong>No hay formación programada para este día en la ficha</strong>
+                <p style="font-size:0.8125rem; margin:0.5rem 0 0 0;">Utiliza los botones de navegación o la vista de semana para revisar los días con clase.</p>
             </div>
         `;
     }
@@ -942,27 +1054,29 @@ function renderizarVistaDia(area, titleEl) {
         const minutosDesdeInicio = ((iniH - 6) * 60) + (iniM || 0);
         const duracionMinutos = ((finH - iniH) * 60) + ((finM || 0) - (iniM || 0));
 
-        const topPx = Math.max(0, (minutosDesdeInicio / 60) * 60);
-        const heightPx = Math.max(50, (duracionMinutos / 60) * 60 - 6);
+        const topPx = Math.max(0, (minutosDesdeInicio / 60) * 56);
+        const heightPx = Math.max(60, (duracionMinutos / 60) * 56 - 6);
 
         const colorInfo = obtenerClaseColor(b.materia);
+        const nombreLimpio = formatearNombreMateria(b.materia);
+        const nombreBloque = (b.bloque === 'bloque1') ? 'Bloque 1' : ((b.bloque === 'bloque2') ? 'Bloque 2' : (b.bloque || 'Bloque'));
 
         html += `
             <div class="gcal-week-card ${colorInfo.css}" 
-                 style="top:${topPx}px; height:${heightPx}px; left:12px; right:12px; padding:0.75rem 1rem;"
+                 style="top:${topPx}px; height:${heightPx}px; left:16px; right:16px; padding:0.75rem 1.25rem;"
                  onclick="gcalAbrirModal(${b.id_horario_bloque})">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.25rem;">
-                    <span class="shadcn-badge" style="background:rgba(0,0,0,0.08); font-size:0.75rem; font-weight:700;">
-                        <i class="bi bi-clock me-1"></i>${hIni} – ${hFin} (${duracionMinutos / 60} horas)
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.35rem;">
+                    <span class="shadcn-badge" style="background:rgba(0,0,0,0.08); font-size:0.8125rem; font-weight:700;">
+                        <i class="bi bi-clock me-1"></i>${nombreBloque} • ${formatearHora12(hIni)} – ${formatearHora12(hFin)} (${duracionMinutos / 60} horas)
                     </span>
-                    <span style="font-size:0.75rem; font-weight:700; text-transform:uppercase;">${colorInfo.label} • ${b.bloque}</span>
+                    <span style="font-size:0.75rem; font-weight:700; text-transform:uppercase;">${colorInfo.label}</span>
                 </div>
-                <div style="font-size:1.0625rem; font-weight:800; line-height:1.3; margin-bottom:0.25rem;">
-                    ${escaparHtml(b.materia)}
+                <div style="font-size:1.0625rem; font-weight:800; line-height:1.3; margin-bottom:0.35rem;">
+                    ${escaparHtml(nombreLimpio)}
                 </div>
                 <div style="display:flex; align-items:center; gap:0.5rem; font-size:0.8125rem;">
                     <span>👨‍🏫 <strong>${escaparHtml(b.instructor_nombre || 'Instructor')}</strong></span>
-                    <span style="opacity:0.7;">•</span>
+                    <span style="opacity:0.6;">•</span>
                     <span style="opacity:0.85;">${escaparHtml(b.instructor_correo || '')}</span>
                 </div>
             </div>
@@ -987,13 +1101,12 @@ function renderizarVistaAgenda(area, titleEl) {
             <div style="text-align:center; padding:4rem 1rem; color:var(--muted-foreground);">
                 <i class="bi bi-journal-x fs-1 d-block mb-2"></i>
                 <h3 style="font-weight:700;">No hay bloques programados en ${NOMBRES_MESES[mes]} ${anio}</h3>
-                <p style="font-size:0.875rem;">Navega a otro mes o importa un nuevo horario desde Excel.</p>
+                <p style="font-size:0.875rem;">Navega con las flechas o selecciona otro mes para explorar.</p>
             </div>
         `;
         return;
     }
 
-    // Agrupar por fecha
     const bloquesPorFecha = {};
     bloques.forEach(b => {
         if (!bloquesPorFecha[b.fecha]) bloquesPorFecha[b.fecha] = [];
@@ -1022,16 +1135,19 @@ function renderizarVistaAgenda(area, titleEl) {
             const colorInfo = obtenerClaseColor(b.materia);
             const hIni = b.hora_inicio ? b.hora_inicio.substring(0, 5) : '06:00';
             const hFin = b.hora_fin ? b.hora_fin.substring(0, 5) : '09:00';
+            const nombreLimpio = formatearNombreMateria(b.materia);
+            const nombreBloque = (b.bloque === 'bloque1') ? 'Bloque 1' : ((b.bloque === 'bloque2') ? 'Bloque 2' : (b.bloque || 'Bloque'));
+
             html += `
                 <div class="gcal-event-pill ${colorInfo.css}" 
                      style="padding:0.625rem 0.75rem; border-radius:6px; cursor:pointer;"
                      onclick="gcalAbrirModal(${b.id_horario_bloque})">
                     <div style="display:flex; justify-content:space-between; font-size:0.75rem; margin-bottom:0.25rem;">
-                        <strong><i class="bi bi-clock me-1"></i>${hIni} – ${hFin}</strong>
+                        <strong>${nombreBloque} • ${formatearHora12(hIni)} – ${formatearHora12(hFin)}</strong>
                         <span>${colorInfo.label}</span>
                     </div>
                     <div style="font-weight:700; font-size:0.875rem; line-height:1.3; margin-bottom:0.25rem;">
-                        ${escaparHtml(b.materia)}
+                        ${escaparHtml(nombreLimpio)}
                     </div>
                     <div style="font-size:0.75rem; opacity:0.9;">
                         👤 ${escaparHtml(b.instructor_nombre || 'Instructor')}
@@ -1072,7 +1188,9 @@ function gcalAbrirModal(idBloque) {
 
     const hIni = b.hora_inicio ? b.hora_inicio.substring(0, 5) : '06:00';
     const hFin = b.hora_fin ? b.hora_fin.substring(0, 5) : '09:00';
-    document.getElementById('gcalModalHorario').textContent = `${hIni} – ${hFin} (3 horas lectivas) • ${b.bloque || 'Bloque 1'}`;
+    const nombreBloque = (b.bloque === 'bloque1') ? 'Bloque 1' : ((b.bloque === 'bloque2') ? 'Bloque 2' : (b.bloque || 'Bloque'));
+
+    document.getElementById('gcalModalHorario').textContent = `${nombreBloque} • ${formatearHora12(hIni)} – ${formatearHora12(hFin)} (3 horas lectivas)`;
 
     document.getElementById('gcalModalInstructor').textContent = b.instructor_nombre || 'Instructor no asignado';
     document.getElementById('gcalModalCorreo').textContent = b.instructor_correo || 'Sin correo registrado';
