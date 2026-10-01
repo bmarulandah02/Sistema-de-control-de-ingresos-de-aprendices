@@ -74,14 +74,24 @@ require __DIR__ . '/../../views/layouts/header.php';
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem;">
                 <!-- Seleccionar Asignatura / Ficha del Instructor -->
                 <div>
-                    <label style="display:block; font-size:0.8125rem; font-weight:500; margin-bottom:0.375rem; color:var(--muted-foreground);">
-                        <i class="bi bi-book me-1"></i>Materia / Asignatura
+                    <label style="display:block; font-size:0.8125rem; font-weight:600; margin-bottom:0.375rem; color:var(--foreground);">
+                        <i class="bi bi-book me-1" style="color:var(--sena-brand);"></i>Materia / Asignatura
+                        <?php if (($_SESSION['rol'] ?? '') === 'Instructor'): ?>
+                            <span class="shadcn-badge" style="font-size:0.6875rem; background:rgba(5,150,105,0.12); color:#059669; margin-left:0.375rem;">
+                                <i class="bi bi-lock-fill me-1"></i>Solo tus asignaturas
+                            </span>
+                        <?php endif; ?>
                     </label>
                     <select id="materia_select" class="shadcn-select" onchange="alCambiarMateria()">
-                        <option value="">— Seleccionar Ficha / Materia —</option>
+                        <option value="">— Seleccionar Materia / Asignatura —</option>
                         <?php 
                         $materiaGuardada = $_SESSION['materia_actual'] ?? '';
                         $materiaEsPersonalizada = true;
+                        $opcionesVistas = [];
+
+                        $rolActual = $_SESSION['rol'] ?? '';
+                        $usuarioIdActual = (int)($_SESSION['usuario_id'] ?? 0);
+
                         foreach ($fichas ?? [] as $f): 
                             $nombreOpcion = $f['programa'] . ' (Ficha ' . $f['numero_ficha'] . ')';
                             $valorOpcion  = $f['programa'] . ' - Ficha ' . $f['numero_ficha'];
@@ -91,21 +101,33 @@ require __DIR__ . '/../../views/layouts/header.php';
                         ?>
                             <?php if (!empty($asignaturasFicha)): ?>
                                 <optgroup label="<?= htmlspecialchars($f['programa']) ?> — Ficha <?= htmlspecialchars($f['numero_ficha']) ?>">
-                                    <option value="<?= htmlspecialchars($valorOpcion) ?>" 
-                                            data-jornada="<?= htmlspecialchars($f['jornada'] ?? 'Mañana') ?>"
-                                            <?= $selected ?>>
-                                        📘 Formación Principal (Ficha <?= htmlspecialchars($f['numero_ficha']) ?>) [<?= htmlspecialchars($f['jornada'] ?? 'Mañana') ?>]
-                                    </option>
-                                    <?php foreach ($asignaturasFicha as $asig): 
+                                    <?php if ($rolActual === 'Administrador' || (int)($f['instructor_id'] ?? 0) === $usuarioIdActual): ?>
+                                        <option value="<?= htmlspecialchars($valorOpcion) ?>" 
+                                                data-jornada="<?= htmlspecialchars($f['jornada'] ?? 'Mañana') ?>"
+                                                <?= $selected ?>>
+                                            📘 Formación Principal (Ficha <?= htmlspecialchars($f['numero_ficha']) ?>) [<?= htmlspecialchars($f['jornada'] ?? 'Mañana') ?>]
+                                        </option>
+                                    <?php endif; ?>
+                                    <?php 
+                                    foreach ($asignaturasFicha as $asig): 
                                         $valAsig = $asig['nombre_asignatura'] . ' - Ficha ' . $f['numero_ficha'];
+                                        
+                                        // Deduplicación estricta para evitar que se repita la misma materia
+                                        $claveDeduplicar = $f['numero_ficha'] . '||' . $asig['nombre_asignatura'] . '||' . ($asig['fk_usuario_instructor'] ?? 0);
+                                        if (isset($opcionesVistas[$claveDeduplicar])) {
+                                            continue;
+                                        }
+                                        $opcionesVistas[$claveDeduplicar] = true;
+
                                         $selAsig = ($materiaGuardada === $valAsig) ? 'selected' : '';
                                         if ($selAsig) $materiaEsPersonalizada = false;
-                                        $icono = ($asig['tipo'] === 'Transversal') ? '📙' : '📗';
+                                        $icono = ($asig['tipo'] === 'Transversal') ? '📙' : (($asig['tipo'] === 'Bilingüismo') ? '📘' : '📗');
+                                        $nombreInstructor = !empty($asig['instructor_nombre']) ? $asig['instructor_nombre'] : 'Instructor Asignado';
                                     ?>
                                         <option value="<?= htmlspecialchars($valAsig) ?>" 
                                                 data-jornada="<?= htmlspecialchars($f['jornada'] ?? 'Mañana') ?>"
                                                 <?= $selAsig ?>>
-                                            <?= $icono ?> <?= htmlspecialchars($asig['nombre_asignatura']) ?> (<?= htmlspecialchars($asig['tipo']) ?> - <?= htmlspecialchars($asig['instructor_nombre'] ?? 'Instructor') ?>)
+                                            <?= $icono ?> <?= htmlspecialchars($asig['nombre_asignatura']) ?> (<?= htmlspecialchars($asig['tipo']) ?> — <?= htmlspecialchars($nombreInstructor) ?>)
                                         </option>
                                     <?php endforeach; ?>
                                 </optgroup>
@@ -117,16 +139,51 @@ require __DIR__ . '/../../views/layouts/header.php';
                                 </option>
                             <?php endif; ?>
                         <?php endforeach; ?>
+
+                        <?php if ($rolActual === 'Administrador'): ?>
                         <option value="__custom__" <?= ($materiaGuardada && $materiaEsPersonalizada) ? 'selected' : '' ?>>
                              Otra Asignatura (Escribir libremente...)
                         </option>
+                        <?php endif; ?>
                     </select>
 
+                    <?php if ($rolActual === 'Administrador'): ?>
                     <input type="text" id="materia_custom_input" class="shadcn-input" 
                            placeholder="Escribe el nombre de la materia..." 
                            value="<?= $materiaEsPersonalizada ? htmlspecialchars($materiaGuardada) : '' ?>"
                            style="display: <?= ($materiaGuardada && $materiaEsPersonalizada) ? 'block' : 'none' ?>; margin-top:0.5rem;" 
                            onchange="actualizarCamposSesion()" oninput="actualizarCamposSesion()">
+                    <?php endif; ?>
+
+                    <?php if (!empty($claseMomento)): ?>
+                        <?php 
+                        $esClaseDeEsteInstructor = ($rolActual === 'Instructor' && (int)($claseMomento['fk_usuario_instructor'] ?? 0) === $usuarioIdActual);
+                        $horaIni = !empty($claseMomento['hora_inicio']) ? substr($claseMomento['hora_inicio'], 0, 5) : '06:00';
+                        $horaFin = !empty($claseMomento['hora_fin']) ? substr($claseMomento['hora_fin'], 0, 5) : '09:00';
+                        ?>
+                        <?php if ($esClaseDeEsteInstructor): ?>
+                            <div style="background:rgba(5,150,105,0.08); border:1px solid #059669; border-radius:var(--radius-md); padding:0.5rem 0.75rem; margin-top:0.5rem; font-size:0.75rem; color:#065f46; display:flex; align-items:center; gap:0.5rem;">
+                                <i class="bi bi-check-circle-fill fs-6" style="color:#059669;"></i>
+                                <div>
+                                    <strong>¡Tu clase programada está activa!</strong> <?= htmlspecialchars($claseMomento['materia']) ?> (<?= $horaIni ?> – <?= $horaFin ?>). Se seleccionó automáticamente.
+                                </div>
+                            </div>
+                        <?php elseif ($rolActual === 'Instructor'): ?>
+                            <div style="background:rgba(245,158,11,0.08); border:1px solid #f59e0b; border-radius:var(--radius-md); padding:0.5rem 0.75rem; margin-top:0.5rem; font-size:0.75rem; color:#92400e; display:flex; align-items:center; gap:0.5rem;">
+                                <i class="bi bi-shield-exclamation fs-6" style="color:#d97706;"></i>
+                                <div>
+                                    <strong>Horario programado:</strong> En este momento la franja corresponde a <strong><?= htmlspecialchars($claseMomento['instructor_nombre'] ?? 'Otro instructor') ?></strong>. Tu menú solo muestra tus asignaturas autorizadas para evitar confusiones.
+                                </div>
+                            </div>
+                        <?php else: ?>
+                            <div style="background:rgba(37,99,235,0.08); border:1px solid #2563eb; border-radius:var(--radius-md); padding:0.5rem 0.75rem; margin-top:0.5rem; font-size:0.75rem; color:#1e40af; display:flex; align-items:center; gap:0.5rem;">
+                                <i class="bi bi-clock-history fs-6" style="color:#2563eb;"></i>
+                                <div>
+                                    <strong>Clase del momento:</strong> <?= htmlspecialchars($claseMomento['materia']) ?> con <strong><?= htmlspecialchars($claseMomento['instructor_nombre'] ?? '') ?></strong> (<?= $horaIni ?> – <?= $horaFin ?>).
+                                </div>
+                            </div>
+                        <?php endif; ?>
+                    <?php endif; ?>
                 </div>
 
                 <!-- Selector de Franja Horaria / Bloque -->

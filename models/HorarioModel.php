@@ -563,9 +563,8 @@ public function obtenerHorarioFicha($identificadorFicha, $fechaActual)
 
             return $horario;
         }
-    }catch(PDOException $e)
-    {
-        error_log("Error en horarioModel: ". $e->getMessage());
+    } catch (PDOException $e) {
+        error_log("Error en horarioModel: " . $e->getMessage());
         return ['entrada' => '07:00:00', 'salida' => '18:00:00'];
     }
     return ['entrada' => '07:00:00', 'salida' => '18:00:00'];
@@ -582,6 +581,7 @@ public function obtenerHorarioFicha($identificadorFicha, $fechaActual)
                 fk_usuario_instructor INT NOT NULL,
                 nombre_asignatura VARCHAR(100) NOT NULL,
                 tipo VARCHAR(30) DEFAULT 'Técnica',
+                UNIQUE KEY uq_fa_ficha_materia_instructor (fk_ficha, fk_usuario_instructor, nombre_asignatura),
                 KEY fk_fa_ficha (fk_ficha),
                 KEY fk_fa_usuario (fk_usuario_instructor)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8";
@@ -590,9 +590,10 @@ public function obtenerHorarioFicha($identificadorFicha, $fechaActual)
     }
 
     /**
-     * Obtiene el listado de asignaturas registradas para una ficha específica
+     * Obtiene el listado de asignaturas registradas para una ficha específica (con opción de filtrar por instructor)
+     * Deduplica resultados para evitar asignaturas repetidas.
      */
-    public static function obtenerAsignaturasPorFicha(int $idFicha): array {
+    public static function obtenerAsignaturasPorFicha(int $idFicha, ?int $soloInstructorId = null): array {
         $asignaturas = [];
         try {
             $mysql = new MySQL();
@@ -600,18 +601,101 @@ public function obtenerHorarioFicha($identificadorFicha, $fechaActual)
             $conexion = $mysql->getConexion();
             if ($conexion) {
                 self::asegurarTablaFichaAsignatura($conexion);
-                $sql = "SELECT fa.id_ficha_asignatura, fa.fk_ficha, fa.fk_usuario_instructor, fa.nombre_asignatura, fa.tipo,
-                               CONCAT(u.nombre, ' ', u.apellido) AS instructor_nombre
+
+                $where = ["fa.fk_ficha = :idFicha"];
+                $params = [':idFicha' => $idFicha];
+
+                if ($soloInstructorId !== null && $soloInstructorId > 0) {
+                    $where[] = "fa.fk_usuario_instructor = :instructorId";
+                    $params[':instructorId'] = $soloInstructorId;
+                }
+
+                $whereSql = implode(" AND ", $where);
+                $sql = "SELECT MIN(fa.id_ficha_asignatura) AS id_ficha_asignatura,
+                               fa.fk_ficha,
+                               fa.fk_usuario_instructor,
+                               fa.nombre_asignatura,
+                               MAX(fa.tipo) AS tipo,
+                               CONCAT(u.nombre, ' ', u.apellido) AS instructor_nombre,
+                               u.nombre_usuario AS instructor_correo
                         FROM ficha_asignatura fa
                         LEFT JOIN usuario u ON fa.fk_usuario_instructor = u.id_usuario
-                        WHERE fa.fk_ficha = :idFicha
-                        ORDER BY fa.tipo ASC, fa.nombre_asignatura ASC";
+                        WHERE {$whereSql}
+                        GROUP BY fa.fk_ficha, fa.fk_usuario_instructor, fa.nombre_asignatura, u.nombre, u.apellido, u.nombre_usuario
+                        ORDER BY tipo ASC, fa.nombre_asignatura ASC";
+
                 $stmt = $conexion->prepare($sql);
-                $stmt->execute([':idFicha' => $idFicha]);
+                $stmt->execute($params);
                 $asignaturas = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
             }
         } catch (Exception $e) {}
         return $asignaturas;
+    }
+
+    /**
+     * Obtiene la clase y el instructor programados en el horario para la fecha y hora actuales (o especificadas)
+     */
+    public static function obtenerClaseDelMomento(?int $idFicha = null, ?string $fecha = null, ?string $hora = null): ?array {
+        try {
+            $mysql = new MySQL();
+            $mysql->conectarBD();
+            $conexion = $mysql->getConexion();
+            if ($conexion) {
+                self::asegurarTablasHorario($conexion);
+                $fecha = $fecha ?? date('Y-m-d');
+                $hora  = $hora ?? date('H:i:s');
+
+                // 1. Buscar coincidencia exacta de hora dentro del bloque
+                $sql = "SELECT hb.*,
+                               CONCAT(u.nombre, ' ', u.apellido) AS instructor_nombre,
+                               u.nombre_usuario AS instructor_correo
+                        FROM horario_bloque hb
+                        LEFT JOIN usuario u ON hb.fk_usuario_instructor = u.id_usuario
+                        WHERE hb.fecha = :fecha
+                          AND (
+                            (hb.hora_inicio <= :hora AND hb.hora_fin >= :hora)
+                            OR :hora BETWEEN hb.hora_inicio AND hb.hora_fin
+                          )";
+                $params = [':fecha' => $fecha, ':hora' => $hora];
+                if (!empty($idFicha)) {
+                    $sql .= " AND hb.fk_ficha = :ficha";
+                    $params[':ficha'] = $idFicha;
+                }
+                $sql .= " ORDER BY hb.hora_inicio ASC LIMIT 1";
+
+                $stmt = $conexion->prepare($sql);
+                $stmt->execute($params);
+                $res = $stmt->fetch(PDO::FETCH_ASSOC);
+                if ($res) {
+                    $res['es_hora_exacta'] = true;
+                    return $res;
+                }
+
+                // 2. Si no coincide con la hora exacta pero hoy hay clase programada en la fecha
+                $sqlHoy = "SELECT hb.*,
+                                  CONCAT(u.nombre, ' ', u.apellido) AS instructor_nombre,
+                                  u.nombre_usuario AS instructor_correo
+                           FROM horario_bloque hb
+                           LEFT JOIN usuario u ON hb.fk_usuario_instructor = u.id_usuario
+                           WHERE hb.fecha = :fecha";
+                $paramsHoy = [':fecha' => $fecha];
+                if (!empty($idFicha)) {
+                    $sqlHoy .= " AND hb.fk_ficha = :ficha";
+                    $paramsHoy[':ficha'] = $idFicha;
+                }
+                $sqlHoy .= " ORDER BY ABS(TIME_TO_SEC(TIMEDIFF(COALESCE(hb.hora_inicio, '06:00:00'), :hora))) ASC LIMIT 1";
+                $paramsHoy[':hora'] = $hora;
+
+                $stmtHoy = $conexion->prepare($sqlHoy);
+                $stmtHoy->execute($paramsHoy);
+                $resHoy = $stmtHoy->fetch(PDO::FETCH_ASSOC);
+                if ($resHoy) {
+                    $resHoy['es_hora_exacta'] = false;
+                    return $resHoy;
+                }
+            }
+        } catch (Exception $e) {}
+        return null;
     }
 
     /**

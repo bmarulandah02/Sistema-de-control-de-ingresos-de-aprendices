@@ -161,7 +161,9 @@ class FichaController {
             $mesFiltro = $mesesDisponibles[0]['mes_anio'];
         }
 
+        $todosLosBloques = HorarioModel::obtenerHorarioBloquesFicha($id, null);
         $bloques = HorarioModel::obtenerHorarioBloquesFicha($id, $mesFiltro ?: null);
+        $bloquesJson = json_encode($todosLosBloques, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
         $instructoresFicha = HorarioModel::obtenerInstructoresDeFicha($id);
         $asignaturas = HorarioModel::obtenerAsignaturasPorFicha($id);
         $todasFichas = HorarioModel::obtenerTodasFichas(['estado' => 'Activo']);

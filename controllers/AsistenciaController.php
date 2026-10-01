@@ -15,14 +15,30 @@ class AsistenciaController {
 
         if ($rolSesion === 'Instructor') {
             $fichas = HorarioModel::obtenerFichasPorInstructor($usuarioIdSesion);
+            $soloInstructorId = $usuarioIdSesion;
         } else {
             $fichas = HorarioModel::obtenerTodasFichas();
+            $soloInstructorId = null;
         }
 
+        $idFichaPrincipal = !empty($fichas) ? (int)$fichas[0]['id'] : null;
+        $claseMomento = HorarioModel::obtenerClaseDelMomento($idFichaPrincipal);
+
         foreach ($fichas as &$f) {
-            $f['asignaturas'] = HorarioModel::obtenerAsignaturasPorFicha((int)$f['id']);
+            $f['asignaturas'] = HorarioModel::obtenerAsignaturasPorFicha((int)$f['id'], $soloInstructorId);
         }
         unset($f);
+
+        // Si es instructor y tiene clase en este momento según horario, preseleccionar automáticamente su clase
+        if ($rolSesion === 'Instructor' && !empty($claseMomento) && (int)($claseMomento['fk_usuario_instructor'] ?? 0) === $usuarioIdSesion) {
+            if (empty($_SESSION['materia_actual'])) {
+                $numFichaActual = $claseMomento['fk_ficha'] ?? $idFichaPrincipal;
+                $_SESSION['materia_actual'] = $claseMomento['materia'] . ' - Ficha ' . $numFichaActual;
+            }
+            if (empty($_SESSION['bloque_actual']) && !empty($claseMomento['hora_inicio']) && !empty($claseMomento['hora_fin'])) {
+                $_SESSION['bloque_actual'] = substr($claseMomento['hora_inicio'], 0, 5) . '|' . substr($claseMomento['hora_fin'], 0, 5) . '|' . $claseMomento['bloque'];
+            }
+        }
 
         $bloques = HorarioModel::obtenerTodosLosBloques();
         if (!$mensaje && isset($_SESSION['mensaje'])) {

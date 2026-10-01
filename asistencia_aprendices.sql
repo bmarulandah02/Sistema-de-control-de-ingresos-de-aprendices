@@ -76,6 +76,7 @@ CREATE TABLE `ficha_asignatura` (
   `nombre_asignatura` varchar(100) NOT NULL,
   `tipo` varchar(30) DEFAULT 'Técnica',
   PRIMARY KEY (`id_ficha_asignatura`),
+  UNIQUE KEY `uq_fa_ficha_materia_instructor` (`fk_ficha`, `fk_usuario_instructor`, `nombre_asignatura`),
   KEY `fk_fa_ficha` (`fk_ficha`),
   KEY `fk_fa_usuario` (`fk_usuario_instructor`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
