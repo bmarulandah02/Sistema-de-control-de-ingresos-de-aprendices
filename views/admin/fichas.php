@@ -151,11 +151,6 @@ $estadoFiltro = $_GET['estado'] ?? 'Activo';
                                class="btn-shadcn btn-shadcn-outline" style="padding:0.25rem 0.5rem; font-size:0.75rem;" title="Editar Ficha">
                                 <i class="bi bi-pencil"></i>
                             </a>
-                            <!-- //etiqueta para horario -->
-                             <a href="index.php?action=ficha-horario&id=<?= $f['id'] ?>"
-                               class="btn-shadcn btn-shadcn-outline" style="padding:0.25rem 0.5rem; font-size:0.75rem;" title="Horario del mes">
-                                <i class="bi bi-calendar3"></i> Horario
-                            </a>
 
                             <?php if ($f['estado'] === 'Finalizado'): ?>
                                 <button type="button"
@@ -172,13 +167,7 @@ $estadoFiltro = $_GET['estado'] ?? 'Activo';
                             <?php endif; ?>
                         </div>
                         <?php else: ?>
-                                                <div style="display:flex; align-items:center; gap:0.5rem;">
-                            <a href="index.php?action=ficha-horario-imprimir&id=<?= $f['id'] ?>" target="_blank"
-                               class="btn-shadcn btn-shadcn-outline" style="padding:0.25rem 0.5rem; font-size:0.75rem;" title="Imprimir horario del mes">
-                                <i class="bi bi-printer"></i> Horario
-                            </a>
-                            <span style="color:var(--muted-foreground); font-size:0.75rem;"><i class="bi bi-eye me-1"></i>Solo Lectura</span>
-                        </div>
+                        <span style="color:var(--muted-foreground); font-size:0.75rem;"><i class="bi bi-eye me-1"></i>Solo Lectura</span>
                         <?php endif; ?>
                     </td>
                 </tr>

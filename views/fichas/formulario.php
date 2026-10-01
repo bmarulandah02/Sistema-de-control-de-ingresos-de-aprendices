@@ -58,21 +58,6 @@ $esEdicion = isset($ficha) && $ficha !== null;
                             <?php endforeach; ?>
                         </select>
                     </div>
-                    
-                    <div style="grid-column: 1 / -1;">
-                        <label style="display:block; font-size:0.875rem; font-weight:500; margin-bottom:0.375rem;">Instructores vinculados a la ficha</label>
-                        <div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap:0.5rem; background:var(--muted); padding:0.75rem; border-radius:var(--radius-md); max-height:200px; overflow-y:auto;">
-                            <?php $vinculados = $ficha['instructores_ids'] ?? []; ?>
-                            <?php foreach ($instructores ?? [] as $u): ?>
-                            <label style="display:flex; align-items:center; gap:0.5rem; font-size:0.875rem; cursor:pointer;">
-                                <input type="checkbox" name="instructores[]" value="<?= (int) $u['id'] ?>"
-                                       <?= in_array((int) $u['id'], $vinculados, true) ? 'checked' : '' ?>>
-                                <?= htmlspecialchars($u['nombre']) ?>
-                            </label>
-                            <?php endforeach; ?>
-                        </div>
-                        <small style="color:var(--muted-foreground);">El instructor encargado se vincula automáticamente; marca aquí a los demás que comparten horario.</small>
-                    </div>
 
                     <div>
                         <label style="display:block; font-size:0.875rem; font-weight:500; margin-bottom:0.375rem;">Jornada *</label>

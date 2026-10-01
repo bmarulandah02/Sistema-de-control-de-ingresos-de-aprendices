@@ -81,7 +81,7 @@ class HorarioModel {
                 $sql = "SELECT u.id_usuario AS id, CONCAT(u.nombre, ' ', u.apellido) AS nombre, u.identificacion
                         FROM usuario u
                         LEFT JOIN rol r ON u.fk_rol = r.id_rol
-                        WHERE r.nombre_rol = 'Instructor'
+                        WHERE r.nombre_rol = 'Instructor' OR u.fk_rol = 2
                         ORDER BY u.nombre ASC";
 
                 $stmt = $conexion->query($sql);
@@ -186,9 +186,7 @@ class HorarioModel {
                 self::asegurarColumnasFechas($conexion);
                 self::asegurarTablaFichaAsignatura($conexion);
 
-                   $where = ["(f.fk_usuario = :instructorId
-                            OR f.id_ficha IN (SELECT fk_ficha FROM ficha_asignatura WHERE fk_usuario_instructor = :instructorId)
-                            OR f.id_ficha IN (SELECT fk_ficha FROM ficha_instructor WHERE fk_usuario = :instructorId))"]; 
+                $where = ["(f.fk_usuario = :instructorId OR f.id_ficha IN (SELECT fk_ficha FROM ficha_asignatura WHERE fk_usuario_instructor = :instructorId))"];
                 $params = [':instructorId' => $instructorId];
 
                 if (!empty($filtros['estado'])) {
@@ -280,8 +278,7 @@ class HorarioModel {
                         'fecha_inicio'  => $row['fecha_inicio'],
                         'fecha_fin'     => $row['fecha_fin'],
                         'estado'        => $row['estado'] ?: 'Activo',
-                        'asignaturas'   => self::obtenerAsignaturasPorFicha($idFicha),
-                        'instructores_ids' => self::obtenerInstructoresPorFicha($idFicha),
+                        'asignaturas'   => self::obtenerAsignaturasPorFicha($idFicha)
                     ];
                 }
             }
@@ -592,200 +589,9 @@ public function obtenerHorarioFicha($identificadorFicha, $fechaActual)
         } catch (Exception $e) {}
     }
 
-
-    /**
-     * Devuelve los IDs de los instructores vinculados a una ficha
-     */
-    public static function obtenerInstructoresPorFicha(int $idFicha): array {
-        try {
-            $mysql = new MySQL();
-            $mysql->conectarBD();
-            $conexion = $mysql->getConexion();
-            if ($conexion) {
-                $stmt = $conexion->prepare("SELECT fk_usuario FROM ficha_instructor WHERE fk_ficha = :ficha");
-                $stmt->execute([':ficha' => $idFicha]);
-                return array_map('intval', $stmt->fetchAll(PDO::FETCH_COLUMN));
-            }
-        } catch (Exception $e) {
-            error_log("Error al obtener instructores de ficha: " . $e->getMessage());
-        }
-        return [];
-    }
-
-    /**
-     * Reemplaza los instructores vinculados a una ficha (con transacción)
-     */
-    public static function guardarInstructoresFicha(int $idFicha, array $instructoresIds): bool {
-        try {
-            $mysql = new MySQL();
-            $mysql->conectarBD();
-            $conexion = $mysql->getConexion();
-            if ($conexion) {
-                $conexion->beginTransaction();
-
-                $stmtDel = $conexion->prepare("DELETE FROM ficha_instructor WHERE fk_ficha = :ficha");
-                $stmtDel->execute([':ficha' => $idFicha]);
-
-                $stmtIns = $conexion->prepare("INSERT IGNORE INTO ficha_instructor (fk_ficha, fk_usuario) VALUES (:ficha, :usuario)");
-                foreach (array_unique(array_map('intval', $instructoresIds)) as $idUsuario) {
-                    if ($idUsuario > 0) {
-                        $stmtIns->execute([':ficha' => $idFicha, ':usuario' => $idUsuario]);
-                    }
-                }
-
-                $conexion->commit();
-                return true;
-            }
-        } catch (Exception $e) {
-            if (isset($conexion) && $conexion->inTransaction()) {
-                $conexion->rollBack();
-            }
-            error_log("Error al guardar instructores de ficha: " . $e->getMessage());
-        }
-        return false;
-    }
-
-    //esta funcion devuelve los instructores vinculados a una ficha,con esto llenamos la lista desplegable de los horarios 
-
-        public static function obtenerInstructoresDeFicha(int $idFicha): array {
-        $lista = [];
-        try {
-            $mysql = new MySQL();
-            $mysql->conectarBD();
-            $conexion = $mysql->getConexion();
-            if ($conexion) {
-                $sql = "SELECT u.id_usuario AS id, CONCAT(u.nombre, ' ', u.apellido) AS nombre
-                        FROM usuario u
-                        WHERE u.id_usuario IN (SELECT fk_usuario FROM ficha WHERE id_ficha = :ficha1)
-                           OR u.id_usuario IN (SELECT fk_usuario FROM ficha_instructor WHERE fk_ficha = :ficha2)
-                        ORDER BY u.nombre ASC";
-                $stmt = $conexion->prepare($sql);
-                $stmt->execute([':ficha1' => $idFicha, ':ficha2' => $idFicha]);
-                while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-                    $lista[] = [
-                        'id'     => (int) $row['id'],
-                        'nombre' => trim($row['nombre'])
-                    ];
-                }
-            }
-        } catch (Exception $e) {
-            error_log("Error al obtener instructores de la ficha: " . $e->getMessage());
-        }
-        return $lista;
-    }
-
-
-    //esta funcion lee el horario de un mes completo para una ficha
-    //el mes llega con formato AAAA-MM, por ejemplo 2026-10
-    public static function obtenerHorarioMes(int $idFicha, string $mes): array {
-        $horario = [];
-        if (!preg_match('/^\d{4}-\d{2}$/', $mes)) {
-            return $horario;
-        }
-        $inicio = $mes . '-01';
-        $fin    = date('Y-m-t', strtotime($inicio));
-
-        try {
-            $mysql = new MySQL();
-            $mysql->conectarBD();
-            $conexion = $mysql->getConexion();
-            if ($conexion) {
-                $sql = "SELECT hb.fecha, hb.bloque, hb.fk_usuario_instructor AS instructor_id,
-                               CONCAT(u.nombre, ' ', u.apellido) AS instructor_nombre
-                        FROM horario_bloque hb
-                        LEFT JOIN usuario u ON hb.fk_usuario_instructor = u.id_usuario
-                        WHERE hb.fk_ficha = :ficha
-                          AND hb.fecha BETWEEN :inicio AND :fin
-                        ORDER BY hb.fecha ASC";
-                $stmt = $conexion->prepare($sql);
-                $stmt->execute([':ficha' => $idFicha, ':inicio' => $inicio, ':fin' => $fin]);
-                while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-                    $horario[$row['fecha']][$row['bloque']] = [
-                        'id'     => (int) $row['instructor_id'],
-                        'nombre' => trim($row['instructor_nombre'])
-                    ];
-                }
-            }
-        } catch (Exception $e) {
-            error_log("Error al obtener el horario del mes: " . $e->getMessage());
-        }
-        return $horario;
-    }
-     //esta funcion guarda el horario de mes para una ficha
-      public static function guardarHorarioMes(int $idFicha, string $mes, array $asignaciones): bool {
-        //esta validacion se hace para comprobar que la fecha tenga la cantidad de digitos correctos 
-        // los /../ son los delimitadores
-        // el ^ significa el inicio del texto
-        // el /d{con numero} significa la cantidad de numeros 
-        // el - es literal
-        // $ significa el final del texto
-        if (!preg_match('/^\d{4}-\d{2}$/', $mes)) {
-            return false;
-        }
-        $inicio = $mes . '-01';
-        $fin    = date('Y-m-t', strtotime($inicio));
-
-        // Solo se aceptan instructores que pertenecen a esta ficha
-        $permitidos = array_column(self::obtenerInstructoresDeFicha($idFicha), 'id');
-        $bloquesValidos = ['bloque1', 'bloque2'];
-
-        try {
-            $mysql = new MySQL();
-            $mysql->conectarBD();
-            $conexion = $mysql->getConexion();
-            if ($conexion) {
-                $conexion->beginTransaction(); // se guarda todo o no se guarda nada en tal caso de que algo falle en la operacion el roolback deshace toda la operacion
-
-                $stmtDel = $conexion->prepare("DELETE FROM horario_bloque
-                                               WHERE fk_ficha = :ficha AND fecha BETWEEN :inicio AND :fin");
-                $stmtDel->execute([':ficha' => $idFicha, ':inicio' => $inicio, ':fin' => $fin]);
-
-                $stmtIns = $conexion->prepare("INSERT INTO horario_bloque (fk_ficha, fecha, bloque, fk_usuario_instructor)
-                                               VALUES (:ficha, :fecha, :bloque, :instructor)");
-
-                foreach ($asignaciones as $fecha => $bloques) {
-                    if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', (string) $fecha) || $fecha < $inicio || $fecha > $fin) {
-                        continue;
-                    }
-                    if (!is_array($bloques)) {
-                        continue;
-                    }
-                    foreach ($bloquesValidos as $bloque) {
-                        $idInstructor = (int) ($bloques[$bloque] ?? 0);
-                        if ($idInstructor > 0 && in_array($idInstructor, $permitidos, true)) {
-                            $stmtIns->execute([
-                                ':ficha'      => $idFicha,
-                                ':fecha'      => $fecha,
-                                ':bloque'     => $bloque,
-                                ':instructor' => $idInstructor
-                            ]);
-                        }
-                    }
-                }
-
-                $conexion->commit();
-                return true;
-            }
-        } catch (Exception $e) {
-            if (isset($conexion) && $conexion->inTransaction()) {
-                $conexion->rollBack();
-            }
-            error_log("Error al guardar el horario del mes: " . $e->getMessage());
-        }
-        return false;
-    }
-
-
-
-
-
-
     /**
      * Obtiene el listado de asignaturas registradas para una ficha específica
      */
-
-
-
     public static function obtenerAsignaturasPorFicha(int $idFicha): array {
         $asignaturas = [];
         try {

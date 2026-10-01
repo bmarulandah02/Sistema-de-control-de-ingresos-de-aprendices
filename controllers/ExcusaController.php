@@ -129,7 +129,7 @@ class ExcusaController{
         exit();
     }
 
-    if ($rol === 'Instructor' && !ExcusaModel::instructorPuedeRevisar($idExcusa, $idInstructor)) {
+    if ($rol === 'Instructor' && (int) $excusa['id_instructor_ficha'] !== $idInstructor) {
         header('Location: index.php?action=403');
         exit();
     }

@@ -168,41 +168,6 @@ public static function obtenerPorId(int $idExcusa): ?array {
     }
     return null;
 }
-
-    /*
-     Verifica si un instructor puede revisar una excusa:
-      debe ser el titular de la ficha del aprendiz o estar vinculado a ella.
-     */
-    public static function instructorPuedeRevisar(int $idExcusa, int $idInstructor): bool {
-        try {
-            $mysql = new MySQL();
-            $mysql->conectarBD();
-            $conexion = $mysql->getConexion();
-            if ($conexion) {
-                $sql = "SELECT COUNT(*)
-                        FROM excusa e
-                        JOIN aprendiz a ON e.fk_aprendiz = a.id_aprendiz
-                        JOIN ficha f ON a.fk_ficha = f.id_ficha
-                        WHERE e.id_excusa = :excusa
-                          AND (f.fk_usuario = :instructor
-                               OR EXISTS (SELECT 1 FROM ficha_instructor fi
-                                          WHERE fi.fk_ficha = f.id_ficha AND fi.fk_usuario = :instructor))";
-                $stmt = $conexion->prepare($sql);
-                $stmt->execute([':excusa' => $idExcusa, ':instructor' => $idInstructor]);
-                return (int) $stmt->fetchColumn() > 0;
-            }
-        } catch (Exception $e) {
-            error_log("Error al verificar permiso de excusa: " . $e->getMessage());
-        }
-        return false;
-    }
-
-
-
-
-
-
-
     //funcion para editar la excusa solo se puede editar si el estado se encuentra en pendiente si no no se puede hacer ningun cambio si el 
     //instructor ya la aprobo o rechazo, solo el aprendiz dueño de la eexcusa la podra editar 
     public static function editarExcusa(int $idExcusa,string $motivo, string $fechaInicio, string $fechaFin, ?string $nuevoArchivo = null): bool{
@@ -252,7 +217,7 @@ public static function obtenerPorId(int $idExcusa): ?array {
                     JOIN aprendiz a ON e.fk_aprendiz = a.id_aprendiz
                     JOIN usuario u ON a.fk_usuario = u.id_usuario
                     JOIN ficha f ON a.fk_ficha = f.id_ficha
-                     WHERE (f.fk_usuario = :idInstructor OR EXISTS (SELECT 1 FROM ficha_instructor fi WHERE fi.fk_ficha = f.id_ficha AND fi.fk_usuario = :idInstructor))";
+                    WHERE f.fk_usuario = :idInstructor";
                     $parametros=[':idInstructor'=>$idInstructor];
                     if(!empty($estado)){
                         $sql.=" AND e.estado=:estado";
