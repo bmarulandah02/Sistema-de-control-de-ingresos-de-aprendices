@@ -972,8 +972,17 @@ public function obtenerHorarioFicha($identificadorFicha, $fechaActual)
             }
         }
 
-        // 2. Cargar hoja de cálculo sheet1
+        // 2. Cargar hoja de cálculo sheet1 (o primera hoja disponible)
         $sheetXml = $zip->getFromName('xl/worksheets/sheet1.xml');
+        if (!$sheetXml) {
+            for ($i = 0; $i < $zip->numFiles; $i++) {
+                $stat = $zip->statIndex($i);
+                if (preg_match('#^xl/worksheets/sheet\d+\.xml$#i', $stat['name'])) {
+                    $sheetXml = $zip->getFromName($stat['name']);
+                    break;
+                }
+            }
+        }
         if (!$sheetXml) {
             $zip->close();
             return ['exito' => false, 'mensaje' => 'No se encontró la hoja de trabajo principal en el archivo Excel.'];
@@ -992,6 +1001,16 @@ public function obtenerHorarioFicha($identificadorFicha, $fechaActual)
                     $val = (string)$c->v;
                     if ($type === 's') {
                         $val = $sharedStrings[(int)$val] ?? $val;
+                    } elseif ($type === 'inlineStr' || isset($c->is)) {
+                        if (isset($c->is->t)) {
+                            $val = (string)$c->is->t;
+                        } elseif (isset($c->is->r)) {
+                            $t = '';
+                            foreach ($c->is->r as $rPart) {
+                                $t .= (string)$rPart->t;
+                            }
+                            $val = $t;
+                        }
                     }
                     $rowData[$col] = trim($val);
                 }
@@ -1019,6 +1038,22 @@ public function obtenerHorarioFicha($identificadorFicha, $fechaActual)
         $instructores = [];
         $maxRow = max(array_keys($sheetRows));
 
+        // Detección dinámica del año (del nombre del archivo o del contenido de la hoja)
+        $detectedYear = (int)date('Y');
+        if (preg_match('/20[2-9][0-9]/', basename($filePath), $mY)) {
+            $detectedYear = (int)$mY[0];
+        } else {
+            for ($yr = 1; $yr <= min(15, $maxRow); $yr++) {
+                if (!isset($sheetRows[$yr])) continue;
+                foreach ($sheetRows[$yr] as $cVal) {
+                    if (preg_match('/20[2-9][0-9]/', $cVal, $mY)) {
+                        $detectedYear = (int)$mY[0];
+                        break 2;
+                    }
+                }
+            }
+        }
+
         for ($r = 1; $r <= $maxRow; $r++) {
             if (!isset($sheetRows[$r])) continue;
             $row = $sheetRows[$r];
@@ -1036,10 +1071,15 @@ public function obtenerHorarioFicha($identificadorFicha, $fechaActual)
                 foreach (['D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O'] as $cL) {
                     if (!empty($monthRow[$cL])) {
                         $mN = mb_strtoupper($monthRow[$cL]);
-                        foreach ($monthMap as $mK => $mV) {
-                            if (str_contains($mN, $mK)) {
-                                $activeM = $mV;
-                                break;
+                        if (is_numeric($mN) && (float)$mN > 35000) {
+                            $ts = ((float)$mN - 25569) * 86400;
+                            $activeM = date('m', (int)$ts);
+                        } else {
+                            foreach ($monthMap as $mK => $mV) {
+                                if (str_contains($mN, $mK)) {
+                                    $activeM = $mV;
+                                    break;
+                                }
                             }
                         }
                     }
@@ -1050,9 +1090,13 @@ public function obtenerHorarioFicha($identificadorFicha, $fechaActual)
                 foreach ($colDays as $col => $dayName) {
                     $dayNum = isset($dayNumRow[$col]) ? (int)$dayNumRow[$col] : 0;
                     if ($dayNum > 0) {
-                        $m = $colMonths[$col] ?? $activeM ?? '07';
+                        $m = $colMonths[$col] ?? $activeM ?? '01';
+                        $slotYear = $detectedYear;
+                        if ($m === '01' && isset($colMonths['D']) && $colMonths['D'] === '12') {
+                            $slotYear = $detectedYear + 1;
+                        }
                         $daysInWeek[$col] = [
-                            'date' => sprintf('%04d-%02d-%02d', 2025, $m, $dayNum),
+                            'date' => sprintf('%04d-%02d-%02d', $slotYear, $m, $dayNum),
                             'dayName' => $dayName
                         ];
                     }
@@ -1071,9 +1115,9 @@ public function obtenerHorarioFicha($identificadorFicha, $fechaActual)
                     foreach ($daysInWeek as $col => $dayInfo) {
                         $cellVal = $hRow[$col] ?? '';
                         if (!empty($cellVal) && mb_strtoupper($cellVal) !== 'FESTIVO') {
-                            $lines = explode("\n", $cellVal);
+                            $lines = preg_split('/\r\n|\r|\n/', $cellVal);
                             $instName = trim($lines[0]);
-                            $subject = trim($lines[1] ?? '');
+                            $subject = trim(implode(' - ', array_slice($lines, 1)));
                             if (!empty($instName)) {
                                 $rawSlots[] = [
                                     'date' => $dayInfo['date'],
@@ -1388,7 +1432,22 @@ public function obtenerHorarioFicha($identificadorFicha, $fechaActual)
      */
     public static function obtenerRutaArchivoExcelFicha(int $idFicha): ?string {
         $dir = __DIR__ . "/../public/uploads/horario/";
-        $archivos = glob($dir . "horario_" . $idFicha . "_*.xlsx");
+        if (!is_dir($dir)) return null;
+
+        $archivos = [];
+        $dh = opendir($dir);
+        if ($dh) {
+            while (($file = readdir($dh)) !== false) {
+                if ($file === '.' || $file === '..') continue;
+                if (!str_ends_with(strtolower($file), '.xlsx')) continue;
+                if ($file === 'horario-ejemplo.xlsx') continue;
+                if (str_contains(strtolower($file), (string)$idFicha)) {
+                    $archivos[] = $dir . $file;
+                }
+            }
+            closedir($dh);
+        }
+
         if (!empty($archivos)) {
             usort($archivos, function($a, $b) {
                 return filemtime($b) - filemtime($a);

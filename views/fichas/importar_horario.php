@@ -78,101 +78,52 @@ foreach ($todasFichas as $f) {
     </div>
 </div>
 
-<!-- ── PANEL DE OPCIONES DE CARGA ────────────────────────────────────── -->
-<div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap:1.5rem; margin-bottom:1.5rem;">
-
-    <!-- OPCIÓN 1: ARCHIVO DE EJEMPLO DEL SISTEMA -->
-    <div class="shadcn-card" style="padding:1.5rem; display:flex; flex-direction:column; justify-content:space-between; position:relative; overflow:hidden; border:2px solid rgba(16,185,129,0.3); background:linear-gradient(to bottom, rgba(16,185,129,0.03), transparent);">
-        <div style="position:absolute; top:1rem; right:1rem;">
-            <span class="shadcn-badge" style="background:#059669; color:#fff; font-size:0.75rem; font-weight:600; padding:0.25rem 0.625rem;">
-                <i class="bi bi-star-fill me-1"></i>Recomendado
-            </span>
+<!-- ── PANEL DE CARGA DE HORARIO EXCEL ────────────────────────────────────── -->
+<div class="shadcn-card" style="padding:1.75rem; margin-bottom:1.5rem;">
+    <div style="display:flex; align-items:center; gap:0.75rem; margin-bottom:1rem;">
+        <div style="width:3rem; height:3rem; border-radius:0.75rem; background:rgba(37,99,235,0.15); color:#2563eb; display:flex; align-items:center; justify-content:center; font-size:1.5rem;">
+            <i class="bi bi-file-earmark-excel-fill"></i>
         </div>
-
         <div>
-            <div style="display:flex; align-items:center; gap:0.75rem; margin-bottom:1rem;">
-                <div style="width:3rem; height:3rem; border-radius:0.75rem; background:rgba(16,185,129,0.15); color:#059669; display:flex; align-items:center; justify-content:center; font-size:1.5rem;">
-                    <i class="bi bi-filetype-xlsx"></i>
-                </div>
-                <div>
-                    <h3 style="font-size:1.125rem; font-weight:700; margin:0; color:var(--foreground);">Horario de Ejemplo</h3>
-                    <div style="font-size:0.8125rem; color:var(--muted-foreground);">public/uploads/horario/horario-ejemplo.xlsx</div>
-                </div>
-            </div>
-
-            <p style="font-size:0.875rem; color:var(--muted-foreground); line-height:1.5; margin-bottom:1.25rem;">
-                Utiliza el archivo <code style="background:var(--muted); padding:0.125rem 0.375rem; border-radius:0.25rem; color:#059669; font-weight:600;">horario-ejemplo.xlsx</code> ubicado en el sistema. Contiene el semestre completo (Julio - Diciembre), con 12 instructores y materias técnicas y transversales.
-            </p>
-
-            <div style="background:var(--muted); border-radius:var(--radius-md); padding:0.75rem 1rem; margin-bottom:1.5rem; font-size:0.8125rem;">
-                <div style="display:flex; justify-content:space-between; margin-bottom:0.25rem;">
-                    <span style="color:var(--muted-foreground);"><i class="bi bi-calendar-range me-1"></i>Periodo:</span>
-                    <strong>Julio 2025 – Diciembre 2025</strong>
-                </div>
-                <div style="display:flex; justify-content:space-between; margin-bottom:0.25rem;">
-                    <span style="color:var(--muted-foreground);"><i class="bi bi-people me-1"></i>Instructores en hoja:</span>
-                    <strong>12 Instructores SENA</strong>
-                </div>
-                <div style="display:flex; justify-content:space-between;">
-                    <span style="color:var(--muted-foreground);"><i class="bi bi-clock me-1"></i>Jornada:</span>
-                    <strong>Diurna (6:00 a 12:00)</strong>
-                </div>
-            </div>
+            <h3 style="font-size:1.125rem; font-weight:700; margin:0; color:var(--foreground);">Subir Horario en Formato Excel</h3>
+            <div style="font-size:0.8125rem; color:var(--muted-foreground);">Formato oficial SENA (.xlsx) con distribución de instructores y bloques</div>
         </div>
-
-        <button type="button" id="btnEscanearEjemplo" class="btn-shadcn btn-shadcn-primary" style="width:100%; justify-content:center; padding:0.75rem 1.25rem; font-size:0.9375rem; font-weight:600; box-shadow:0 4px 12px rgba(16,185,129,0.25);" onclick="iniciarEscaneo(true)">
-            <i class="bi bi-lightning-charge-fill me-2"></i>Escanear e Insertar Automáticamente
-        </button>
     </div>
 
-    <!-- OPCIÓN 2: SUBIR ARCHIVO EXCEL PERSONALIZADO -->
-    <div class="shadcn-card" style="padding:1.5rem; display:flex; flex-direction:column; justify-content:space-between;">
-        <div>
-            <div style="display:flex; align-items:center; gap:0.75rem; margin-bottom:1rem;">
-                <div style="width:3rem; height:3rem; border-radius:0.75rem; background:rgba(37,99,235,0.15); color:#2563eb; display:flex; align-items:center; justify-content:center; font-size:1.5rem;">
-                    <i class="bi bi-cloud-arrow-up-fill"></i>
-                </div>
-                <div>
-                    <h3 style="font-size:1.125rem; font-weight:700; margin:0; color:var(--foreground);">Subir Otro Excel</h3>
-                    <div style="font-size:0.8125rem; color:var(--muted-foreground);">Formato oficial SENA (.xlsx)</div>
-                </div>
+    <p style="font-size:0.875rem; color:var(--muted-foreground); line-height:1.5; margin-bottom:1.25rem;">
+        Arrastra o selecciona el archivo Excel de la ficha para escanearlo e insertarlo automáticamente en el sistema. Los instructores y competencias se vincularán de forma inmediata.
+    </p>
+
+    <form id="formSubirExcel" enctype="multipart/form-data" onsubmit="event.preventDefault(); iniciarEscaneo(false);">
+        <div id="dropzone" style="border:2px dashed var(--border); border-radius:var(--radius-lg); padding:2.5rem 1.5rem; text-align:center; cursor:pointer; transition:all 0.2s ease; background:var(--muted); margin-bottom:1rem;"
+             onclick="document.getElementById('archivoExcelInput').click()"
+             ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event)">
+            <i class="bi bi-cloud-arrow-up" style="font-size:2.5rem; color:var(--muted-foreground); display:block; margin-bottom:0.75rem;"></i>
+            <div id="dropzoneText" style="font-size:0.9375rem; font-weight:600; color:var(--foreground); margin-bottom:0.25rem;">
+                Haz clic o arrastra tu archivo Excel aquí
             </div>
-
-            <p style="font-size:0.875rem; color:var(--muted-foreground); line-height:1.5; margin-bottom:1.25rem;">
-                Si tienes un archivo Excel actualizado o de otra ficha, arrástralo o selecciónalo aquí para escanearlo e insertarlo.
-            </p>
-
-            <form id="formSubirExcel" enctype="multipart/form-data" onsubmit="event.preventDefault(); iniciarEscaneo(false);">
-                <div id="dropzone" style="border:2px dashed var(--border); border-radius:var(--radius-lg); padding:1.75rem 1rem; text-align:center; cursor:pointer; transition:all 0.2s ease; background:var(--muted); margin-bottom:1rem;"
-                     onclick="document.getElementById('archivoExcelInput').click()"
-                     ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event)">
-                    <i class="bi bi-cloud-arrow-up" style="font-size:2.25rem; color:var(--muted-foreground); display:block; margin-bottom:0.5rem;"></i>
-                    <div id="dropzoneText" style="font-size:0.875rem; font-weight:600; color:var(--foreground); margin-bottom:0.25rem;">
-                        Haz clic o arrastra tu archivo Excel aquí
-                    </div>
-                    <div style="font-size:0.75rem; color:var(--muted-foreground);">
-                        Solo archivos .xlsx (Máx. 10 MB)
-                    </div>
-                    <input type="file" id="archivoExcelInput" name="archivo_excel" accept=".xlsx" style="display:none;" onchange="handleFileSelect(this)">
-                </div>
-
-                <div id="fileInfoCard" style="display:none; align-items:center; justify-content:space-between; background:rgba(37,99,235,0.08); border:1px solid rgba(37,99,235,0.25); border-radius:var(--radius-md); padding:0.625rem 0.875rem; margin-bottom:1rem;">
-                    <div style="display:flex; align-items:center; gap:0.5rem; overflow:hidden;">
-                        <i class="bi bi-file-earmark-excel-fill" style="color:#2563eb; font-size:1.25rem;"></i>
-                        <span id="fileNameDisplay" style="font-size:0.8125rem; font-weight:600; color:var(--foreground); text-overflow:ellipsis; overflow:hidden; white-space:nowrap;">archivo.xlsx</span>
-                    </div>
-                    <button type="button" class="btn-shadcn btn-shadcn-ghost" style="padding:0.25rem; color:var(--muted-foreground);" onclick="removerArchivoSeleccionado(event)">
-                        <i class="bi bi-x-lg"></i>
-                    </button>
-                </div>
-            </form>
+            <div style="font-size:0.75rem; color:var(--muted-foreground);">
+                Solo archivos .xlsx (Máx. 10 MB)
+            </div>
+            <input type="file" id="archivoExcelInput" name="archivo_excel" accept=".xlsx" style="display:none;" onchange="handleFileSelect(this)">
         </div>
 
-        <button type="button" id="btnSubirPersonalizado" class="btn-shadcn btn-shadcn-outline" style="width:100%; justify-content:center; padding:0.75rem 1.25rem; font-size:0.9375rem; font-weight:600;" onclick="iniciarEscaneo(false)" disabled>
-            <i class="bi bi-upload me-2"></i>Escanear Archivo Subido
+        <div id="fileInfoCard" style="display:none; align-items:center; justify-content:space-between; background:rgba(37,99,235,0.08); border:1px solid rgba(37,99,235,0.25); border-radius:var(--radius-md); padding:0.75rem 1rem; margin-bottom:1rem;">
+            <div style="display:flex; align-items:center; gap:0.5rem; overflow:hidden;">
+                <i class="bi bi-file-earmark-excel-fill" style="color:#2563eb; font-size:1.5rem;"></i>
+                <span id="fileNameDisplay" style="font-size:0.875rem; font-weight:600; color:var(--foreground); text-overflow:ellipsis; overflow:hidden; white-space:nowrap;">archivo.xlsx</span>
+            </div>
+            <button type="button" class="btn-shadcn btn-shadcn-ghost" style="padding:0.25rem; color:var(--muted-foreground);" onclick="removerArchivoSeleccionado(event)">
+                <i class="bi bi-x-lg"></i>
+            </button>
+        </div>
+    </form>
+
+    <div style="display:flex; justify-content:flex-end;">
+        <button type="button" id="btnSubirPersonalizado" class="btn-shadcn btn-shadcn-primary" style="padding:0.75rem 1.5rem; font-size:0.9375rem; font-weight:600;" onclick="iniciarEscaneo(false)" disabled>
+            <i class="bi bi-lightning-charge-fill me-2"></i>Escanear e Insertar Horario
         </button>
     </div>
-
 </div>
 
 <!-- ── PANEL DE SIMULACIÓN EN TIEMPO REAL ────────────────────────────── -->
@@ -429,7 +380,8 @@ async function iniciarEscaneo(esEjemplo) {
     panelSim.style.display = 'block';
     panelSim.scrollIntoView({ behavior: 'smooth' });
 
-    document.getElementById('btnEscanearEjemplo').disabled = true;
+    const btnEjemplo = document.getElementById('btnEscanearEjemplo');
+    if (btnEjemplo) btnEjemplo.disabled = true;
     document.getElementById('btnSubirPersonalizado').disabled = true;
 
     const progressBar = document.getElementById('progressBar');
@@ -512,7 +464,8 @@ async function iniciarEscaneo(esEjemplo) {
                     text: data.mensaje || 'Ocurrió un error al procesar el archivo.'
                 });
             }
-            document.getElementById('btnEscanearEjemplo').disabled = false;
+            const btnEj = document.getElementById('btnEscanearEjemplo');
+            if (btnEj) btnEj.disabled = false;
             document.getElementById('btnSubirPersonalizado').disabled = !archivoSeleccionado;
         }, 500);
 
@@ -523,7 +476,8 @@ async function iniciarEscaneo(esEjemplo) {
             title: 'Error de Comunicación',
             text: 'No se pudo conectar con el servidor para procesar el horario.'
         });
-        document.getElementById('btnEscanearEjemplo').disabled = false;
+        const btnEj = document.getElementById('btnEscanearEjemplo');
+        if (btnEj) btnEj.disabled = false;
         document.getElementById('btnSubirPersonalizado').disabled = !archivoSeleccionado;
     }
 }

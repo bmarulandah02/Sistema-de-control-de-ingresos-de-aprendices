@@ -175,9 +175,10 @@ class AprendizModel {
             $conexion=$mysql->getConexion();
             if($conexion)
                 {
-                    $consulta="SELECT a.id_aprendiz, a.fk_ficha 
+                    $consulta="SELECT a.id_aprendiz, a.fk_ficha, u.nombre, u.apellido, f.nombre_programa 
                                FROM aprendiz a
                                LEFT JOIN usuario u ON a.fk_usuario = u.id_usuario
+                               LEFT JOIN ficha f ON a.fk_ficha = f.id_ficha
                                WHERE a.codigo_rfid = :codigo OR u.identificacion = :codigo OR a.id_aprendiz = :codigo 
                                LIMIT 1";
                     $stmt=$conexion->prepare($consulta);
@@ -202,9 +203,10 @@ class AprendizModel {
             $conexion = $mysql->getConexion();
             
             if ($conexion) {
-                $consulta = "SELECT a.id_aprendiz, a.fk_ficha 
+                $consulta = "SELECT a.id_aprendiz, a.fk_ficha, u.nombre, u.apellido, f.nombre_programa 
                              FROM aprendiz a
                              LEFT JOIN usuario u ON a.fk_usuario = u.id_usuario
+                             LEFT JOIN ficha f ON a.fk_ficha = f.id_ficha
                              WHERE a.id_aprendiz = :id OR u.identificacion = :id OR a.codigo_rfid = :id 
                              LIMIT 1";
                 $stmt = $conexion->prepare($consulta);

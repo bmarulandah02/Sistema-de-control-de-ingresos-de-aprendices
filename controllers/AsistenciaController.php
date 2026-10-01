@@ -34,6 +34,7 @@ class AsistenciaController {
             if (empty($_SESSION['materia_actual'])) {
                 $numFichaActual = $claseMomento['fk_ficha'] ?? $idFichaPrincipal;
                 $_SESSION['materia_actual'] = $claseMomento['materia'] . ' - Ficha ' . $numFichaActual;
+                $_SESSION['ficha_actual']   = (string)$numFichaActual;
             }
             if (empty($_SESSION['bloque_actual']) && !empty($claseMomento['hora_inicio']) && !empty($claseMomento['hora_fin'])) {
                 $_SESSION['bloque_actual'] = substr($claseMomento['hora_inicio'], 0, 5) . '|' . substr($claseMomento['hora_fin'], 0, 5) . '|' . $claseMomento['bloque'];
@@ -67,6 +68,9 @@ class AsistenciaController {
         if (isset($_POST['bloque_horario'])) {
             $_SESSION['bloque_actual'] = trim($_POST['bloque_horario']);
         }
+        if (isset($_POST['ficha_id'])) {
+            $_SESSION['ficha_actual'] = trim($_POST['ficha_id']);
+        }
 
         $materiaActual = $_SESSION['materia_actual'] ?? '';
         $bloqueActual  = $_SESSION['bloque_actual'] ?? '';
@@ -98,6 +102,29 @@ class AsistenciaController {
             if ($datosAprendiz) {
                 $identificadorAprendiz = intval($datosAprendiz['id_aprendiz']);
                 $identificadorFicha    = intval($datosAprendiz['fk_ficha']);
+
+                // ── VALIDACIÓN DE FICHA: Solo puede marcar en la ficha a la que pertenece ──
+                $fichaSeleccionada = !empty($_POST['ficha_id']) ? intval($_POST['ficha_id']) : (!empty($_SESSION['ficha_actual']) ? intval($_SESSION['ficha_actual']) : 0);
+
+                // Si no se obtuvo por ficha_id directo, intentar extraer el número de ficha del texto de la materia
+                if (!$fichaSeleccionada && !empty($materiaActual)) {
+                    if (preg_match('/(?:Ficha|ficha)\s*[:#-]?\s*([0-9]+)/i', $materiaActual, $coincidencias)) {
+                        $fichaSeleccionada = intval($coincidencias[1]);
+                    }
+                }
+
+                if ($fichaSeleccionada > 0 && $identificadorFicha !== $fichaSeleccionada) {
+                    $nombreCompleto = trim(($datosAprendiz['nombre'] ?? '') . ' ' . ($datosAprendiz['apellido'] ?? ''));
+                    $nombreMostrar  = !empty($nombreCompleto) ? $nombreCompleto : "El aprendiz (ID: {$identificadorAprendiz})";
+                    $progAprendiz   = !empty($datosAprendiz['nombre_programa']) ? " ({$datosAprendiz['nombre_programa']})" : "";
+
+                    $_SESSION['mensaje'] = [
+                        'texto' => "Error de Ficha: {$nombreMostrar} pertenece a la Ficha {$identificadorFicha}{$progAprendiz}. No tiene permitido registrar asistencia en la Ficha {$fichaSeleccionada} seleccionada.",
+                        'tipo'  => "error"
+                    ];
+                    header("Location: index.php?action=asistencia");
+                    exit();
+                }
 
                 $horarioFicha = $horarioModel->obtenerHorarioFicha($identificadorFicha, $fechaActual);
 
@@ -201,7 +228,7 @@ class AsistenciaController {
 
     public function cerrarJornada()
     {
-        unset($_SESSION['materia_actual'], $_SESSION['bloque_actual'], $_SESSION['hora_apertura_asistencia']);
+        unset($_SESSION['materia_actual'], $_SESSION['bloque_actual'], $_SESSION['hora_apertura_asistencia'], $_SESSION['ficha_actual']);
         $rolSesion = $_SESSION['rol'] ?? '';
         $usuarioIdSesion = (int)($_SESSION['usuario_id'] ?? 0);
         $instructorId = ($rolSesion === 'Instructor') ? $usuarioIdSesion : null;

@@ -99,6 +99,7 @@ require __DIR__ . '/../../views/layouts/header.php';
                                     <?php if ($rolActual === 'Administrador' || (int)($f['instructor_id'] ?? 0) === $usuarioIdActual): ?>
                                         <option value="<?= htmlspecialchars($valorOpcion) ?>" 
                                                 data-jornada="<?= htmlspecialchars($f['jornada'] ?? 'Mañana') ?>"
+                                                data-ficha="<?= htmlspecialchars($f['numero_ficha']) ?>"
                                                 <?= $selected ?>>
                                             📘 Formación Principal (Ficha <?= htmlspecialchars($f['numero_ficha']) ?>) [<?= htmlspecialchars($f['jornada'] ?? 'Mañana') ?>]
                                         </option>
@@ -121,6 +122,7 @@ require __DIR__ . '/../../views/layouts/header.php';
                                     ?>
                                         <option value="<?= htmlspecialchars($valAsig) ?>" 
                                                 data-jornada="<?= htmlspecialchars($f['jornada'] ?? 'Mañana') ?>"
+                                                data-ficha="<?= htmlspecialchars($f['numero_ficha']) ?>"
                                                 <?= $selAsig ?>>
                                             <?= $icono ?> <?= htmlspecialchars($asig['nombre_asignatura']) ?> (<?= htmlspecialchars($asig['tipo']) ?> — <?= htmlspecialchars($nombreInstructor) ?>)
                                         </option>
@@ -129,6 +131,7 @@ require __DIR__ . '/../../views/layouts/header.php';
                             <?php else: ?>
                                 <option value="<?= htmlspecialchars($valorOpcion) ?>" 
                                         data-jornada="<?= htmlspecialchars($f['jornada'] ?? 'Mañana') ?>"
+                                        data-ficha="<?= htmlspecialchars($f['numero_ficha']) ?>"
                                         <?= $selected ?>>
                                     <?= htmlspecialchars($nombreOpcion) ?> [<?= htmlspecialchars($f['jornada'] ?? 'Mañana') ?>]
                                 </option>
@@ -223,6 +226,7 @@ require __DIR__ . '/../../views/layouts/header.php';
             <form method="POST" action="index.php?action=registrar-ingreso" id="rfidForm">
                 <input type="hidden" name="materia" id="rfid_materia" value="<?= htmlspecialchars($_SESSION['materia_actual'] ?? '') ?>">
                 <input type="hidden" name="bloque_horario" id="rfid_bloque" value="<?= htmlspecialchars($_SESSION['bloque_actual'] ?? '') ?>">
+                <input type="hidden" name="ficha_id" id="rfid_ficha" value="<?= htmlspecialchars($_SESSION['ficha_actual'] ?? '') ?>">
 
                 <div style="margin-bottom: 1rem;">
                     <label style="display:block; font-size:0.875rem; font-weight:500; margin-bottom:0.375rem;">Código UID RFID</label>
@@ -247,6 +251,7 @@ require __DIR__ . '/../../views/layouts/header.php';
             <form method="POST" action="index.php?action=registrar-ingreso" id="manualForm">
                 <input type="hidden" name="materia" id="manual_materia" value="<?= htmlspecialchars($_SESSION['materia_actual'] ?? '') ?>">
                 <input type="hidden" name="bloque_horario" id="manual_bloque" value="<?= htmlspecialchars($_SESSION['bloque_actual'] ?? '') ?>">
+                <input type="hidden" name="ficha_id" id="manual_ficha" value="<?= htmlspecialchars($_SESSION['ficha_actual'] ?? '') ?>">
 
                 <div style="margin-bottom: 1rem;">
                     <label style="display:block; font-size:0.875rem; font-weight:500; margin-bottom:0.375rem;">ID de Aprendiz</label>
@@ -269,10 +274,12 @@ function alCambiarMateria() {
     const bloqueSelect = document.getElementById('bloque_select');
 
     if (sel.value === '__custom__') {
-        customInput.style.display = 'block';
-        customInput.focus();
+        if (customInput) {
+            customInput.style.display = 'block';
+            customInput.focus();
+        }
     } else {
-        customInput.style.display = 'none';
+        if (customInput) customInput.style.display = 'none';
 
         // Detectar jornada de la asignatura seleccionada
         const selectedOpt = sel.options[sel.selectedIndex];
@@ -301,19 +308,43 @@ function actualizarCamposSesion() {
     const sel = document.getElementById('materia_select');
     const customInput = document.getElementById('materia_custom_input');
     let mat = sel.value;
+    let ficha = '';
 
     if (mat === '__custom__') {
-        mat = customInput.value;
+        mat = customInput ? customInput.value : '';
+    } else {
+        const selectedOpt = sel.options[sel.selectedIndex];
+        if (selectedOpt) {
+            ficha = selectedOpt.getAttribute('data-ficha') || '';
+        }
     }
 
     const bloq = document.getElementById('bloque_select').value;
 
-    document.getElementById('rfid_materia').value = mat;
-    document.getElementById('rfid_bloque').value = bloq;
+    const rfidMat = document.getElementById('rfid_materia');
+    const rfidBloq = document.getElementById('rfid_bloque');
+    const rfidFicha = document.getElementById('rfid_ficha');
+    if (rfidMat) rfidMat.value = mat;
+    if (rfidBloq) rfidBloq.value = bloq;
+    if (rfidFicha) rfidFicha.value = ficha;
 
-    document.getElementById('manual_materia').value = mat;
-    document.getElementById('manual_bloque').value = bloq;
+    const manualMat = document.getElementById('manual_materia');
+    const manualBloq = document.getElementById('manual_bloque');
+    const manualFicha = document.getElementById('manual_ficha');
+    if (manualMat) manualMat.value = mat;
+    if (manualBloq) manualBloq.value = bloq;
+    if (manualFicha) manualFicha.value = ficha;
 }
+
+document.addEventListener('DOMContentLoaded', () => {
+    actualizarCamposSesion();
+});
+document.getElementById('rfidForm')?.addEventListener('submit', () => {
+    actualizarCamposSesion();
+});
+document.getElementById('manualForm')?.addEventListener('submit', () => {
+    actualizarCamposSesion();
+});
 
 // Temporizador en tiempo real de 5 minutos
 let segundosRestantes = <?= (int) $segundosRestantes ?>;
