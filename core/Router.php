@@ -13,6 +13,8 @@ require_once __DIR__ . '/../models/ExcusaModel.php';
 require_once __DIR__ . '/../controllers/AsistenciaController.php';
 require_once __DIR__ . '/../controllers/ReporteController.php';
 require_once __DIR__ . '/../controllers/ExcusaController.php';
+require_once __DIR__ . '/../models/DesercionModel.php';
+require_once __DIR__ . '/../controllers/DesercionController.php';
 class Router {
 
     public static function dispatch(): void {
@@ -70,6 +72,7 @@ class Router {
             'abrir-sesion-asistencia', 'cerrar-jornada', 'historial', 'fichas', 'ficha-crear', 'ficha-editar',
             'ficha-guardar', 'ficha-eliminar', 'ficha-reactivar', 'ficha-horario', 'ficha-horario-importar', 'ficha-horario-imprimir',
             'reportes', 'excusas-admin', 'reporte-pdf', 'reporte-excel', 'reporte-horario-excel', 'reporte-horario-pdf',
+            'desercion', 'desercion-citacion', 'desercion-aviso-guardar', 'desercion-exportar',
             'mi-perfil', 'mi-perfil-guardar', 'reporte-faltas-aprendiz', 'excusa-subir', 'excusa-editar', 'excusa-aprobar', 'excusa-rechazar', 'mis-excusas', '403', '404'
         ];
 
@@ -242,6 +245,18 @@ class Router {
                 break;
             case 'reporte-horario-pdf':
                 (new ReporteController())->exportarHorarioPDF();
+                break;
+            case 'desercion':
+                (new DesercionController())->index();
+                break;
+            case 'desercion-citacion':
+                (new DesercionController())->citacion();
+                break;
+            case 'desercion-aviso-guardar':
+                (new DesercionController())->registrarAviso();
+                break;
+            case 'desercion-exportar':
+                (new DesercionController())->exportarExcel();
                 break;
             case 'mi-perfil':
                 (new UsuarioController())->miPerfil();

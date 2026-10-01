@@ -81,6 +81,11 @@
                 <span>Excusas Médicas</span>
             </a>
 
+            <a href="index.php?action=desercion" class="nav-link-item <?= (in_array($_GET['action'] ?? '', ['desercion', 'desercion-citacion'])) ? 'active' : '' ?>">
+                <i class="bi bi-person-exclamation"></i>
+                <span>Alertas de Deserción</span>
+            </a>
+
             <a href="index.php?action=reportes" class="nav-link-item <?= (($_GET['action'] ?? '') === 'reportes') ? 'active' : '' ?>">
                 <i class="bi bi-file-earmark-bar-graph"></i>
                 <span>Reportes PDF/Excel</span>
