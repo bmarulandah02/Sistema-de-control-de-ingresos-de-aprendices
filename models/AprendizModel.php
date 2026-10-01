@@ -22,7 +22,12 @@ class AprendizModel {
                     $stmt->execute([':ficha' => $idFicha]);
                     return (int) $stmt->fetchColumn();
                 } else if ($instructorId && $instructorId > 0) {
-                    $stmt = $conexion->prepare("SELECT COUNT(*) FROM aprendiz a JOIN ficha f ON a.fk_ficha = f.id_ficha WHERE f.fk_usuario = :instructor");
+                    $stmt = $conexion->prepare("SELECT COUNT(*) FROM aprendiz a JOIN ficha f ON a.fk_ficha = f.id_ficha WHERE (
+                        f.fk_usuario = :instructor 
+                        OR f.id_ficha IN (SELECT fk_ficha FROM ficha_instructor WHERE fk_usuario = :instructor)
+                        OR f.id_ficha IN (SELECT fk_ficha FROM ficha_asignatura WHERE fk_usuario_instructor = :instructor)
+                        OR f.id_ficha IN (SELECT fk_ficha FROM horario_bloque WHERE fk_usuario_instructor = :instructor)
+                    )");
                     $stmt->execute([':instructor' => $instructorId]);
                     return (int) $stmt->fetchColumn();
                 }

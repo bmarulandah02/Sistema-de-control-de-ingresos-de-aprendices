@@ -1,5 +1,8 @@
 <?php
 $pageTitle = 'Usuarios y Aprendices — Control de Ingresos SENA';
+$usuarios = $usuarios ?? [];
+$fichas = $fichas ?? [];
+$filtros = $filtros ?? [];
 require __DIR__ . '/../../views/layouts/header.php';
 ?>
 
@@ -147,8 +150,8 @@ require __DIR__ . '/../../views/layouts/header.php';
                     </td>
                     <td>
                         <?php if ($u['rol'] === 'Aprendiz'): ?>
-                            <span class="shadcn-badge badge-secondary" title="Ficha">
-                                Ficha: <?= htmlspecialchars($u['numero_ficha'] ?? 'N/A') ?>
+                            <span class="shadcn-badge badge-secondary" title="Ficha y Carrera / Programa de Formación">
+                                <i class="bi bi-mortarboard me-1"></i>Ficha: <?= htmlspecialchars($u['numero_ficha'] ?? 'N/A') ?><?= !empty($u['nombre_programa']) ? ' — ' . htmlspecialchars($u['nombre_programa']) : '' ?>
                             </span>
                             <?php 
                                 $st = $u['estado_aprendiz'] ?? 'Activo';

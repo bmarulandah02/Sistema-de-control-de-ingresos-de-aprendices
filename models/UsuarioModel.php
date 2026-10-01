@@ -246,9 +246,14 @@ class UsuarioModel {
                 $where = [];
                 $params = [];
 
-                // Si la persona en sesión es Instructor, solo ve a sus propios aprendices asignados a sus fichas y su propio usuario
+                // Si la persona en sesión es Instructor, ve a todos los aprendices de las fichas/carreras donde esté vinculado (titular, ficha_instructor, ficha_asignatura o horario_bloque) y su propio usuario
                 if ($rolSesion === 'Instructor' && $usuarioIdSesion && $usuarioIdSesion > 0) {
-                    $where[] = "( (r.nombre_rol = 'Aprendiz' AND f.fk_usuario = :instId) OR u.id_usuario = :instSelf )";
+                    $where[] = "( (r.nombre_rol = 'Aprendiz' AND (
+                        f.fk_usuario = :instId 
+                        OR f.id_ficha IN (SELECT fk_ficha FROM ficha_instructor WHERE fk_usuario = :instId)
+                        OR f.id_ficha IN (SELECT fk_ficha FROM ficha_asignatura WHERE fk_usuario_instructor = :instId)
+                        OR f.id_ficha IN (SELECT fk_ficha FROM horario_bloque WHERE fk_usuario_instructor = :instId)
+                    )) OR u.id_usuario = :instSelf )";
                     $params[':instId']   = $usuarioIdSesion;
                     $params[':instSelf'] = $usuarioIdSesion;
                 }

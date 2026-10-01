@@ -133,9 +133,12 @@ $fichas = $fichas ?? [];
                         <?php endif; ?>
                     </td>
                     <td>
-                        <span class="shadcn-badge badge-secondary">
-                            <?= (int) $f['total_aprendices'] ?> aprendices
-                        </span>
+                        <a href="index.php?action=usuarios&ficha_id=<?= $f['id'] ?>" 
+                           class="shadcn-badge badge-secondary" 
+                           style="text-decoration:none; cursor:pointer;" 
+                           title="Ver los aprendices vinculados a esta ficha">
+                            <i class="bi bi-people me-1"></i><?= (int) $f['total_aprendices'] ?> aprendices
+                        </a>
                     </td>
                     <td><?= htmlspecialchars($f['fecha_inicio'] ?? '—') ?></td>
                     <td><?= htmlspecialchars($f['fecha_fin'] ?? '—') ?></td>
@@ -150,35 +153,38 @@ $fichas = $fichas ?? [];
                         </span>
                     </td>
                     <td>
-                        <?php if (($_SESSION['rol'] ?? '') === 'Administrador'): ?>
-                        <div style="display:flex; gap:0.375rem;">
+                        <div style="display:flex; gap:0.375rem; flex-wrap:wrap;">
                             <a href="index.php?action=ficha-horario&id=<?= $f['id'] ?>"
-                               class="btn-shadcn btn-shadcn-outline" style="padding:0.25rem 0.5rem; font-size:0.75rem; color:#2563eb; border-color:rgba(37,99,235,0.3);" title="Ver Horario">
-                                <i class="bi bi-calendar3"></i>
+                               class="btn-shadcn btn-shadcn-outline" style="padding:0.25rem 0.5rem; font-size:0.75rem; color:#2563eb; border-color:rgba(37,99,235,0.3);" title="Ver Horario de la Ficha">
+                                <i class="bi bi-calendar3 me-1"></i>Horario
                             </a>
 
-                            <a href="index.php?action=ficha-editar&id=<?= $f['id'] ?>"
-                               class="btn-shadcn btn-shadcn-outline" style="padding:0.25rem 0.5rem; font-size:0.75rem;" title="Editar Ficha">
-                                <i class="bi bi-pencil"></i>
+                            <a href="index.php?action=usuarios&ficha_id=<?= $f['id'] ?>"
+                               class="btn-shadcn btn-shadcn-outline" style="padding:0.25rem 0.5rem; font-size:0.75rem; color:#059669; border-color:rgba(5,150,105,0.3);" title="Ver Aprendices de esta Ficha">
+                                <i class="bi bi-people me-1"></i>Aprendices
                             </a>
 
-                            <?php if ($f['estado'] === 'Finalizado'): ?>
-                                <button type="button"
-                                        onclick="confirmarReactivarFicha(<?= $f['id'] ?>, '<?= htmlspecialchars(addslashes($f['numero_ficha'])) ?>')"
-                                        class="btn-shadcn btn-shadcn-outline" style="padding:0.25rem 0.5rem; font-size:0.75rem; color:#059669; border-color:rgba(5,150,105,0.3);" title="Reactivar Ficha">
-                                    <i class="bi bi-arrow-counterclockwise"></i> Reactivar
-                                </button>
-                            <?php else: ?>
-                                <button type="button"
-                                        onclick="confirmarOcultarFicha(<?= $f['id'] ?>, '<?= htmlspecialchars(addslashes($f['numero_ficha'])) ?>', <?= (int)$f['total_aprendices'] ?>)"
-                                        class="btn-shadcn btn-shadcn-outline" style="padding:0.25rem 0.5rem; font-size:0.75rem; color:#dc2626; border-color:rgba(239,68,68,0.3);" title="Finalizar / Ocultar Ficha">
-                                    <i class="bi bi-archive"></i> Ocultar
-                                </button>
+                            <?php if (($_SESSION['rol'] ?? '') === 'Administrador'): ?>
+                                <a href="index.php?action=ficha-editar&id=<?= $f['id'] ?>"
+                                   class="btn-shadcn btn-shadcn-outline" style="padding:0.25rem 0.5rem; font-size:0.75rem;" title="Editar Ficha">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+
+                                <?php if ($f['estado'] === 'Finalizado'): ?>
+                                    <button type="button"
+                                            onclick="confirmarReactivarFicha(<?= $f['id'] ?>, '<?= htmlspecialchars(addslashes($f['numero_ficha'])) ?>')"
+                                            class="btn-shadcn btn-shadcn-outline" style="padding:0.25rem 0.5rem; font-size:0.75rem; color:#059669; border-color:rgba(5,150,105,0.3);" title="Reactivar Ficha">
+                                        <i class="bi bi-arrow-counterclockwise"></i>
+                                    </button>
+                                <?php else: ?>
+                                    <button type="button"
+                                            onclick="confirmarOcultarFicha(<?= $f['id'] ?>, '<?= htmlspecialchars(addslashes($f['numero_ficha'])) ?>', <?= (int)$f['total_aprendices'] ?>)"
+                                            class="btn-shadcn btn-shadcn-outline" style="padding:0.25rem 0.5rem; font-size:0.75rem; color:#dc2626; border-color:rgba(239,68,68,0.3);" title="Finalizar / Ocultar Ficha">
+                                        <i class="bi bi-archive"></i>
+                                    </button>
+                                <?php endif; ?>
                             <?php endif; ?>
                         </div>
-                        <?php else: ?>
-                        <span style="color:var(--muted-foreground); font-size:0.75rem;"><i class="bi bi-eye me-1"></i>Solo Lectura</span>
-                        <?php endif; ?>
                     </td>
                 </tr>
                 <?php endforeach; ?>

@@ -244,11 +244,12 @@ class FichaController {
      * Vista imprimible / exportable del horario
      */
     public function imprimirHorario(): void {
-        $id = (int)($_GET['id'] ?? 3234082);
+        $id = (int)($_GET['id'] ?? $_GET['ficha_id'] ?? 3234082);
         $mes = trim($_GET['mes'] ?? '');
         $ficha = HorarioModel::obtenerFichaPorId($id);
         $bloques = HorarioModel::obtenerHorarioBloquesFicha($id, $mes ?: null);
         $instructoresFicha = HorarioModel::obtenerInstructoresDeFicha($id);
+        $mesesDisponibles = HorarioModel::obtenerMesesDisponiblesHorario($id);
 
         require __DIR__ . '/../views/fichas/horario_imprimir.php';
     }

@@ -217,7 +217,7 @@ public static function obtenerPorId(int $idExcusa): ?array {
                     JOIN aprendiz a ON e.fk_aprendiz = a.id_aprendiz
                     JOIN usuario u ON a.fk_usuario = u.id_usuario
                     JOIN ficha f ON a.fk_ficha = f.id_ficha
-                    WHERE f.fk_usuario = :idInstructor";
+                    WHERE (f.fk_usuario = :idInstructor OR f.id_ficha IN (SELECT fk_ficha FROM ficha_instructor WHERE fk_usuario = :idInstructor) OR f.id_ficha IN (SELECT fk_ficha FROM ficha_asignatura WHERE fk_usuario_instructor = :idInstructor) OR f.id_ficha IN (SELECT fk_ficha FROM horario_bloque WHERE fk_usuario_instructor = :idInstructor))";
                     $parametros=[':idInstructor'=>$idInstructor];
                     if(!empty($estado)){
                         $sql.=" AND e.estado=:estado";

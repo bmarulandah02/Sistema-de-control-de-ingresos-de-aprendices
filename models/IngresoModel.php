@@ -26,7 +26,12 @@ class IngresoModel {
                     $whereClause .= " AND a.fk_ficha = :ficha";
                     $params[':ficha'] = $idFicha;
                 } else if ($instructorId && $instructorId > 0) {
-                    $whereClause .= " AND f.fk_usuario = :instructor";
+                    $whereClause .= " AND (
+                        f.fk_usuario = :instructor
+                        OR f.id_ficha IN (SELECT fk_ficha FROM ficha_instructor WHERE fk_usuario = :instructor)
+                        OR f.id_ficha IN (SELECT fk_ficha FROM ficha_asignatura WHERE fk_usuario_instructor = :instructor)
+                        OR f.id_ficha IN (SELECT fk_ficha FROM horario_bloque WHERE fk_usuario_instructor = :instructor)
+                    )";
                     $params[':instructor'] = $instructorId;
                 }
 
@@ -83,7 +88,12 @@ class IngresoModel {
                     $where[] = "f.id_ficha = :idFicha";
                     $params[':idFicha'] = $idFicha;
                 } else if ($instructorId && $instructorId > 0) {
-                    $where[] = "f.fk_usuario = :instructorId";
+                    $where[] = "(
+                        f.fk_usuario = :instructorId
+                        OR f.id_ficha IN (SELECT fk_ficha FROM ficha_instructor WHERE fk_usuario = :instructorId)
+                        OR f.id_ficha IN (SELECT fk_ficha FROM ficha_asignatura WHERE fk_usuario_instructor = :instructorId)
+                        OR f.id_ficha IN (SELECT fk_ficha FROM horario_bloque WHERE fk_usuario_instructor = :instructorId)
+                    )";
                     $params[':instructorId'] = $instructorId;
                 }
 
@@ -164,7 +174,12 @@ class IngresoModel {
                 }
 
                 if (!empty($filtros['instructor_id'])) {
-                    $where[] = "f.fk_usuario = :instructor_id";
+                    $where[] = "(
+                        f.fk_usuario = :instructor_id
+                        OR f.id_ficha IN (SELECT fk_ficha FROM ficha_instructor WHERE fk_usuario = :instructor_id)
+                        OR f.id_ficha IN (SELECT fk_ficha FROM ficha_asignatura WHERE fk_usuario_instructor = :instructor_id)
+                        OR f.id_ficha IN (SELECT fk_ficha FROM horario_bloque WHERE fk_usuario_instructor = :instructor_id)
+                    )";
                     $params[':instructor_id'] = (int) $filtros['instructor_id'];
                 }
 

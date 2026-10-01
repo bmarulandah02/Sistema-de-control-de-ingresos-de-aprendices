@@ -452,10 +452,13 @@ $totalHorasSemestre = count($todosLosBloques) * 3;
             <i class="bi bi-file-earmark-arrow-up me-1"></i>Escanear / Importar Excel
         </a>
         <a href="index.php?action=reporte-horario-pdf&ficha_id=<?= $id ?>" target="_blank" class="btn-shadcn btn-shadcn-outline">
-            <i class="bi bi-printer me-1"></i>Imprimir PDF
+            <i class="bi bi-printer me-1"></i>Imprimir / PDF Mensual
         </a>
-        <a href="index.php?action=reporte-horario-excel&ficha_id=<?= $id ?>" class="btn-shadcn btn-shadcn-outline" style="color:#059669;">
-            <i class="bi bi-file-earmark-excel me-1"></i>Descargar Excel (CSV)
+        <a href="index.php?action=reporte-horario-excel&ficha_id=<?= $id ?>&tipo=original" class="btn-shadcn btn-shadcn-outline" style="color:#059669;" title="Descargar archivo Excel oficial como se subió (.xlsx)">
+            <i class="bi bi-file-earmark-excel me-1"></i>Bajar Excel Original (.xlsx)
+        </a>
+        <a href="index.php?action=reporte-horario-excel&ficha_id=<?= $id ?>&tipo=mensual" class="btn-shadcn btn-shadcn-outline" style="color:#2563eb;" title="Descargar plantilla mensual estructurada por bloques (.xls)">
+            <i class="bi bi-calendar2-range me-1"></i>Excel Mensual (.xls)
         </a>
     </div>
 </div>
