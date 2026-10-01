@@ -138,4 +138,116 @@ class FichaController {
         header('Location: index.php?action=fichas&ok=reactivada');
         exit();
     }
+
+    /**
+     * Muestra la vista interactiva de horario para una ficha específica
+     */
+    public function horario(): void {
+        $id = (int)($_GET['id'] ?? $_GET['ficha_id'] ?? 3234082);
+        $ficha = HorarioModel::obtenerFichaPorId($id);
+
+        if (!$ficha) {
+            $todas = HorarioModel::obtenerTodasFichas(['estado' => 'Activo']);
+            if (!empty($todas)) {
+                $ficha = $todas[0];
+                $id = (int)$ficha['id'];
+            }
+        }
+
+        $mesFiltro = trim($_GET['mes'] ?? '');
+        $mesesDisponibles = HorarioModel::obtenerMesesDisponiblesHorario($id);
+
+        if (empty($mesFiltro) && !empty($mesesDisponibles)) {
+            $mesFiltro = $mesesDisponibles[0]['mes_anio'];
+        }
+
+        $bloques = HorarioModel::obtenerHorarioBloquesFicha($id, $mesFiltro ?: null);
+        $instructoresFicha = HorarioModel::obtenerInstructoresDeFicha($id);
+        $asignaturas = HorarioModel::obtenerAsignaturasPorFicha($id);
+        $todasFichas = HorarioModel::obtenerTodasFichas(['estado' => 'Activo']);
+
+        require __DIR__ . '/../views/fichas/horario.php';
+    }
+
+    /**
+     * Muestra el panel de importación y escaneo de Excel de horarios y procesa la carga
+     */
+    public function importarHorario(): void {
+        if (($_SESSION['rol'] ?? '') !== 'Administrador' && ($_SESSION['rol'] ?? '') !== 'Instructor') {
+            header('Location: index.php?action=fichas&error=sin_permiso');
+            exit();
+        }
+
+        $idFichaDefault = (int)($_GET['ficha_id'] ?? 3234082);
+        $todasFichas = HorarioModel::obtenerTodasFichas(['estado' => 'Activo']);
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $idFicha = (int)($_POST['ficha_id'] ?? $idFichaDefault);
+            $esEjemplo = !empty($_POST['usar_ejemplo']);
+            $esAjax = !empty($_POST['ajax']) || (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest');
+
+            $rutaArchivo = '';
+
+            if ($esEjemplo) {
+                $rutaArchivo = __DIR__ . '/../public/uploads/horario/horario-ejemplo.xlsx';
+            } elseif (isset($_FILES['archivo_excel']) && $_FILES['archivo_excel']['error'] === UPLOAD_ERR_OK) {
+                $ext = strtolower(pathinfo($_FILES['archivo_excel']['name'], PATHINFO_EXTENSION));
+                if ($ext !== 'xlsx') {
+                    $errorMsg = 'Solo se permiten archivos en formato Excel (.xlsx).';
+                    if ($esAjax) {
+                        header('Content-Type: application/json; charset=utf-8');
+                        echo json_encode(['exito' => false, 'mensaje' => $errorMsg]);
+                        exit();
+                    }
+                    $error = $errorMsg;
+                    require __DIR__ . '/../views/fichas/importar_horario.php';
+                    return;
+                }
+
+                $dirUploads = __DIR__ . '/../public/uploads/horario/';
+                if (!is_dir($dirUploads)) {
+                    mkdir($dirUploads, 0777, true);
+                }
+                $nombreArchivo = 'horario_' . $idFicha . '_' . time() . '.xlsx';
+                $rutaArchivo = $dirUploads . $nombreArchivo;
+                move_uploaded_file($_FILES['archivo_excel']['tmp_name'], $rutaArchivo);
+            } else {
+                $errorMsg = 'Por favor selecciona un archivo Excel válido o utiliza el horario de ejemplo.';
+                if ($esAjax) {
+                    header('Content-Type: application/json; charset=utf-8');
+                    echo json_encode(['exito' => false, 'mensaje' => $errorMsg]);
+                    exit();
+                }
+                $error = $errorMsg;
+                require __DIR__ . '/../views/fichas/importar_horario.php';
+                return;
+            }
+
+            $resultado = HorarioModel::importarHorarioExcel($rutaArchivo, $idFicha);
+
+            if ($esAjax) {
+                header('Content-Type: application/json; charset=utf-8');
+                echo json_encode($resultado);
+                exit();
+            }
+
+            require __DIR__ . '/../views/fichas/importar_horario.php';
+            return;
+        }
+
+        require __DIR__ . '/../views/fichas/importar_horario.php';
+    }
+
+    /**
+     * Vista imprimible / exportable del horario
+     */
+    public function imprimirHorario(): void {
+        $id = (int)($_GET['id'] ?? 3234082);
+        $mes = trim($_GET['mes'] ?? '');
+        $ficha = HorarioModel::obtenerFichaPorId($id);
+        $bloques = HorarioModel::obtenerHorarioBloquesFicha($id, $mes ?: null);
+        $instructoresFicha = HorarioModel::obtenerInstructoresDeFicha($id);
+
+        require __DIR__ . '/../views/fichas/horario_imprimir.php';
+    }
 }

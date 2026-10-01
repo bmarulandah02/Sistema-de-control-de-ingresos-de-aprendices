@@ -93,6 +93,11 @@ class UsuarioController {
                 return;
             }
 
+            if (!empty($codigo_rfid) && AprendizModel::existeCodigoRfid($codigo_rfid, $idUsuario)) {
+                $this->formulario($idUsuario, "El código RFID '{$codigo_rfid}' ya está asignado a otro aprendiz. Cada aprendiz debe tener una tarjeta RFID única.");
+                return;
+            }
+
             $datosUsuario = [
                 'nombre'         => $nombre,
                 'apellido'       => $apellido,

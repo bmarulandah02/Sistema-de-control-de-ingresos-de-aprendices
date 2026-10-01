@@ -179,6 +179,7 @@ CREATE TABLE `usuario` (
 --
 ALTER TABLE `aprendiz`
   ADD PRIMARY KEY (`id_aprendiz`),
+  ADD UNIQUE KEY `uq_aprendiz_rfid` (`codigo_rfid`),
   ADD KEY `fk_aprendiz_ficha1_idx` (`fk_ficha`),
   ADD KEY `fk_aprendiz_usuario1_idx` (`fk_usuario`);
 

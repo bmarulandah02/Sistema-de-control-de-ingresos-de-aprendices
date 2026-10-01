@@ -66,9 +66,14 @@
                 <span>Usuarios & Aprendices</span>
             </a>
 
-            <a href="index.php?action=fichas" class="nav-link-item <?= (($_GET['action'] ?? '') === 'fichas') ? 'active' : '' ?>">
+            <a href="index.php?action=fichas" class="nav-link-item <?= (in_array($_GET['action'] ?? '', ['fichas', 'ficha-crear', 'ficha-editar'])) ? 'active' : '' ?>">
                 <i class="bi bi-journal-bookmark"></i>
-                <span>Fichas & Horarios</span>
+                <span>Fichas de Formación</span>
+            </a>
+
+            <a href="index.php?action=ficha-horario-importar" class="nav-link-item <?= (in_array($_GET['action'] ?? '', ['ficha-horario', 'ficha-horario-importar', 'ficha-horario-imprimir'])) ? 'active' : '' ?>">
+                <i class="bi bi-calendar-week"></i>
+                <span>Horarios & Escáner Excel</span>
             </a>
 
             <a href="index.php?action=excusas-admin" class="nav-link-item <?= (($_GET['action'] ?? '') === 'excusas-admin') ? 'active' : '' ?>">

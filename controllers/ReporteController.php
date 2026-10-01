@@ -48,11 +48,26 @@ class ReporteController {
         }
 
         $reporteConsolidado = ReporteModel::obtenerReporteConsolidado($filtros);
-       if ($rolSesion === 'Instructor') {
+        if ($rolSesion === 'Instructor') {
             $excusas = ExcusaModel::obtenerPorInstructor($usuarioIdSesion, 'Pendiente');
         } else {
-             $excusas = ExcusaModel::obtenerTodas();
-    }
+            $excusas = ExcusaModel::obtenerTodas();
+        }
+
+        // Parámetros y datos para el reporte de Horarios
+        $fichaHorarioId = (int)($_GET['ficha_horario_id'] ?? (!empty($fichas[0]['id']) ? $fichas[0]['id'] : 3234082));
+        $mesHorario = trim($_GET['mes_horario'] ?? '');
+        $instructorHorarioId = !empty($_GET['instructor_horario_id']) ? (int)$_GET['instructor_horario_id'] : null;
+
+        $mesesHorarioDisponibles = HorarioModel::obtenerMesesDisponiblesHorario($fichaHorarioId);
+        $bloquesHorario = HorarioModel::obtenerHorarioBloquesFicha($fichaHorarioId, $mesHorario ?: null);
+        $instructoresFichaHorario = HorarioModel::obtenerInstructoresDeFicha($fichaHorarioId);
+
+        if ($instructorHorarioId && $instructorHorarioId > 0) {
+            $bloquesHorario = array_values(array_filter($bloquesHorario, function($b) use ($instructorHorarioId) {
+                return (int)($b['fk_usuario_instructor'] ?? 0) === $instructorHorarioId;
+            }));
+        }
 
         require __DIR__ . '/../views/admin/reportes.php';
     }
@@ -73,18 +88,14 @@ class ReporteController {
 
         $reporte = ReporteModel::obtenerReporteConsolidado($filtros);
 
-        // Nombre del archivo descargable
         $filename = "Reporte_Asistencias_SENA_" . date('Y-m-d') . ".csv";
 
         header('Content-Type: text/csv; charset=utf-8');
         header('Content-Disposition: attachment; filename="' . $filename . '"');
 
         $output = fopen('php://output', 'w');
-
-        // BOM UTF-8 para que Microsoft Excel reconozca tildes y caracteres especiales
         fprintf($output, chr(0xEF).chr(0xBB).chr(0xBF));
 
-        // Encabezados del archivo Excel
         fputcsv($output, [
             'Aprendiz',
             'Documento',
@@ -143,8 +154,86 @@ class ReporteController {
 
         $reporte = ReporteModel::obtenerReporteConsolidado($filtros);
 
-        // Renderizar plantilla de impresión PDF
         require __DIR__ . '/../views/admin/reporte_pdf.php';
+        exit();
+    }
+
+    /**
+     * Exporta el reporte de horarios a Excel (CSV compatible con Excel)
+     */
+    public function exportarHorarioExcel(): void {
+        $idFicha = (int)($_GET['ficha_id'] ?? 3234082);
+        $mes = trim($_GET['mes'] ?? '');
+        $ficha = HorarioModel::obtenerFichaPorId($idFicha);
+        $bloques = HorarioModel::obtenerHorarioBloquesFicha($idFicha, $mes ?: null);
+
+        $numFicha = $ficha['numero_ficha'] ?? $idFicha;
+        $nombreMes = !empty($mes) ? str_replace('-', '_', $mes) : 'completo';
+        $filename = "Reporte_Horario_Ficha_{$numFicha}_{$nombreMes}_" . date('Ymd') . ".csv";
+
+        header('Content-Type: text/csv; charset=utf-8');
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+
+        $output = fopen('php://output', 'w');
+        fprintf($output, chr(0xEF).chr(0xBB).chr(0xBF));
+
+        fputcsv($output, [
+            'Ficha',
+            'Programa de Formación',
+            'Jornada',
+            'Fecha',
+            'Día de la Semana',
+            'Hora Inicio',
+            'Hora Fin',
+            'Bloque',
+            'Instructor Encargado',
+            'Correo SENA Instructor',
+            'Identificación Instructor',
+            'Competencia / Asignatura'
+        ], ';');
+
+        $diasEspanol = [
+            'Monday' => 'Lunes', 'Tuesday' => 'Martes', 'Wednesday' => 'Miércoles',
+            'Thursday' => 'Jueves', 'Friday' => 'Viernes', 'Saturday' => 'Sábado', 'Sunday' => 'Domingo'
+        ];
+
+        foreach ($bloques as $b) {
+            $dt = new DateTime($b['fecha']);
+            $dia = $diasEspanol[$dt->format('l')] ?? $dt->format('l');
+            $hIni = !empty($b['hora_inicio']) ? substr($b['hora_inicio'], 0, 5) : '06:00';
+            $hFin = !empty($b['hora_fin']) ? substr($b['hora_fin'], 0, 5) : '09:00';
+
+            fputcsv($output, [
+                $numFicha,
+                $ficha['programa'] ?? 'ADSO',
+                $ficha['jornada'] ?? 'Mañana',
+                $b['fecha'],
+                $dia,
+                $hIni,
+                $hFin,
+                $b['bloque'],
+                $b['instructor_nombre'] ?? 'Sin asignar',
+                $b['instructor_correo'] ?? '',
+                $b['instructor_identificacion'] ?? '',
+                $b['materia'] ?? 'Formación Integral'
+            ], ';');
+        }
+
+        fclose($output);
+        exit();
+    }
+
+    /**
+     * Genera la vista imprimible en PDF del horario
+     */
+    public function exportarHorarioPDF(): void {
+        $id = (int)($_GET['ficha_id'] ?? 3234082);
+        $mes = trim($_GET['mes'] ?? '');
+        $ficha = HorarioModel::obtenerFichaPorId($id);
+        $bloques = HorarioModel::obtenerHorarioBloquesFicha($id, $mes ?: null);
+        $instructoresFicha = HorarioModel::obtenerInstructoresDeFicha($id);
+
+        require __DIR__ . '/../views/fichas/horario_imprimir.php';
         exit();
     }
 }

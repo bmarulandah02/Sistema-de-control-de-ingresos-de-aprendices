@@ -68,8 +68,9 @@ class Router {
             'login', 'logout', 'dashboard', 'usuarios', 'usuario-crear', 'usuario-editar',
             'usuario-actualizar', 'usuario-eliminar', 'asistencia', 'registrar-ingreso',
             'abrir-sesion-asistencia', 'cerrar-jornada', 'historial', 'fichas', 'ficha-crear', 'ficha-editar',
-            'ficha-guardar', 'ficha-eliminar', 'ficha-reactivar', 'reportes', 'excusas-admin', 'reporte-pdf',
-            'reporte-excel', 'mi-perfil', 'mi-perfil-guardar', 'reporte-faltas-aprendiz', 'excusa-subir', 'excusa-editar', 'excusa-aprobar', 'excusa-rechazar', 'mis-excusas', '403', '404'
+            'ficha-guardar', 'ficha-eliminar', 'ficha-reactivar', 'ficha-horario', 'ficha-horario-importar', 'ficha-horario-imprimir',
+            'reportes', 'excusas-admin', 'reporte-pdf', 'reporte-excel', 'reporte-horario-excel', 'reporte-horario-pdf',
+            'mi-perfil', 'mi-perfil-guardar', 'reporte-faltas-aprendiz', 'excusa-subir', 'excusa-editar', 'excusa-aprobar', 'excusa-rechazar', 'mis-excusas', '403', '404'
         ];
 
         if (!empty($action) && !in_array($action, $rutasValidas)) {
@@ -217,6 +218,15 @@ class Router {
             case 'ficha-reactivar':
                 (new FichaController())->reactivar();
                 break;
+            case 'ficha-horario':
+                (new FichaController())->horario();
+                break;
+            case 'ficha-horario-importar':
+                (new FichaController())->importarHorario();
+                break;
+            case 'ficha-horario-imprimir':
+                (new FichaController())->imprimirHorario();
+                break;
             case 'reportes':
             case 'excusas-admin':
                 (new ReporteController())->index();
@@ -226,6 +236,12 @@ class Router {
                 break;
             case 'reporte-excel':
                 (new ReporteController())->exportarExcel();
+                break;
+            case 'reporte-horario-excel':
+                (new ReporteController())->exportarHorarioExcel();
+                break;
+            case 'reporte-horario-pdf':
+                (new ReporteController())->exportarHorarioPDF();
                 break;
             case 'mi-perfil':
                 (new UsuarioController())->miPerfil();

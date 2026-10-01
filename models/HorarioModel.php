@@ -671,5 +671,633 @@ public function obtenerHorarioFicha($identificadorFicha, $fechaActual)
         } catch (Exception $e) {}
         return $lista;
     }
+
+    /**
+     * Asegura la creación de las tablas ficha_instructor y horario_bloque
+     */
+    public static function asegurarTablasHorario($conexion = null): void {
+        $cerrar = false;
+        if (!$conexion) {
+            $mysql = new MySQL();
+            $mysql->conectarBD();
+            $conexion = $mysql->getConexion();
+            $cerrar = true;
+        }
+        if (!$conexion) return;
+
+        try {
+            $sql1 = "CREATE TABLE IF NOT EXISTS ficha_instructor (
+                fk_ficha INT NOT NULL,
+                fk_usuario INT NOT NULL,
+                PRIMARY KEY (fk_ficha, fk_usuario),
+                KEY idx_fi_usuario (fk_usuario),
+                CONSTRAINT fk_fi_ficha FOREIGN KEY (fk_ficha) REFERENCES ficha (id_ficha) ON DELETE CASCADE,
+                CONSTRAINT fk_fi_usuario FOREIGN KEY (fk_usuario) REFERENCES usuario (id_usuario) ON DELETE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;";
+            $conexion->exec($sql1);
+        } catch (Exception $e) {}
+
+        try {
+            $sql2 = "CREATE TABLE IF NOT EXISTS horario_bloque (
+                id_horario_bloque INT AUTO_INCREMENT PRIMARY KEY,
+                fk_ficha INT NOT NULL,
+                fecha DATE NOT NULL,
+                bloque VARCHAR(20) NOT NULL,
+                fk_usuario_instructor INT NOT NULL,
+                materia VARCHAR(150) NULL,
+                hora_inicio TIME NULL,
+                hora_fin TIME NULL,
+                UNIQUE KEY uq_ficha_fecha_bloque (fk_ficha, fecha, bloque),
+                KEY idx_hb_instructor (fk_usuario_instructor),
+                CONSTRAINT fk_hb_ficha FOREIGN KEY (fk_ficha) REFERENCES ficha (id_ficha) ON DELETE CASCADE,
+                CONSTRAINT fk_hb_instructor FOREIGN KEY (fk_usuario_instructor) REFERENCES usuario (id_usuario) ON DELETE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;";
+            $conexion->exec($sql2);
+        } catch (Exception $e) {}
+    }
+
+    /**
+     * Normaliza un texto removiendo acentos y convirtiendo a minúsculas
+     */
+    public static function normalizarTexto(string $str): string {
+        $str = mb_strtolower(trim($str), 'UTF-8');
+        $reemplazos = [
+            'á'=>'a', 'é'=>'e', 'í'=>'i', 'ó'=>'o', 'ú'=>'u', 'ñ'=>'n', 'ü'=>'u',
+            'Á'=>'a', 'É'=>'e', 'Í'=>'i', 'Ó'=>'o', 'Ú'=>'u', 'Ñ'=>'n', 'Ü'=>'u'
+        ];
+        return strtr($str, $reemplazos);
+    }
+
+    /**
+     * Limpia un slug alfanumérico
+     */
+    public static function limpiarSlug(string $str): string {
+        $norm = self::normalizarTexto($str);
+        return preg_replace('/[^a-z0-9]/', '', $norm);
+    }
+
+    /**
+     * Sincroniza un instructor encontrado en el horario: busca coincidencia o crea un usuario nuevo
+     * con correo generado, rol Instructor y contraseña '12345'
+     */
+    public static function sincronizarInstructor(PDO $conexion, string $nombreCompleto, int $idFicha, array &$resumen): int {
+        $nombreCompleto = trim($nombreCompleto);
+        if (empty($nombreCompleto)) return 0;
+
+        $stmt = $conexion->prepare("SELECT id_usuario, nombre, apellido, nombre_usuario FROM usuario WHERE fk_rol = 2");
+        $stmt->execute();
+        $instructoresExistentes = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        $normBuscado = self::normalizarTexto($nombreCompleto);
+        $idEncontrado = null;
+        $instructorExistente = null;
+
+        foreach ($instructoresExistentes as $inst) {
+            $fullNameInst = self::normalizarTexto(trim($inst['nombre'] . ' ' . $inst['apellido']));
+            if ($fullNameInst === $normBuscado || str_contains($fullNameInst, $normBuscado) || str_contains($normBuscado, $fullNameInst)) {
+                $idEncontrado = (int)$inst['id_usuario'];
+                $instructorExistente = $inst;
+                break;
+            }
+            $p1 = explode(' ', $normBuscado);
+            $p2 = explode(' ', $fullNameInst);
+            $inter = array_intersect($p1, $p2);
+            if (count($inter) >= 2) {
+                $idEncontrado = (int)$inst['id_usuario'];
+                $instructorExistente = $inst;
+                break;
+            }
+        }
+
+        if ($idEncontrado) {
+            if (!isset($resumen['instructores_existentes'][$idEncontrado])) {
+                $resumen['instructores_existentes'][$idEncontrado] = [
+                    'id' => $idEncontrado,
+                    'nombre' => $instructorExistente['nombre'] . ' ' . $instructorExistente['apellido'],
+                    'correo' => $instructorExistente['nombre_usuario']
+                ];
+            }
+        } else {
+            // Crear instructor nuevo
+            $partes = preg_split('/\s+/', $nombreCompleto);
+            if (count($partes) === 1) {
+                $nombre = $partes[0];
+                $apellido = 'Instructor';
+            } elseif (count($partes) === 2) {
+                $nombre = $partes[0];
+                $apellido = $partes[1];
+            } elseif (count($partes) === 3) {
+                $nombre = $partes[0];
+                $apellido = $partes[1] . ' ' . $partes[2];
+            } else {
+                $nombre = $partes[0] . ' ' . $partes[1];
+                $apellido = implode(' ', array_slice($partes, 2));
+            }
+
+            $slugNombre = self::limpiarSlug($partes[0]);
+            $slugApellido = self::limpiarSlug($partes[count($partes) - 1]);
+            $baseEmail = strtolower($slugNombre . '.' . $slugApellido);
+            $correo = $baseEmail . '@sena.edu.co';
+
+            // Validar unicidad del correo
+            $stmtCheck = $conexion->prepare("SELECT COUNT(*) FROM usuario WHERE LOWER(nombre_usuario) = LOWER(:email)");
+            $stmtCheck->execute([':email' => $correo]);
+            $sufijo = 1;
+            while ((int)$stmtCheck->fetchColumn() > 0) {
+                $sufijo++;
+                $correo = $baseEmail . $sufijo . '@sena.edu.co';
+                $stmtCheck->execute([':email' => $correo]);
+            }
+
+            // Clave '12345'
+            $hashPass = password_hash('12345', PASSWORD_BCRYPT);
+
+            // Generar identificación única
+            $identificacion = '10' . str_pad((string)mt_rand(10000000, 99999999), 8, '0', STR_PAD_LEFT);
+            $stmtIdent = $conexion->prepare("SELECT COUNT(*) FROM usuario WHERE identificacion = :ident");
+            $stmtIdent->execute([':ident' => $identificacion]);
+            while ((int)$stmtIdent->fetchColumn() > 0) {
+                $identificacion = '10' . str_pad((string)mt_rand(10000000, 99999999), 8, '0', STR_PAD_LEFT);
+                $stmtIdent->execute([':ident' => $identificacion]);
+            }
+
+            $telefono = '3' . str_pad((string)mt_rand(100000000, 999999999), 9, '0', STR_PAD_LEFT);
+
+            $stmtIns = $conexion->prepare("INSERT INTO usuario (nombre_usuario, contrasena, nombre, apellido, identificacion, telefono, fk_rol)
+                                           VALUES (:correo, :pass, :nombre, :apellido, :ident, :tel, 2)");
+            $stmtIns->execute([
+                ':correo' => $correo,
+                ':pass' => $hashPass,
+                ':nombre' => $nombre,
+                ':apellido' => $apellido,
+                ':ident' => $identificacion,
+                ':tel' => $telefono
+            ]);
+            $idEncontrado = (int)$conexion->lastInsertId();
+
+            $resumen['instructores_nuevos'][$idEncontrado] = [
+                'id' => $idEncontrado,
+                'nombre' => $nombre . ' ' . $apellido,
+                'correo' => $correo,
+                'identificacion' => $identificacion,
+                'clave_inicial' => '12345'
+            ];
+        }
+
+        // Asociar a ficha_instructor
+        try {
+            $stmtLink = $conexion->prepare("INSERT IGNORE INTO ficha_instructor (fk_ficha, fk_usuario) VALUES (:ficha, :usuario)");
+            $stmtLink->execute([':ficha' => $idFicha, ':usuario' => $idEncontrado]);
+        } catch (Exception $e) {}
+
+        return $idEncontrado;
+    }
+
+    /**
+     * Parsea un archivo Excel de horarios (.xlsx) utilizando ZipArchive y SimpleXML nativos
+     */
+    public static function parsearExcelHorario(string $filePath): array {
+        if (!file_exists($filePath)) {
+            return ['exito' => false, 'mensaje' => 'El archivo Excel no existe en la ruta especificada.'];
+        }
+
+        $zip = new ZipArchive();
+        if ($zip->open($filePath) !== TRUE) {
+            return ['exito' => false, 'mensaje' => 'No se pudo abrir el archivo Excel (.xlsx).'];
+        }
+
+        // 1. Cargar cadenas compartidas
+        $sharedStrings = [];
+        $ssXml = $zip->getFromName('xl/sharedStrings.xml');
+        if ($ssXml) {
+            $xml = simplexml_load_string($ssXml);
+            if ($xml && isset($xml->si)) {
+                foreach ($xml->si as $si) {
+                    if (isset($si->t)) {
+                        $sharedStrings[] = (string)$si->t;
+                    } elseif (isset($si->r)) {
+                        $t = '';
+                        foreach ($si->r as $r) {
+                            $t .= (string)$r->t;
+                        }
+                        $sharedStrings[] = $t;
+                    } else {
+                        $sharedStrings[] = '';
+                    }
+                }
+            }
+        }
+
+        // 2. Cargar hoja de cálculo sheet1
+        $sheetXml = $zip->getFromName('xl/worksheets/sheet1.xml');
+        if (!$sheetXml) {
+            $zip->close();
+            return ['exito' => false, 'mensaje' => 'No se encontró la hoja de trabajo principal en el archivo Excel.'];
+        }
+
+        $xml = simplexml_load_string($sheetXml);
+        $sheetRows = [];
+        if ($xml && isset($xml->sheetData->row)) {
+            foreach ($xml->sheetData->row as $row) {
+                $rNum = (int)$row['r'];
+                $rowData = [];
+                foreach ($row->c as $c) {
+                    $ref = (string)$c['r'];
+                    $col = preg_replace('/[0-9]/', '', $ref);
+                    $type = (string)$c['t'];
+                    $val = (string)$c->v;
+                    if ($type === 's') {
+                        $val = $sharedStrings[(int)$val] ?? $val;
+                    }
+                    $rowData[$col] = trim($val);
+                }
+                $sheetRows[$rNum] = $rowData;
+            }
+        }
+        $zip->close();
+
+        if (empty($sheetRows)) {
+            return ['exito' => false, 'mensaje' => 'El archivo Excel está vacío o no contiene filas con datos.'];
+        }
+
+        $monthMap = [
+            'ENERO' => '01', 'FEBRERO' => '02', 'MARZO' => '03', 'ABRIL' => '04',
+            'MAYO' => '05', 'JUNIO' => '06', 'JULIO' => '07', 'AGOSTO' => '08',
+            'SEPTIEMBRE' => '09', 'OCTUBRE' => '10', 'NOVIEMBRE' => '11', 'DICIEMBRE' => '12'
+        ];
+
+        $colDays = [
+            'D' => 'Lunes', 'F' => 'Martes', 'H' => 'Miércoles',
+            'J' => 'Jueves', 'L' => 'Viernes', 'N' => 'Sábado'
+        ];
+
+        $rawSlots = [];
+        $instructores = [];
+        $maxRow = max(array_keys($sheetRows));
+
+        for ($r = 1; $r <= $maxRow; $r++) {
+            if (!isset($sheetRows[$r])) continue;
+            $row = $sheetRows[$r];
+
+            if (isset($row['D']) && mb_strtoupper($row['D']) === 'LUNES') {
+                $monthRow = $sheetRows[$r - 1] ?? [];
+                if (empty(array_filter($monthRow)) && isset($sheetRows[$r - 2])) {
+                    $monthRow = $sheetRows[$r - 2];
+                }
+
+                $dayNumRow = $sheetRows[$r + 1] ?? [];
+                $colMonths = [];
+                $activeM = null;
+
+                foreach (['D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O'] as $cL) {
+                    if (!empty($monthRow[$cL])) {
+                        $mN = mb_strtoupper($monthRow[$cL]);
+                        foreach ($monthMap as $mK => $mV) {
+                            if (str_contains($mN, $mK)) {
+                                $activeM = $mV;
+                                break;
+                            }
+                        }
+                    }
+                    if ($activeM) $colMonths[$cL] = $activeM;
+                }
+
+                $daysInWeek = [];
+                foreach ($colDays as $col => $dayName) {
+                    $dayNum = isset($dayNumRow[$col]) ? (int)$dayNumRow[$col] : 0;
+                    if ($dayNum > 0) {
+                        $m = $colMonths[$col] ?? $activeM ?? '07';
+                        $daysInWeek[$col] = [
+                            'date' => sprintf('%04d-%02d-%02d', 2025, $m, $dayNum),
+                            'dayName' => $dayName
+                        ];
+                    }
+                }
+
+                for ($hrRow = $r + 2; $hrRow < $r + 23 && $hrRow <= $maxRow; $hrRow++) {
+                    if (!isset($sheetRows[$hrRow])) continue;
+                    $hRow = $sheetRows[$hrRow];
+                    $startHour = isset($hRow['B']) ? trim($hRow['B']) : '';
+                    $endHour   = isset($hRow['C']) ? trim($hRow['C']) : '';
+                    if (!is_numeric($startHour)) continue;
+
+                    $hStart = (int)$startHour;
+                    $hEnd   = (int)$endHour;
+
+                    foreach ($daysInWeek as $col => $dayInfo) {
+                        $cellVal = $hRow[$col] ?? '';
+                        if (!empty($cellVal) && mb_strtoupper($cellVal) !== 'FESTIVO') {
+                            $lines = explode("\n", $cellVal);
+                            $instName = trim($lines[0]);
+                            $subject = trim($lines[1] ?? '');
+                            if (!empty($instName)) {
+                                $rawSlots[] = [
+                                    'date' => $dayInfo['date'],
+                                    'day' => $dayInfo['dayName'],
+                                    'start' => $hStart,
+                                    'end' => $hEnd,
+                                    'instructor' => $instName,
+                                    'subject' => $subject
+                                ];
+                                $instructores[$instName] = ($instructores[$instName] ?? 0) + 1;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        return [
+            'exito' => true,
+            'slots' => $rawSlots,
+            'instructores' => $instructores
+        ];
+    }
+
+    /**
+     * Importa completamente el horario desde un archivo Excel para la ficha especificada
+     */
+    public static function importarHorarioExcel(string $filePath, int $idFicha): array {
+        $resultado = [
+            'exito' => false,
+            'mensaje' => '',
+            'total_bloques_insertados' => 0,
+            'total_horas' => 0,
+            'instructores_nuevos' => [],
+            'instructores_existentes' => [],
+            'materias_detectadas' => [],
+            'ficha' => null,
+            'rango_fechas' => ['inicio' => null, 'fin' => null]
+        ];
+
+        try {
+            $mysql = new MySQL();
+            $mysql->conectarBD();
+            $pdo = $mysql->getConexion();
+            if (!$pdo) {
+                $resultado['mensaje'] = 'Error al conectar con la base de datos MySQL.';
+                return $resultado;
+            }
+
+            self::asegurarTablasHorario($pdo);
+            self::asegurarTablaFichaAsignatura($pdo);
+
+            $stmtFicha = $pdo->prepare("SELECT id_ficha, nombre_programa, jornada FROM ficha WHERE id_ficha = :id LIMIT 1");
+            $stmtFicha->execute([':id' => $idFicha]);
+            $fichaData = $stmtFicha->fetch(PDO::FETCH_ASSOC);
+            if (!$fichaData) {
+                $resultado['mensaje'] = "La ficha {$idFicha} no existe en la base de datos.";
+                return $resultado;
+            }
+            $resultado['ficha'] = $fichaData;
+
+            $parseResult = self::parsearExcelHorario($filePath);
+            if (!$parseResult['exito']) {
+                $resultado['mensaje'] = $parseResult['mensaje'];
+                return $resultado;
+            }
+
+            $rawSlots = $parseResult['slots'];
+            if (empty($rawSlots)) {
+                $resultado['mensaje'] = 'No se encontraron bloques ni horarios válidos en el archivo Excel.';
+                return $resultado;
+            }
+
+            // Sincronizar instructores
+            $instructorMap = [];
+            foreach ($parseResult['instructores'] as $instNombre => $cnt) {
+                $idUsuario = self::sincronizarInstructor($pdo, $instNombre, $idFicha, $resultado);
+                if ($idUsuario > 0) {
+                    $instructorMap[$instNombre] = $idUsuario;
+                }
+            }
+
+            // Agrupar en bloques estándar
+            $groupedBlocks = [];
+            $fechas = [];
+            $materias = [];
+
+            foreach ($rawSlots as $slot) {
+                $date = $slot['date'];
+                $fechas[] = $date;
+                $hStart = $slot['start'];
+                $instNombre = $slot['instructor'];
+                $subject = $slot['subject'];
+                if (!empty($subject)) {
+                    $materias[$subject] = ($materias[$subject] ?? 0) + 1;
+                }
+
+                if ($hStart >= 6 && $hStart < 9) {
+                    $bloqueKey = 'bloque1';
+                    $hIni = '06:00:00';
+                    $hFin = '09:00:00';
+                } elseif ($hStart >= 9 && $hStart < 12) {
+                    $bloqueKey = 'bloque2';
+                    $hIni = '09:00:00';
+                    $hFin = '12:00:00';
+                } elseif ($hStart >= 12 && $hStart < 15) {
+                    $bloqueKey = 'bloque1_t';
+                    $hIni = '12:00:00';
+                    $hFin = '15:00:00';
+                } elseif ($hStart >= 15 && $hStart < 18) {
+                    $bloqueKey = 'bloque2_t';
+                    $hIni = '15:00:00';
+                    $hFin = '18:00:00';
+                } else {
+                    $bloqueKey = 'bloque_n';
+                    $hIni = sprintf('%02d:00:00', $hStart);
+                    $hFin = sprintf('%02d:00:00', $slot['end']);
+                }
+
+                $key = $date . '|' . $bloqueKey;
+                if (!isset($groupedBlocks[$key])) {
+                    $groupedBlocks[$key] = [
+                        'fecha' => $date,
+                        'bloque' => $bloqueKey,
+                        'fk_usuario_instructor' => $instructorMap[$instNombre] ?? 0,
+                        'materia' => $subject,
+                        'hora_inicio' => $hIni,
+                        'hora_fin' => $hFin,
+                        'horas_count' => 1
+                    ];
+                } else {
+                    $groupedBlocks[$key]['horas_count']++;
+                    if (empty($groupedBlocks[$key]['materia']) && !empty($subject)) {
+                        $groupedBlocks[$key]['materia'] = $subject;
+                    }
+                }
+            }
+
+            $pdo->beginTransaction();
+
+            $stmtIns = $pdo->prepare("INSERT INTO horario_bloque 
+                (fk_ficha, fecha, bloque, fk_usuario_instructor, materia, hora_inicio, hora_fin)
+                VALUES (:fk_ficha, :fecha, :bloque, :fk_usuario_instructor, :materia, :hora_inicio, :hora_fin)
+                ON DUPLICATE KEY UPDATE 
+                    fk_usuario_instructor = VALUES(fk_usuario_instructor),
+                    materia = VALUES(materia),
+                    hora_inicio = VALUES(hora_inicio),
+                    hora_fin = VALUES(hora_fin)");
+
+            $insertados = 0;
+            foreach ($groupedBlocks as $b) {
+                if ($b['fk_usuario_instructor'] > 0) {
+                    $stmtIns->execute([
+                        ':fk_ficha' => $idFicha,
+                        ':fecha' => $b['fecha'],
+                        ':bloque' => $b['bloque'],
+                        ':fk_usuario_instructor' => $b['fk_usuario_instructor'],
+                        ':materia' => $b['materia'],
+                        ':hora_inicio' => $b['hora_inicio'],
+                        ':hora_fin' => $b['hora_fin']
+                    ]);
+                    $insertados++;
+                }
+            }
+
+            $stmtAsig = $pdo->prepare("INSERT IGNORE INTO ficha_asignatura (fk_ficha, fk_usuario_instructor, nombre_asignatura, tipo)
+                                       VALUES (:ficha, :instructor, :materia, :tipo)");
+            foreach ($materias as $matNombre => $count) {
+                foreach ($groupedBlocks as $gb) {
+                    if ($gb['materia'] === $matNombre && $gb['fk_usuario_instructor'] > 0) {
+                        $tipo = 'Técnica';
+                        $matUpper = mb_strtoupper($matNombre);
+                        if (str_contains($matUpper, 'INGLÉS') || str_contains($matUpper, 'INGLES')) $tipo = 'Bilingüismo';
+                        elseif (str_contains($matUpper, 'AMBIENTAL') || str_contains($matUpper, 'SST') || str_contains($matUpper, 'DERECHOS') || str_contains($matUpper, 'COMUNICACIÓN') || str_contains($matUpper, 'ÉTICA')) $tipo = 'Transversal';
+
+                        $stmtAsig->execute([
+                            ':ficha' => $idFicha,
+                            ':instructor' => $gb['fk_usuario_instructor'],
+                            ':materia' => mb_substr($matNombre, 0, 100),
+                            ':tipo' => $tipo
+                        ]);
+                        break;
+                    }
+                }
+            }
+
+            if ($pdo->inTransaction()) {
+                $pdo->commit();
+            }
+
+            sort($fechas);
+            $resultado['exito'] = true;
+            $resultado['total_bloques_insertados'] = $insertados;
+            $resultado['total_horas'] = count($rawSlots);
+            $resultado['rango_fechas'] = [
+                'inicio' => $fechas[0] ?? null,
+                'fin' => end($fechas) ?: null
+            ];
+            $resultado['materias_detectadas'] = array_keys($materias);
+            $resultado['mensaje'] = "Horario importado exitosamente: {$insertados} bloques y " . count($rawSlots) . " horas procesadas.";
+
+        } catch (Exception $e) {
+            if (isset($pdo) && $pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+            $resultado['exito'] = false;
+            $resultado['mensaje'] = 'Error al procesar el archivo: ' . $e->getMessage();
+        }
+
+        return $resultado;
+    }
+
+    /**
+     * Obtiene los bloques de horario registrados para una ficha, opcionalmente filtrados por mes (YYYY-MM)
+     */
+    public static function obtenerHorarioBloquesFicha(int $idFicha, ?string $mesAnio = null): array {
+        $bloques = [];
+        try {
+            $mysql = new MySQL();
+            $mysql->conectarBD();
+            $conexion = $mysql->getConexion();
+            if ($conexion) {
+                self::asegurarTablasHorario($conexion);
+                $sql = "SELECT hb.*, 
+                               CONCAT(u.nombre, ' ', u.apellido) AS instructor_nombre,
+                               u.nombre_usuario AS instructor_correo,
+                               u.identificacion AS instructor_identificacion
+                        FROM horario_bloque hb
+                        LEFT JOIN usuario u ON hb.fk_usuario_instructor = u.id_usuario
+                        WHERE hb.fk_ficha = :idFicha";
+                $params = [':idFicha' => $idFicha];
+                if (!empty($mesAnio)) {
+                    $sql .= " AND DATE_FORMAT(hb.fecha, '%Y-%m') = :mesAnio";
+                    $params[':mesAnio'] = $mesAnio;
+                }
+                $sql .= " ORDER BY hb.fecha ASC, hb.hora_inicio ASC";
+                $stmt = $conexion->prepare($sql);
+                $stmt->execute($params);
+                $bloques = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+            }
+        } catch (Exception $e) {}
+        return $bloques;
+    }
+
+    /**
+     * Obtiene los meses disponibles con bloques registrados para una ficha
+     */
+    public static function obtenerMesesDisponiblesHorario(int $idFicha): array {
+        $meses = [];
+        try {
+            $mysql = new MySQL();
+            $mysql->conectarBD();
+            $conexion = $mysql->getConexion();
+            if ($conexion) {
+                self::asegurarTablasHorario($conexion);
+                $sql = "SELECT DISTINCT DATE_FORMAT(fecha, '%Y-%m') AS mes_anio, 
+                               COUNT(*) as total_bloques
+                        FROM horario_bloque
+                        WHERE fk_ficha = :idFicha
+                        GROUP BY DATE_FORMAT(fecha, '%Y-%m')
+                        ORDER BY mes_anio ASC";
+                $stmt = $conexion->prepare($sql);
+                $stmt->execute([':idFicha' => $idFicha]);
+                $rows = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+                $nombresMes = [
+                    '01' => 'Enero', '02' => 'Febrero', '03' => 'Marzo', '04' => 'Abril',
+                    '05' => 'Mayo', '06' => 'Junio', '07' => 'Julio', '08' => 'Agosto',
+                    '09' => 'Septiembre', '10' => 'Octubre', '11' => 'Noviembre', '12' => 'Diciembre'
+                ];
+
+                foreach ($rows as $r) {
+                    $parts = explode('-', $r['mes_anio']);
+                    $nombreM = $nombresMes[$parts[1] ?? '01'] ?? 'Mes';
+                    $meses[] = [
+                        'mes_anio' => $r['mes_anio'],
+                        'label' => $nombreM . ' ' . ($parts[0] ?? ''),
+                        'total_bloques' => (int)$r['total_bloques']
+                    ];
+                }
+            }
+        } catch (Exception $e) {}
+        return $meses;
+    }
+
+    /**
+     * Obtiene todos los instructores asociados a una ficha a través de ficha_instructor
+     */
+    public static function obtenerInstructoresDeFicha(int $idFicha): array {
+        $instructores = [];
+        try {
+            $mysql = new MySQL();
+            $mysql->conectarBD();
+            $conexion = $mysql->getConexion();
+            if ($conexion) {
+                self::asegurarTablasHorario($conexion);
+                $sql = "SELECT u.id_usuario, CONCAT(u.nombre, ' ', u.apellido) AS nombre_completo,
+                               u.nombre_usuario AS correo, u.identificacion, u.telefono
+                        FROM ficha_instructor fi
+                        INNER JOIN usuario u ON fi.fk_usuario = u.id_usuario
+                        WHERE fi.fk_ficha = :idFicha
+                        ORDER BY u.nombre ASC";
+                $stmt = $conexion->prepare($sql);
+                $stmt->execute([':idFicha' => $idFicha]);
+                $instructores = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+            }
+        } catch (Exception $e) {}
+        return $instructores;
+    }
 }
 ?>

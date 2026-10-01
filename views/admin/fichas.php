@@ -2,6 +2,7 @@
 $pageTitle = 'Fichas de Formación — Control de Ingresos SENA';
 require __DIR__ . '/../../views/layouts/header.php';
 $estadoFiltro = $_GET['estado'] ?? 'Activo';
+$fichas = $fichas ?? [];
 ?>
 
 <div class="page-header">
@@ -10,7 +11,11 @@ $estadoFiltro = $_GET['estado'] ?? 'Activo';
         <div class="page-header-subtitle">Gestión de fichas, programas e instructores encargados</div>
     </div>
     <?php if (($_SESSION['rol'] ?? '') === 'Administrador'): ?>
-    <div>
+    <div style="display:flex; gap:0.5rem;">
+        <a href="index.php?action=ficha-horario-importar" class="btn-shadcn btn-shadcn-outline">
+            <i class="bi bi-file-earmark-excel"></i>
+            <span>Importar Horario Excel</span>
+        </a>
         <a href="index.php?action=ficha-crear" class="btn-shadcn btn-shadcn-primary">
             <i class="bi bi-plus-lg"></i>
             <span>+ Nueva Ficha</span>
@@ -147,6 +152,11 @@ $estadoFiltro = $_GET['estado'] ?? 'Activo';
                     <td>
                         <?php if (($_SESSION['rol'] ?? '') === 'Administrador'): ?>
                         <div style="display:flex; gap:0.375rem;">
+                            <a href="index.php?action=ficha-horario&id=<?= $f['id'] ?>"
+                               class="btn-shadcn btn-shadcn-outline" style="padding:0.25rem 0.5rem; font-size:0.75rem; color:#2563eb; border-color:rgba(37,99,235,0.3);" title="Ver Horario">
+                                <i class="bi bi-calendar3"></i>
+                            </a>
+
                             <a href="index.php?action=ficha-editar&id=<?= $f['id'] ?>"
                                class="btn-shadcn btn-shadcn-outline" style="padding:0.25rem 0.5rem; font-size:0.75rem;" title="Editar Ficha">
                                 <i class="bi bi-pencil"></i>

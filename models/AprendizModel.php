@@ -36,6 +36,32 @@ class AprendizModel {
     }
 
     /**
+     * Verifica si un código RFID ya está asignado a otro aprendiz en la base de datos
+     */
+    public static function existeCodigoRfid(?string $codigoRfid, ?int $excluirUsuarioId = null): bool {
+        $codigoRfid = trim((string)$codigoRfid);
+        if (empty($codigoRfid)) return false;
+
+        try {
+            $mysql = new MySQL();
+            $mysql->conectarBD();
+            $conexion = $mysql->getConexion();
+            if ($conexion) {
+                $sql = "SELECT COUNT(*) FROM aprendiz WHERE LOWER(TRIM(codigo_rfid)) = LOWER(:rfid)";
+                $params = [':rfid' => $codigoRfid];
+                if ($excluirUsuarioId && $excluirUsuarioId > 0) {
+                    $sql .= " AND fk_usuario != :excluirUsuarioId";
+                    $params[':excluirUsuarioId'] = $excluirUsuarioId;
+                }
+                $stmt = $conexion->prepare($sql);
+                $stmt->execute($params);
+                return ((int)$stmt->fetchColumn()) > 0;
+            }
+        } catch (Exception $e) {}
+        return false;
+    }
+
+    /**
      * Inserta un nuevo registro en la tabla aprendiz asociando código RFID, ficha y usuario
      */
     public static function crearAprendiz(?string $codigoRfid, int $fkFicha, int $fkUsuario, string $estado = 'Activo'): bool {
@@ -45,6 +71,7 @@ class AprendizModel {
             $conexion = $mysql->getConexion();
 
             if ($conexion) {
+                $codigoRfid = (!empty(trim((string)$codigoRfid))) ? trim((string)$codigoRfid) : null;
                 $sql = "INSERT INTO aprendiz (codigo_rfid, fk_ficha, fk_usuario, estado) VALUES (:rfid, :ficha, :usuario, :estado)";
                 $stmt = $conexion->prepare($sql);
                 return $stmt->execute([
@@ -71,6 +98,7 @@ class AprendizModel {
             $conexion = $mysql->getConexion();
 
             if ($conexion) {
+                $codigoRfid = (!empty(trim((string)$codigoRfid))) ? trim((string)$codigoRfid) : null;
                 $check = (int) $conexion->query("SELECT COUNT(*) FROM aprendiz WHERE fk_usuario = " . (int)$fkUsuario)->fetchColumn();
                 if ($check > 0) {
                     $sql = "UPDATE aprendiz SET codigo_rfid = :rfid, fk_ficha = :ficha, estado = :estado WHERE fk_usuario = :usuario";
