@@ -120,8 +120,12 @@ class AsistenciaController {
                     $horarioSalida = date('H:i:s', strtotime($horarioFicha['salida']));
                 }
 
+                $usuarioIdSesion = (int)($_SESSION['usuario_id'] ?? 0);
+                $fkInstructor = ($usuarioIdSesion > 0) ? $usuarioIdSesion : null;
+
                 if ($horarioEntrada || isset($_SESSION['hora_apertura_asistencia'])) {
-                    $registroActual = $ingresoModel->verificarIngreso($identificadorAprendiz, $fechaActual);
+                    // Verifica si este instructor ya registró al aprendiz hoy
+                    $registroActual = $ingresoModel->verificarIngreso($identificadorAprendiz, $fechaActual, $fkInstructor);
 
                     if (!$registroActual) {
                         $estadoAsistencia = "Puntual";
@@ -146,7 +150,8 @@ class AsistenciaController {
                             $estadoAsistencia,
                             $identificadorAprendiz,
                             $materiaActual,
-                            $nombreBloque
+                            $nombreBloque,
+                            $fkInstructor
                         );
 
                         if ($resultado) {
@@ -178,7 +183,7 @@ class AsistenciaController {
                             $_SESSION['mensaje'] = ['texto' => "Error no se pudo actualizar la salida", 'tipo' => "error"];
                         }
                     } else {
-                        $_SESSION['mensaje'] = ['texto' => "El aprendiz ya completó sus registros de entrada y salida de hoy", 'tipo' => "warning"];
+                        $_SESSION['mensaje'] = ['texto' => "El aprendiz ya completó sus registros de entrada y salida con este instructor hoy", 'tipo' => "warning"];
                     }
                 } else {
                     $_SESSION['mensaje'] = ['texto' => "No se encontró un horario asignado para la ficha hoy", 'tipo' => "warning"];
@@ -197,11 +202,15 @@ class AsistenciaController {
     public function cerrarJornada()
     {
         unset($_SESSION['materia_actual'], $_SESSION['bloque_actual'], $_SESSION['hora_apertura_asistencia']);
+        $rolSesion = $_SESSION['rol'] ?? '';
+        $usuarioIdSesion = (int)($_SESSION['usuario_id'] ?? 0);
+        $instructorId = ($rolSesion === 'Instructor') ? $usuarioIdSesion : null;
+
         $ingresoModel = new IngresoModel();
-        $resultado = $ingresoModel->BorrarRegistros();
+        $resultado = $ingresoModel->BorrarRegistros(null, $instructorId);
         if ($resultado['success']) {
             $_SESSION['mensaje'] = [
-                'texto' => "Se limpiaron " . $resultado['eliminados'] . " registros",
+                'texto' => "Se limpiaron " . $resultado['eliminados'] . " registros de la jornada",
                 'tipo' => "success"
             ];
         } else {

@@ -79,12 +79,17 @@ class ReporteModel {
                                     FROM ingresos i
                                     WHERE i.fk_aprendiz = :idAprendiz 
                                       AND i.fecha_registro BETWEEN :fInicio AND :fFin";
-                    $stmtIng = $conexion->prepare($sqlIngresos);
-                    $stmtIng->execute([
+                    $paramsIng = [
                         ':idAprendiz' => $idAprendiz,
                         ':fInicio'    => $fechaInicio,
                         ':fFin'       => $fechaFin
-                    ]);
+                    ];
+                    if ($instructorId && $instructorId > 0) {
+                        $sqlIngresos .= " AND i.fk_usuario_instructor = :instructorId";
+                        $paramsIng[':instructorId'] = $instructorId;
+                    }
+                    $stmtIng = $conexion->prepare($sqlIngresos);
+                    $stmtIng->execute($paramsIng);
                     $ingresosMap = [];
                     $minutosRetardoTotal = 0;
                     $conteoPuntuales = 0;

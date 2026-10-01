@@ -1,12 +1,15 @@
 <?php
 $pageTitle = 'Historial de Asistencia — Control de Ingresos SENA';
+$filtros   = $filtros ?? ['fecha_inicio' => date('Y-m-01'), 'fecha_fin' => date('Y-m-d')];
+$fichas    = $fichas ?? [];
+$registros = $registros ?? [];
 require __DIR__ . '/../../views/layouts/header.php';
 ?>
 
 <div class="page-header">
     <div>
         <h1 class="page-header-title">Historial de Asistencias</h1>
-        <div class="page-header-subtitle">Consulta y exporta el registro de ingresos de aprendices</div>
+        <div class="page-header-subtitle"><?= (($_SESSION['rol'] ?? '') === 'Instructor') ? 'Consulta tus registros de asistencia de aprendices' : 'Consulta y exporta el registro de ingresos de aprendices' ?></div>
     </div>
     <div>
         <!--  EDITAR AQUÍ: Enlace o acción para exportar el CSV/Excel -->
@@ -27,7 +30,7 @@ require __DIR__ . '/../../views/layouts/header.php';
             <div>
                 <label style="display:block; font-size:0.875rem; font-weight:500; margin-bottom:0.375rem;">Ficha de Formación</label>
                 <select name="ficha_id" class="shadcn-select">
-                    <option value="">— <?= (($_SESSION['rol'] ?? '') === 'Instructor') ? 'Todas mis fichas' : 'Todas las fichas' ?> —</option>
+                    <option value="">— <?= (($_SESSION['rol'] ?? '') === 'Instructor') ? 'Todas tus fichas' : 'Todas las fichas' ?> —</option>
                     <?php foreach ($fichas as $f): ?>
                     <option value="<?= $f['id'] ?>" <?= (($filtros['ficha_id'] ?? '') == $f['id']) ? 'selected' : '' ?>>
                         Ficha <?= htmlspecialchars($f['numero_ficha']) ?> — <?= htmlspecialchars($f['programa']) ?>
@@ -68,7 +71,12 @@ require __DIR__ . '/../../views/layouts/header.php';
 <!-- ──  TABLA DE REGISTROS DE ASISTENCIA ────────────────────── -->
 <div class="shadcn-card">
     <div class="card-header-shadcn">
-        <h3><i class="bi bi-table me-2"></i>Registros de Ingreso</h3>
+        <div style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
+            <h3><i class="bi bi-table me-2"></i>Registros de Ingreso</h3>
+            <?php if (($_SESSION['rol'] ?? '') === 'Instructor'): ?>
+            <span class="shadcn-badge badge-puntual"><i class="bi bi-person-check me-1"></i>Tus Asistencias</span>
+            <?php endif; ?>
+        </div>
         <span class="shadcn-badge badge-secondary"><?= count($registros) ?> registros</span>
     </div>
 
@@ -80,7 +88,10 @@ require __DIR__ . '/../../views/layouts/header.php';
                     <th>Aprendiz</th>
                     <th>Documento</th>
                     <th>Ficha</th>
-                    <th>Programa</th>
+                    <th>Materia / Bloque</th>
+                    <?php if (($_SESSION['rol'] ?? '') === 'Administrador'): ?>
+                    <th>Instructor Registro</th>
+                    <?php endif; ?>
                     <th>Hora entrada</th>
                     <th>Hora salida</th>
                     <th>Estado</th>
@@ -90,7 +101,7 @@ require __DIR__ . '/../../views/layouts/header.php';
                 <!-- EDITAR AQUÍ: Itera sobre tus registros traídos de la base de datos -->
                 <?php if (empty($registros)): ?>
                 <tr>
-                    <td colspan="8" style="text-align:center; padding: 2.5rem; color:var(--muted-foreground);">
+                    <td colspan="<?= (($_SESSION['rol'] ?? '') === 'Administrador') ? '9' : '8' ?>" style="text-align:center; padding: 2.5rem; color:var(--muted-foreground);">
                         <i class="bi bi-inbox fs-3 d-block mb-1"></i>
                         No existen registros de asistencia para los filtros seleccionados.
                     </td>
@@ -102,7 +113,24 @@ require __DIR__ . '/../../views/layouts/header.php';
                     <td style="font-weight:600;"><?= htmlspecialchars($r['aprendiz']) ?></td>
                     <td><?= htmlspecialchars($r['documento']) ?></td>
                     <td><span class="shadcn-badge badge-secondary"><?= htmlspecialchars($r['numero_ficha']) ?></span></td>
-                    <td><?= htmlspecialchars($r['programa']) ?></td>
+                    <td>
+                        <?php if (!empty($r['materia'])): ?>
+                            <div style="font-size:0.8125rem; font-weight:600;"><?= htmlspecialchars($r['materia']) ?></div>
+                        <?php endif; ?>
+                        <?php if (!empty($r['bloque'])): ?>
+                            <div style="font-size:0.75rem; color:var(--muted-foreground);"><i class="bi bi-clock me-1"></i><?= htmlspecialchars($r['bloque']) ?></div>
+                        <?php endif; ?>
+                        <?php if (empty($r['materia']) && empty($r['bloque'])): ?>
+                            <span style="color:var(--muted-foreground);">—</span>
+                        <?php endif; ?>
+                    </td>
+                    <?php if (($_SESSION['rol'] ?? '') === 'Administrador'): ?>
+                    <td>
+                        <span class="shadcn-badge badge-secondary" style="font-size:0.75rem;">
+                            <i class="bi bi-person me-1"></i><?= htmlspecialchars($r['instructor'] ?? '—') ?>
+                        </span>
+                    </td>
+                    <?php endif; ?>
                     <td><?= htmlspecialchars($r['hora_entrada']) ?></td>
                     <td><?= htmlspecialchars($r['hora_salida'] ?? '—') ?></td>
                     <td>

@@ -138,9 +138,12 @@ CREATE TABLE `ingresos` (
   `id_ingresos` int(11) NOT NULL,
   `fecha_registro` date NOT NULL,
   `entrada` datetime NOT NULL,
-  `salida` datetime NOT NULL,
+  `salida` datetime DEFAULT NULL,
   `estado_asistencia` varchar(45) NOT NULL,
-  `fk_aprendiz` int(11) NOT NULL
+  `fk_aprendiz` int(11) NOT NULL,
+  `fk_usuario_instructor` int(11) DEFAULT NULL,
+  `materia` varchar(100) DEFAULT NULL,
+  `bloque_horario` varchar(100) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
 
 -- --------------------------------------------------------

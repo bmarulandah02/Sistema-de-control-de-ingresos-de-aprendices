@@ -19,21 +19,21 @@ class IngresoModel {
             $conexion = $mysql->getConexion();
 
             if ($conexion) {
-                $whereClause = "WHERE i.fecha_registro = CURDATE()";
+                $where = ["i.fecha_registro = CURDATE()"];
                 $params = [];
 
-                if ($idFicha && $idFicha > 0) {
-                    $whereClause .= " AND a.fk_ficha = :ficha";
-                    $params[':ficha'] = $idFicha;
-                } else if ($instructorId && $instructorId > 0) {
-                    $whereClause .= " AND (
-                        f.fk_usuario = :instructor
-                        OR f.id_ficha IN (SELECT fk_ficha FROM ficha_instructor WHERE fk_usuario = :instructor)
-                        OR f.id_ficha IN (SELECT fk_ficha FROM ficha_asignatura WHERE fk_usuario_instructor = :instructor)
-                        OR f.id_ficha IN (SELECT fk_ficha FROM horario_bloque WHERE fk_usuario_instructor = :instructor)
-                    )";
+                // Si es un instructor, SOLO ve las asistencias registradas por él
+                if ($instructorId && $instructorId > 0) {
+                    $where[] = "i.fk_usuario_instructor = :instructor";
                     $params[':instructor'] = $instructorId;
                 }
+
+                if ($idFicha && $idFicha > 0) {
+                    $where[] = "a.fk_ficha = :ficha";
+                    $params[':ficha'] = $idFicha;
+                }
+
+                $whereClause = "WHERE " . implode(" AND ", $where);
 
                 // Total ingresos hoy
                 $sqlTotal = "SELECT COUNT(*) FROM ingresos i 
@@ -84,28 +84,29 @@ class IngresoModel {
                 $where = ["i.fecha_registro = CURDATE()"];
                 $params = [];
 
+                // Si es un instructor, SOLO ve las asistencias que él mismo registró
+                if ($instructorId && $instructorId > 0) {
+                    $where[] = "i.fk_usuario_instructor = :instructorId";
+                    $params[':instructorId'] = $instructorId;
+                }
+
                 if ($idFicha && $idFicha > 0) {
                     $where[] = "f.id_ficha = :idFicha";
                     $params[':idFicha'] = $idFicha;
-                } else if ($instructorId && $instructorId > 0) {
-                    $where[] = "(
-                        f.fk_usuario = :instructorId
-                        OR f.id_ficha IN (SELECT fk_ficha FROM ficha_instructor WHERE fk_usuario = :instructorId)
-                        OR f.id_ficha IN (SELECT fk_ficha FROM ficha_asignatura WHERE fk_usuario_instructor = :instructorId)
-                        OR f.id_ficha IN (SELECT fk_ficha FROM horario_bloque WHERE fk_usuario_instructor = :instructorId)
-                    )";
-                    $params[':instructorId'] = $instructorId;
                 }
 
                 $whereSql = !empty($where) ? "WHERE " . implode(" AND ", $where) : "";
 
                 $sql = "SELECT i.id_ingresos, i.fecha_registro, i.entrada, i.salida, i.estado_asistencia AS estado,
+                               i.materia, i.bloque_horario, i.fk_usuario_instructor,
                                CONCAT(u.nombre, ' ', u.apellido) AS aprendiz, u.identificacion AS documento,
-                               f.id_ficha AS numero_ficha, f.nombre_programa AS programa
+                               f.id_ficha AS numero_ficha, f.nombre_programa AS programa,
+                               CONCAT(inst.nombre, ' ', inst.apellido) AS instructor_nombre
                         FROM ingresos i
                         JOIN aprendiz a ON i.fk_aprendiz = a.id_aprendiz
                         JOIN usuario u ON a.fk_usuario = u.id_usuario
                         LEFT JOIN ficha f ON a.fk_ficha = f.id_ficha
+                        LEFT JOIN usuario inst ON i.fk_usuario_instructor = inst.id_usuario
                         {$whereSql}
                         ORDER BY i.entrada DESC
                         LIMIT :limite";
@@ -124,6 +125,9 @@ class IngresoModel {
                         'documento'    => $row['documento'],
                         'numero_ficha' => $row['numero_ficha'] ?? 'N/A',
                         'programa'     => $row['programa'] ?? 'Sin programa',
+                        'materia'      => $row['materia'] ?? '',
+                        'bloque'       => $row['bloque_horario'] ?? '',
+                        'instructor'   => !empty(trim($row['instructor_nombre'] ?? '')) ? $row['instructor_nombre'] : '—',
                         'fecha'        => $row['fecha_registro'],
                         'hora_entrada' => $row['entrada'] ? date('H:i:s', strtotime($row['entrada'])) : '—',
                         'hora_salida'  => ($row['salida'] && $row['salida'] !== '0000-00-00 00:00:00') ? date('H:i:s', strtotime($row['salida'])) : null,
@@ -139,7 +143,7 @@ class IngresoModel {
     }
 
     /**
-     * Obtiene historial de asistencias con filtros dinámicos por rango de fecha y estado
+     * Obtiene historial de asistencias con filtros dinámicos por rango de fecha, estado, ficha e instructor
      */
     public static function obtenerHistorialConFiltros(array $filtros): array {
         $registros = [];
@@ -173,25 +177,24 @@ class IngresoModel {
                     $params[':ficha_id'] = (int) $filtros['ficha_id'];
                 }
 
+                // Si es un instructor, solo ve asistencias registradas por él
                 if (!empty($filtros['instructor_id'])) {
-                    $where[] = "(
-                        f.fk_usuario = :instructor_id
-                        OR f.id_ficha IN (SELECT fk_ficha FROM ficha_instructor WHERE fk_usuario = :instructor_id)
-                        OR f.id_ficha IN (SELECT fk_ficha FROM ficha_asignatura WHERE fk_usuario_instructor = :instructor_id)
-                        OR f.id_ficha IN (SELECT fk_ficha FROM horario_bloque WHERE fk_usuario_instructor = :instructor_id)
-                    )";
+                    $where[] = "i.fk_usuario_instructor = :instructor_id";
                     $params[':instructor_id'] = (int) $filtros['instructor_id'];
                 }
 
                 $whereSql = !empty($where) ? "WHERE " . implode(" AND ", $where) : "";
 
                 $sql = "SELECT i.id_ingresos, i.fecha_registro, i.entrada, i.salida, i.estado_asistencia AS estado,
+                               i.materia, i.bloque_horario, i.fk_usuario_instructor,
                                CONCAT(u.nombre, ' ', u.apellido) AS aprendiz, u.identificacion AS documento,
-                               f.id_ficha AS numero_ficha, f.nombre_programa AS programa
+                               f.id_ficha AS numero_ficha, f.nombre_programa AS programa,
+                               CONCAT(inst.nombre, ' ', inst.apellido) AS instructor_nombre
                         FROM ingresos i
                         JOIN aprendiz a ON i.fk_aprendiz = a.id_aprendiz
                         JOIN usuario u ON a.fk_usuario = u.id_usuario
                         LEFT JOIN ficha f ON a.fk_ficha = f.id_ficha
+                        LEFT JOIN usuario inst ON i.fk_usuario_instructor = inst.id_usuario
                         {$whereSql}
                         ORDER BY i.fecha_registro DESC, i.entrada DESC";
 
@@ -206,6 +209,9 @@ class IngresoModel {
                         'documento'    => $row['documento'],
                         'numero_ficha' => $row['numero_ficha'] ?? 'N/A',
                         'programa'     => $row['programa'] ?? 'Sin programa',
+                        'materia'      => $row['materia'] ?? '',
+                        'bloque'       => $row['bloque_horario'] ?? '',
+                        'instructor'   => !empty(trim($row['instructor_nombre'] ?? '')) ? $row['instructor_nombre'] : '—',
                         'hora_entrada' => $row['entrada'] ? date('H:i:s', strtotime($row['entrada'])) : '—',
                         'hora_salida'  => ($row['salida'] && $row['salida'] !== '0000-00-00 00:00:00') ? date('H:i:s', strtotime($row['salida'])) : null,
                         'estado'       => $row['estado']
@@ -219,155 +225,182 @@ class IngresoModel {
         return $registros;
     }
 
-    public function verificarIngreso($identificadorAprendiz,$fechaActual)
+    /**
+     * Verifica si el aprendiz ya tiene un ingreso registrado para la fecha actual.
+     * Si se pasa el ID del instructor, busca el registro hecho por ese instructor en específico,
+     * permitiendo que distintos instructores tomen asistencia independientemente en sus respectivas clases.
+     */
+    public function verificarIngreso($identificadorAprendiz, $fechaActual, ?int $idInstructor = null)
     {
-        try{
-            $mysql= new MySQL();
+        try {
+            $mysql = new MySQL();
             $mysql->conectarBD();
-            $conexion=$mysql->getConexion();
-            if($conexion)
-                {
-                    $consulta="select id_ingresos,entrada,salida,estado_asistencia from ingresos where fk_aprendiz=:idA and fecha_registro=:FA limit 1";
-                    $stmt=$conexion->prepare($consulta);
-                    $stmt->bindParam(':idA',$identificadorAprendiz,PDO::PARAM_INT);
-                    $stmt->bindParam(':FA',$fechaActual,PDO::PARAM_STR);
-                    $stmt->execute();
-                    return $stmt->fetch(PDO::FETCH_ASSOC);
+            $conexion = $mysql->getConexion();
+            if ($conexion) {
+                $consulta = "SELECT id_ingresos, entrada, salida, estado_asistencia, fk_usuario_instructor 
+                             FROM ingresos 
+                             WHERE fk_aprendiz = :idA 
+                               AND fecha_registro = :FA";
+                $params = [
+                    ':idA' => $identificadorAprendiz,
+                    ':FA'  => $fechaActual
+                ];
+
+                if ($idInstructor && $idInstructor > 0) {
+                    $consulta .= " AND fk_usuario_instructor = :idInst";
+                    $params[':idInst'] = $idInstructor;
                 }
-            
-        }catch(PDOException $e)
-        {
-            error_log("Error en IngresoModel ". $e->getMessage());
+
+                $consulta .= " ORDER BY id_ingresos DESC LIMIT 1";
+
+                $stmt = $conexion->prepare($consulta);
+                $stmt->execute($params);
+                return $stmt->fetch(PDO::FETCH_ASSOC);
+            }
+        } catch (PDOException $e) {
+            error_log("Error en IngresoModel " . $e->getMessage());
             return false;
-
         }
-
     } 
-    //funcion para insertar las filas al marcar una entrada 
-    public function registrarEntrada($fechaActual,$horaActual,$estadoAsistencia,$identificadorAprendiz,$materia = null,$bloqueHorario = null)
+
+    /**
+     * Inserta la fila al marcar una entrada, asociando el instructor que realiza el registro
+     */
+    public function registrarEntrada($fechaActual, $horaActual, $estadoAsistencia, $identificadorAprendiz, $materia = null, $bloqueHorario = null, ?int $fkInstructor = null)
     {
-        try{
-            $mysql= new MySQL();
+        try {
+            $mysql = new MySQL();
             $mysql->conectarBD();
-            $conexion=$mysql->getConexion();
-            if($conexion)
-                {
-                    // Asegurar que la columna salida permita valores NULOS al registrar únicamente la entrada
-                    try {
-                        $conexion->exec("ALTER TABLE ingresos MODIFY COLUMN salida DATETIME NULL DEFAULT NULL");
-                    } catch (Exception $e) {}
-                    try {
-                        $conexion->exec("ALTER TABLE ingresos ADD COLUMN materia VARCHAR(100) NULL");
-                    } catch (Exception $e) {}
-                    try {
-                        $conexion->exec("ALTER TABLE ingresos ADD COLUMN bloque_horario VARCHAR(100) NULL");
-                    } catch (Exception $e) {}
+            $conexion = $mysql->getConexion();
+            if ($conexion) {
+                // Asegurar columnas requeridas
+                try {
+                    $conexion->exec("ALTER TABLE ingresos MODIFY COLUMN salida DATETIME NULL DEFAULT NULL");
+                } catch (Exception $e) {}
+                try {
+                    $conexion->exec("ALTER TABLE ingresos ADD COLUMN materia VARCHAR(100) NULL");
+                } catch (Exception $e) {}
+                try {
+                    $conexion->exec("ALTER TABLE ingresos ADD COLUMN bloque_horario VARCHAR(100) NULL");
+                } catch (Exception $e) {}
+                try {
+                    $conexion->exec("ALTER TABLE ingresos ADD COLUMN fk_usuario_instructor INT NULL DEFAULT NULL AFTER fk_aprendiz");
+                } catch (Exception $e) {}
 
-                    $consulta="INSERT INTO ingresos (fecha_registro, entrada, salida, estado_asistencia, fk_aprendiz, materia, bloque_horario) VALUES (:FA, :HA, NULL, :EA, :IA, :MAT, :BLOQ)";
-                    $stmt=$conexion->prepare($consulta);
-                    $stmt->bindParam(':FA',$fechaActual,PDO::PARAM_STR);
-                    $stmt->bindParam(':HA',$horaActual,PDO::PARAM_STR);
-                    $stmt->bindParam(':EA',$estadoAsistencia,PDO::PARAM_STR);
-                    $stmt->bindParam(':IA',$identificadorAprendiz,PDO::PARAM_INT);
-                    $stmt->bindParam(':MAT',$materia,PDO::PARAM_STR);
-                    $stmt->bindParam(':BLOQ',$bloqueHorario,PDO::PARAM_STR);
-                    return $stmt->execute();
+                $consulta = "INSERT INTO ingresos (fecha_registro, entrada, salida, estado_asistencia, fk_aprendiz, fk_usuario_instructor, materia, bloque_horario) 
+                             VALUES (:FA, :HA, NULL, :EA, :IA, :FI, :MAT, :BLOQ)";
+                $stmt = $conexion->prepare($consulta);
+                $stmt->bindParam(':FA', $fechaActual, PDO::PARAM_STR);
+                $stmt->bindParam(':HA', $horaActual, PDO::PARAM_STR);
+                $stmt->bindParam(':EA', $estadoAsistencia, PDO::PARAM_STR);
+                $stmt->bindParam(':IA', $identificadorAprendiz, PDO::PARAM_INT);
+                if ($fkInstructor && $fkInstructor > 0) {
+                    $stmt->bindValue(':FI', $fkInstructor, PDO::PARAM_INT);
+                } else {
+                    $stmt->bindValue(':FI', null, PDO::PARAM_NULL);
                 }
-        }catch(PDOException $e)
-        {
-            error_log("Error al insertar la entrada ". $e->getMessage());
+                $stmt->bindParam(':MAT', $materia, PDO::PARAM_STR);
+                $stmt->bindParam(':BLOQ', $bloqueHorario, PDO::PARAM_STR);
+                return $stmt->execute();
+            }
+        } catch (PDOException $e) {
+            error_log("Error al insertar la entrada " . $e->getMessage());
             return false;
-
         }
     }
 
-    ////funcion para actualizar la fila de la tabla para marcar la salida 
-
-    public function registrarSalida($id_ingreso,$horaActual,$estadoAsistencia)
+    /**
+     * Actualiza la fila para marcar la salida
+     */
+    public function registrarSalida($id_ingreso, $horaActual, $estadoAsistencia)
     {
-        try{
-            $mysql= new MySQL();
+        try {
+            $mysql = new MySQL();
             $mysql->conectarBD();
-            $conexion=$mysql->getConexion();
-            if($conexion)
-                {
-                    $consulta="update ingresos set salida=:HA,estado_asistencia=:EA where id_ingresos=:ID";
-                    $stmt=$conexion->prepare($consulta);
-                    $stmt->bindParam(':HA',$horaActual,PDO::PARAM_STR);
-                    $stmt->bindParam(':EA',$estadoAsistencia,PDO::PARAM_STR);
-                    $stmt->bindParam(':ID',$id_ingreso,PDO::PARAM_INT);
-                    return $stmt->execute();
-                }
-
-        }catch(PDOException $e)
-        {
-            error_log("Error al marca salida: ". $e->getMessage());
+            $conexion = $mysql->getConexion();
+            if ($conexion) {
+                $consulta = "UPDATE ingresos SET salida = :HA, estado_asistencia = :EA WHERE id_ingresos = :ID";
+                $stmt = $conexion->prepare($consulta);
+                $stmt->bindParam(':HA', $horaActual, PDO::PARAM_STR);
+                $stmt->bindParam(':EA', $estadoAsistencia, PDO::PARAM_STR);
+                $stmt->bindParam(':ID', $id_ingreso, PDO::PARAM_INT);
+                return $stmt->execute();
+            }
+        } catch (PDOException $e) {
+            error_log("Error al marcar salida: " . $e->getMessage());
             return false;
-
         }
     }
-    //obtener el historial privado de cada aprendiz
+
+    /**
+     * Obtener el historial privado de cada aprendiz
+     */
     public static function HistorialAprendiz(int $idAprendiz): array {
-        $registros=[];
-         $idAprendiz = (int) $idAprendiz;
+        $registros = [];
+        $idAprendiz = (int) $idAprendiz;
         if ($idAprendiz <= 0) {
             return $registros;
         }
-        try{
-            $mysql= new MySQL();
+        try {
+            $mysql = new MySQL();
             $mysql->conectarBD();
-            $conexion=$mysql->getConexion();
-            if($conexion)
-                {
-                    $consulta="SELECT ingresos.id_ingresos,ingresos.fecha_registro,ingresos.entrada,ingresos.salida, ingresos.estado_asistencia AS estado
-                    FROM ingresos where ingresos.fk_aprendiz=:idAprendiz
-                    ORDER BY ingresos.fecha_registro desc, ingresos.entrada";
-                    $stmt=$conexion->prepare($consulta);
-                    $stmt->bindValue(':idAprendiz',$idAprendiz,PDO::PARAM_INT);
-                    $stmt->execute();
-                    while ($row=$stmt->fetch(PDO::FETCH_ASSOC))
-                        {
-                            $registros[]=[
-                                'id'           => (int)$row['id_ingresos'],
-                                'fecha'        =>htmlspecialchars( $row['fecha_registro']?? '',ENT_QUOTES,'UTF-8'),
-                                'hora_entrada' => $row['entrada'] ? date('H:i:s', strtotime($row['entrada'])) : '—',
-                                'hora_salida'  => ($row['salida'] && $row['salida'] !== '0000-00-00 00:00:00') ? date('H:i:s', strtotime($row['salida'])) : null,
-                                'estado'       => htmlspecialchars($row['estado']?? '',ENT_QUOTES,'UTF-8')
-                            ];
-                        }
+            $conexion = $mysql->getConexion();
+            if ($conexion) {
+                $consulta = "SELECT ingresos.id_ingresos, ingresos.fecha_registro, ingresos.entrada, ingresos.salida, 
+                                    ingresos.estado_asistencia AS estado, ingresos.materia, ingresos.bloque_horario
+                             FROM ingresos 
+                             WHERE ingresos.fk_aprendiz = :idAprendiz
+                             ORDER BY ingresos.fecha_registro DESC, ingresos.entrada DESC";
+                $stmt = $conexion->prepare($consulta);
+                $stmt->bindValue(':idAprendiz', $idAprendiz, PDO::PARAM_INT);
+                $stmt->execute();
+                while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+                    $registros[] = [
+                        'id'           => (int)$row['id_ingresos'],
+                        'fecha'        => htmlspecialchars($row['fecha_registro'] ?? '', ENT_QUOTES, 'UTF-8'),
+                        'materia'      => htmlspecialchars($row['materia'] ?? '', ENT_QUOTES, 'UTF-8'),
+                        'bloque'       => htmlspecialchars($row['bloque_horario'] ?? '', ENT_QUOTES, 'UTF-8'),
+                        'hora_entrada' => $row['entrada'] ? date('H:i:s', strtotime($row['entrada'])) : '—',
+                        'hora_salida'  => ($row['salida'] && $row['salida'] !== '0000-00-00 00:00:00') ? date('H:i:s', strtotime($row['salida'])) : null,
+                        'estado'       => htmlspecialchars($row['estado'] ?? '', ENT_QUOTES, 'UTF-8')
+                    ];
                 }
-
-        }catch(PDOException $e)
-        {
-            error_log("Error en obtenerHistorialPorAprendiz: ". $e->getMessage());
-
+            }
+        } catch (PDOException $e) {
+            error_log("Error en HistorialAprendiz: " . $e->getMessage());
         }
         return $registros;
     }
-    // Elimina todos los registros de ingreso de la jornada indicada (por defecto hoy)
-    public function BorrarRegistros(?string $fecha = null): array
-    {
-        try{
-            $mysql= new MySQL();
-            $mysql->conectarBD();
-            $conexion= $mysql->getConexion();
-            if($conexion)
-                {
-                    $fechaCierre = $fecha ?? date('Y-m-d'); 
-                    $consulta = "DELETE FROM ingresos WHERE fecha_registro <= :fechaCierre";
-                    $stmt = $conexion->prepare($consulta);
-                    $stmt->bindParam(':fechaCierre', $fechaCierre, PDO::PARAM_STR);
-                    $stmt->execute();
-                    $filasEliminadas = $stmt->rowCount();
-                    return ['success' => true, 'eliminados' => $filasEliminadas, 'fecha' => $fechaCierre];
-                }
-            return ['success' => false, 'eliminados' => 0];
 
-        }catch(PDOException $e)
-        {
-            error_log("Error al eliminar registros de la jornada: ". $e->getMessage());
+    /**
+     * Elimina los registros de ingreso de la jornada indicada.
+     * Si se pasa un instructorId, SOLO borra los registros de dicho instructor.
+     */
+    public function BorrarRegistros(?string $fecha = null, ?int $instructorId = null): array
+    {
+        try {
+            $mysql = new MySQL();
+            $mysql->conectarBD();
+            $conexion = $mysql->getConexion();
+            if ($conexion) {
+                $fechaCierre = $fecha ?? date('Y-m-d');
+                $consulta = "DELETE FROM ingresos WHERE fecha_registro <= :fechaCierre";
+                $params = [':fechaCierre' => $fechaCierre];
+
+                if ($instructorId && $instructorId > 0) {
+                    $consulta .= " AND fk_usuario_instructor = :instructorId";
+                    $params[':instructorId'] = $instructorId;
+                }
+
+                $stmt = $conexion->prepare($consulta);
+                $stmt->execute($params);
+                $filasEliminadas = $stmt->rowCount();
+                return ['success' => true, 'eliminados' => $filasEliminadas, 'fecha' => $fechaCierre];
+            }
+            return ['success' => false, 'eliminados' => 0];
+        } catch (PDOException $e) {
+            error_log("Error al eliminar registros de la jornada: " . $e->getMessage());
             return ['success' => false, 'eliminados' => 0];
         }
-    } 
+    }
 }
-?>

@@ -7,7 +7,7 @@ require __DIR__ . '/../layouts/header.php';
     <div>
         <h1 class="page-header-title">Dashboard</h1>
         <div class="page-header-subtitle">
-            <?= date('d/m/Y') ?> — Resumen de ingresos y asistencia de aprendices.
+            <?= date('d/m/Y') ?> — <?= (($_SESSION['rol'] ?? '') === 'Instructor') ? 'Resumen de tus asistencias registradas como instructor.' : 'Resumen general de ingresos y asistencia de aprendices.' ?>
         </div>
     </div>
     <div style="display:flex; align-items:center; gap:0.75rem; flex-wrap:wrap;">
@@ -17,7 +17,7 @@ require __DIR__ . '/../layouts/header.php';
             <i class="bi bi-funnel-fill" style="color:var(--sena-brand);"></i>
             <span style="font-size:0.8125rem; font-weight:600; color:var(--muted-foreground);">Ficha:</span>
             <select name="ficha_id" class="shadcn-select" onchange="this.form.submit()" style="padding:0.25rem 0.5rem; font-size:0.875rem; border:none; background:transparent;">
-                <option value="">— Todas las Fichas —</option>
+                <option value="">— <?= (($_SESSION['rol'] ?? '') === 'Instructor') ? 'Todas tus fichas' : 'Todas las Fichas' ?> —</option>
                 <?php foreach ($fichas ?? [] as $f): ?>
                 <option value="<?= $f['id'] ?>" <?= (($fichaSeleccionada ?? '') == $f['id']) ? 'selected' : '' ?>>
                     Ficha <?= htmlspecialchars($f['numero_ficha']) ?> — <?= htmlspecialchars($f['programa']) ?>
@@ -30,9 +30,9 @@ require __DIR__ . '/../layouts/header.php';
             <i class="bi bi-qr-code-scan"></i>
             <span>Terminal RFID</span>
         </a>
-        <!-- agrego el nuevo boton para cerrar la jornada es decir para eliminar los datos que cumplen con el horario en la tabla de ingresos -->
+        <!-- Botón para cerrar jornada: solo limpia los registros del instructor en sesión si es Instructor -->
          <a href="index.php?action=cerrar-jornada" class="btn-shadcn btn-shadcn-outline"
-           onclick="return confirm('¿Cerrar la jornada de hoy? Se eliminarán los registros de aprendices que su estado es  (puntuales y con salida a tiempo).');">
+           onclick="return confirm('¿Cerrar la jornada de hoy? Se limpiarán los registros de aprendices correspondientes a hoy.');">
             <i class="bi bi-moon-stars"></i>
             <span>Cerrar Jornada</span>
         </a>
@@ -56,7 +56,7 @@ require __DIR__ . '/../layouts/header.php';
             <i class="bi bi-door-open metric-icon"></i>
         </div>
         <div class="metric-value"><?= (int) ($statsHoy['total'] ?? 0) ?></div>
-        <div class="metric-footer">Registros marcados hoy</div>
+        <div class="metric-footer"><?= (($_SESSION['rol'] ?? '') === 'Instructor') ? 'Registrados por ti hoy' : 'Registros marcados hoy' ?></div>
     </div>
 
     <div class="metric-card">
@@ -90,8 +90,11 @@ require __DIR__ . '/../layouts/header.php';
 <!-- ── TABLA DE ÚLTIMOS MOVIMIENTOS ────────────────────────── -->
 <div class="shadcn-card">
     <div class="card-header-shadcn">
-        <div style="display:flex; align-items:center; gap:0.5rem;">
+        <div style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
             <h3><i class="bi bi-activity me-2"></i>Últimos movimientos del día</h3>
+            <?php if (($_SESSION['rol'] ?? '') === 'Instructor'): ?>
+            <span class="shadcn-badge badge-puntual"><i class="bi bi-person-check me-1"></i>Tus Registros</span>
+            <?php endif; ?>
             <?php if (!empty($fichaSeleccionada)): ?>
             <span class="shadcn-badge badge-secondary">Filtro Ficha Activa</span>
             <?php endif; ?>
@@ -108,6 +111,10 @@ require __DIR__ . '/../layouts/header.php';
                     <th>Aprendiz</th>
                     <th>Documento</th>
                     <th>Ficha</th>
+                    <th>Materia / Bloque</th>
+                    <?php if (($_SESSION['rol'] ?? '') === 'Administrador'): ?>
+                    <th>Instructor Registro</th>
+                    <?php endif; ?>
                     <th>Hora entrada</th>
                     <th>Hora salida</th>
                     <th>Estado</th>
@@ -116,7 +123,7 @@ require __DIR__ . '/../layouts/header.php';
             <tbody>
                 <?php if (empty($ultimos)): ?>
                 <tr>
-                    <td colspan="6" style="text-align:center; padding: 2.5rem; color:var(--muted-foreground);">
+                    <td colspan="<?= (($_SESSION['rol'] ?? '') === 'Administrador') ? '8' : '7' ?>" style="text-align:center; padding: 2.5rem; color:var(--muted-foreground);">
                         <i class="bi bi-inbox fs-3 d-block mb-1"></i>
                         No hay ingresos registrados el día de hoy para esta selección.
                     </td>
@@ -127,6 +134,24 @@ require __DIR__ . '/../layouts/header.php';
                     <td style="font-weight:600;"><?= htmlspecialchars($r['aprendiz']) ?></td>
                     <td><?= htmlspecialchars($r['documento']) ?></td>
                     <td><span class="shadcn-badge badge-secondary"><?= htmlspecialchars($r['numero_ficha']) ?></span></td>
+                    <td>
+                        <?php if (!empty($r['materia'])): ?>
+                            <div style="font-size:0.8125rem; font-weight:600;"><?= htmlspecialchars($r['materia']) ?></div>
+                        <?php endif; ?>
+                        <?php if (!empty($r['bloque'])): ?>
+                            <div style="font-size:0.75rem; color:var(--muted-foreground);"><i class="bi bi-clock me-1"></i><?= htmlspecialchars($r['bloque']) ?></div>
+                        <?php endif; ?>
+                        <?php if (empty($r['materia']) && empty($r['bloque'])): ?>
+                            <span style="color:var(--muted-foreground);">—</span>
+                        <?php endif; ?>
+                    </td>
+                    <?php if (($_SESSION['rol'] ?? '') === 'Administrador'): ?>
+                    <td>
+                        <span class="shadcn-badge badge-secondary" style="font-size:0.75rem;">
+                            <i class="bi bi-person me-1"></i><?= htmlspecialchars($r['instructor'] ?? '—') ?>
+                        </span>
+                    </td>
+                    <?php endif; ?>
                     <td><?= htmlspecialchars($r['hora_entrada']) ?></td>
                     <td><?= htmlspecialchars($r['hora_salida'] ?? '—') ?></td>
                     <td>
