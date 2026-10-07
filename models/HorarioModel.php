@@ -635,7 +635,7 @@ public function obtenerHorarioFicha($identificadorFicha, $fechaActual)
     /**
      * Obtiene la clase y el instructor programados en el horario para la fecha y hora actuales (o especificadas)
      */
-    public static function obtenerClaseDelMomento(?int $idFicha = null, ?string $fecha = null, ?string $hora = null): ?array {
+    public static function obtenerClaseDelMomento(?int $idFicha = null, ?string $fecha = null, ?string $hora = null, ?int $idInstructor = null): ?array {
         try {
             $mysql = new MySQL();
             $mysql->conectarBD();
@@ -647,9 +647,12 @@ public function obtenerHorarioFicha($identificadorFicha, $fechaActual)
 
                 // 1. Buscar coincidencia exacta de hora dentro del bloque
                 $sql = "SELECT hb.*,
+                               f.nombre_programa,
+                               f.jornada,
                                CONCAT(u.nombre, ' ', u.apellido) AS instructor_nombre,
                                u.nombre_usuario AS instructor_correo
                         FROM horario_bloque hb
+                        LEFT JOIN ficha f ON hb.fk_ficha = f.id_ficha
                         LEFT JOIN usuario u ON hb.fk_usuario_instructor = u.id_usuario
                         WHERE hb.fecha = :fecha
                           AND (
@@ -660,6 +663,10 @@ public function obtenerHorarioFicha($identificadorFicha, $fechaActual)
                 if (!empty($idFicha)) {
                     $sql .= " AND hb.fk_ficha = :ficha";
                     $params[':ficha'] = $idFicha;
+                }
+                if (!empty($idInstructor)) {
+                    $sql .= " AND hb.fk_usuario_instructor = :instructor";
+                    $params[':instructor'] = $idInstructor;
                 }
                 $sql .= " ORDER BY hb.hora_inicio ASC LIMIT 1";
 
@@ -673,15 +680,22 @@ public function obtenerHorarioFicha($identificadorFicha, $fechaActual)
 
                 // 2. Si no coincide con la hora exacta pero hoy hay clase programada en la fecha
                 $sqlHoy = "SELECT hb.*,
+                                  f.nombre_programa,
+                                  f.jornada,
                                   CONCAT(u.nombre, ' ', u.apellido) AS instructor_nombre,
                                   u.nombre_usuario AS instructor_correo
                            FROM horario_bloque hb
+                           LEFT JOIN ficha f ON hb.fk_ficha = f.id_ficha
                            LEFT JOIN usuario u ON hb.fk_usuario_instructor = u.id_usuario
                            WHERE hb.fecha = :fecha";
                 $paramsHoy = [':fecha' => $fecha];
                 if (!empty($idFicha)) {
                     $sqlHoy .= " AND hb.fk_ficha = :ficha";
                     $paramsHoy[':ficha'] = $idFicha;
+                }
+                if (!empty($idInstructor)) {
+                    $sqlHoy .= " AND hb.fk_usuario_instructor = :instructor";
+                    $paramsHoy[':instructor'] = $idInstructor;
                 }
                 $sqlHoy .= " ORDER BY ABS(TIME_TO_SEC(TIMEDIFF(COALESCE(hb.hora_inicio, '06:00:00'), :hora))) ASC LIMIT 1";
                 $paramsHoy[':hora'] = $hora;
@@ -692,6 +706,39 @@ public function obtenerHorarioFicha($identificadorFicha, $fechaActual)
                 if ($resHoy) {
                     $resHoy['es_hora_exacta'] = false;
                     return $resHoy;
+                }
+            }
+        } catch (Exception $e) {}
+        return null;
+    }
+
+    /**
+     * Obtiene la clase más próxima en el calendario para un instructor específico
+     */
+    public static function obtenerProximaClaseInstructor(int $instructorId): ?array {
+        try {
+            $mysql = new MySQL();
+            $mysql->conectarBD();
+            $conexion = $mysql->getConexion();
+            if ($conexion) {
+                self::asegurarTablasHorario($conexion);
+                $sql = "SELECT hb.*,
+                               f.nombre_programa,
+                               f.jornada,
+                               CONCAT(u.nombre, ' ', u.apellido) AS instructor_nombre,
+                               u.nombre_usuario AS instructor_correo
+                        FROM horario_bloque hb
+                        LEFT JOIN ficha f ON hb.fk_ficha = f.id_ficha
+                        LEFT JOIN usuario u ON hb.fk_usuario_instructor = u.id_usuario
+                        WHERE hb.fk_usuario_instructor = :instructor
+                        ORDER BY ABS(DATEDIFF(hb.fecha, CURDATE())) ASC, hb.hora_inicio ASC
+                        LIMIT 1";
+                $stmt = $conexion->prepare($sql);
+                $stmt->execute([':instructor' => $instructorId]);
+                $res = $stmt->fetch(PDO::FETCH_ASSOC);
+                if ($res) {
+                    $res['es_hora_exacta'] = false;
+                    return $res;
                 }
             }
         } catch (Exception $e) {}
@@ -1333,7 +1380,7 @@ public function obtenerHorarioFicha($identificadorFicha, $fechaActual)
     /**
      * Obtiene los bloques de horario registrados para una ficha, opcionalmente filtrados por mes (YYYY-MM)
      */
-    public static function obtenerHorarioBloquesFicha(int $idFicha, ?string $mesAnio = null): array {
+    public static function obtenerHorarioBloquesFicha(int $idFicha, ?string $mesAnio = null, ?int $instructorId = null): array {
         $bloques = [];
         try {
             $mysql = new MySQL();
@@ -1353,6 +1400,11 @@ public function obtenerHorarioFicha($identificadorFicha, $fechaActual)
                     $sql .= " AND DATE_FORMAT(hb.fecha, '%Y-%m') = :mesAnio";
                     $params[':mesAnio'] = $mesAnio;
                 }
+                // Filtrar solo los bloques del instructor si se especifica
+                if (!empty($instructorId)) {
+                    $sql .= " AND hb.fk_usuario_instructor = :instructorId";
+                    $params[':instructorId'] = $instructorId;
+                }
                 $sql .= " ORDER BY hb.fecha ASC, hb.hora_inicio ASC";
                 $stmt = $conexion->prepare($sql);
                 $stmt->execute($params);
@@ -1365,7 +1417,7 @@ public function obtenerHorarioFicha($identificadorFicha, $fechaActual)
     /**
      * Obtiene los meses disponibles con bloques registrados para una ficha
      */
-    public static function obtenerMesesDisponiblesHorario(int $idFicha): array {
+    public static function obtenerMesesDisponiblesHorario(int $idFicha, ?int $instructorId = null): array {
         $meses = [];
         try {
             $mysql = new MySQL();
@@ -1376,11 +1428,15 @@ public function obtenerHorarioFicha($identificadorFicha, $fechaActual)
                 $sql = "SELECT DISTINCT DATE_FORMAT(fecha, '%Y-%m') AS mes_anio, 
                                COUNT(*) as total_bloques
                         FROM horario_bloque
-                        WHERE fk_ficha = :idFicha
-                        GROUP BY DATE_FORMAT(fecha, '%Y-%m')
-                        ORDER BY mes_anio ASC";
+                        WHERE fk_ficha = :idFicha";
+                $params = [':idFicha' => $idFicha];
+                if (!empty($instructorId)) {
+                    $sql .= " AND fk_usuario_instructor = :instructorId";
+                    $params[':instructorId'] = $instructorId;
+                }
+                $sql .= " GROUP BY DATE_FORMAT(fecha, '%Y-%m') ORDER BY mes_anio ASC";
                 $stmt = $conexion->prepare($sql);
-                $stmt->execute([':idFicha' => $idFicha]);
+                $stmt->execute($params);
                 $rows = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
 
                 $nombresMes = [

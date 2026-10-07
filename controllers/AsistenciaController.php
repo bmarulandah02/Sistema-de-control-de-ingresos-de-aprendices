@@ -16,32 +16,51 @@ class AsistenciaController {
         if ($rolSesion === 'Instructor') {
             $fichas = HorarioModel::obtenerFichasPorInstructor($usuarioIdSesion);
             $soloInstructorId = $usuarioIdSesion;
+            // Obtener directamente la clase programada del instructor
+            $claseMomento = HorarioModel::obtenerClaseDelMomento(null, null, null, $usuarioIdSesion);
+            if (!$claseMomento) {
+                $claseMomento = HorarioModel::obtenerProximaClaseInstructor($usuarioIdSesion);
+            }
         } else {
             $fichas = HorarioModel::obtenerTodasFichas();
             $soloInstructorId = null;
+            $idFichaPrincipal = !empty($fichas) ? (int)$fichas[0]['id'] : null;
+            $claseMomento = HorarioModel::obtenerClaseDelMomento($idFichaPrincipal);
         }
 
-        $idFichaPrincipal = !empty($fichas) ? (int)$fichas[0]['id'] : null;
-        $claseMomento = HorarioModel::obtenerClaseDelMomento($idFichaPrincipal);
+        // Si aún no se encontró clase programada pero el instructor o admin tiene fichas, generar fallback
+        if (!$claseMomento && !empty($fichas)) {
+            $primeraFicha = $fichas[0];
+            $asigs = HorarioModel::obtenerAsignaturasPorFicha((int)$primeraFicha['id'], $soloInstructorId);
+            $materiaNombre = !empty($asigs) ? $asigs[0]['nombre_asignatura'] : $primeraFicha['programa'];
 
-        foreach ($fichas as &$f) {
-            $f['asignaturas'] = HorarioModel::obtenerAsignaturasPorFicha((int)$f['id'], $soloInstructorId);
+            $claseMomento = [
+                'fk_ficha'              => $primeraFicha['id'],
+                'nombre_programa'       => $primeraFicha['programa'],
+                'jornada'               => $primeraFicha['jornada'] ?? 'Mañana',
+                'materia'               => $materiaNombre,
+                'hora_inicio'           => '06:00:00',
+                'hora_fin'              => '12:00:00',
+                'bloque'                => 'bloque_1',
+                'fk_usuario_instructor' => $usuarioIdSesion,
+                'instructor_nombre'     => $_SESSION['usuario_nombre'] ?? 'Instructor',
+                'es_hora_exacta'        => false,
+                'es_fallback'           => true
+            ];
         }
-        unset($f);
 
-        // Si es instructor y tiene clase en este momento según horario, preseleccionar automáticamente su clase
-        if ($rolSesion === 'Instructor' && !empty($claseMomento) && (int)($claseMomento['fk_usuario_instructor'] ?? 0) === $usuarioIdSesion) {
-            if (empty($_SESSION['materia_actual'])) {
-                $numFichaActual = $claseMomento['fk_ficha'] ?? $idFichaPrincipal;
-                $_SESSION['materia_actual'] = $claseMomento['materia'] . ' - Ficha ' . $numFichaActual;
-                $_SESSION['ficha_actual']   = (string)$numFichaActual;
+        if (!empty($claseMomento)) {
+            $numFichaActual = $claseMomento['fk_ficha'] ?? (!empty($fichas) ? $fichas[0]['id'] : 0);
+            $nombreMateria  = $claseMomento['materia'] ?? 'Formación';
+            $_SESSION['materia_actual'] = $nombreMateria . ' - Ficha ' . $numFichaActual;
+            $_SESSION['ficha_actual']   = (string)$numFichaActual;
+            if (!empty($claseMomento['hora_inicio']) && !empty($claseMomento['hora_fin'])) {
+                $_SESSION['bloque_actual'] = substr($claseMomento['hora_inicio'], 0, 5)
+                    . '|' . substr($claseMomento['hora_fin'], 0, 5)
+                    . '|' . ($claseMomento['bloque'] ?? 'bloque_1');
             }
-            if (empty($_SESSION['bloque_actual']) && !empty($claseMomento['hora_inicio']) && !empty($claseMomento['hora_fin'])) {
-                $_SESSION['bloque_actual'] = substr($claseMomento['hora_inicio'], 0, 5) . '|' . substr($claseMomento['hora_fin'], 0, 5) . '|' . $claseMomento['bloque'];
-            }
         }
 
-        $bloques = HorarioModel::obtenerTodosLosBloques();
         if (!$mensaje && isset($_SESSION['mensaje'])) {
             $mensaje = $_SESSION['mensaje'];
             unset($_SESSION['mensaje']);
