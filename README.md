@@ -181,7 +181,7 @@ Sistema-de-control-de-ingresos-de-aprendices/
 Ubica el repositorio en la carpeta raíz de tu servidor web (en Laragon suele ser `C:\laragon\www\`):
 ```bash
 cd C:\laragon\www\Sistema-Ingreso
-git clone <URL_DEL_REPOSITORIO> Sistema-de-control-de-ingresos-de-aprendices
+git clone https://github.com/bmarulandah02/Sistema-de-control-de-ingresos-de-aprendices
 ```
 
 ### 2. Configurar la Base de Datos
