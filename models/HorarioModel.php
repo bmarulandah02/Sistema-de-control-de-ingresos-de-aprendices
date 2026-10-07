@@ -731,7 +731,8 @@ public function obtenerHorarioFicha($identificadorFicha, $fechaActual)
                         LEFT JOIN ficha f ON hb.fk_ficha = f.id_ficha
                         LEFT JOIN usuario u ON hb.fk_usuario_instructor = u.id_usuario
                         WHERE hb.fk_usuario_instructor = :instructor
-                        ORDER BY ABS(DATEDIFF(hb.fecha, CURDATE())) ASC, hb.hora_inicio ASC
+                          AND hb.fecha > CURDATE()
+                        ORDER BY hb.fecha ASC, hb.hora_inicio ASC
                         LIMIT 1";
                 $stmt = $conexion->prepare($sql);
                 $stmt->execute([':instructor' => $instructorId]);

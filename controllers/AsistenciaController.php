@@ -16,39 +16,23 @@ class AsistenciaController {
         if ($rolSesion === 'Instructor') {
             $fichas = HorarioModel::obtenerFichasPorInstructor($usuarioIdSesion);
             $soloInstructorId = $usuarioIdSesion;
-            // Obtener directamente la clase programada del instructor
+            // Buscar clase programada EXCLUSIVAMENTE para el día de HOY
             $claseMomento = HorarioModel::obtenerClaseDelMomento(null, null, null, $usuarioIdSesion);
+            
+            // Si hoy NO tiene clase programada, buscar cuál es su próxima clase futura sólo para informarle
+            $proximaClase = null;
             if (!$claseMomento) {
-                $claseMomento = HorarioModel::obtenerProximaClaseInstructor($usuarioIdSesion);
+                $proximaClase = HorarioModel::obtenerProximaClaseInstructor($usuarioIdSesion);
             }
         } else {
             $fichas = HorarioModel::obtenerTodasFichas();
             $soloInstructorId = null;
             $idFichaPrincipal = !empty($fichas) ? (int)$fichas[0]['id'] : null;
             $claseMomento = HorarioModel::obtenerClaseDelMomento($idFichaPrincipal);
+            $proximaClase = null;
         }
 
-        // Si aún no se encontró clase programada pero el instructor o admin tiene fichas, generar fallback
-        if (!$claseMomento && !empty($fichas)) {
-            $primeraFicha = $fichas[0];
-            $asigs = HorarioModel::obtenerAsignaturasPorFicha((int)$primeraFicha['id'], $soloInstructorId);
-            $materiaNombre = !empty($asigs) ? $asigs[0]['nombre_asignatura'] : $primeraFicha['programa'];
-
-            $claseMomento = [
-                'fk_ficha'              => $primeraFicha['id'],
-                'nombre_programa'       => $primeraFicha['programa'],
-                'jornada'               => $primeraFicha['jornada'] ?? 'Mañana',
-                'materia'               => $materiaNombre,
-                'hora_inicio'           => '06:00:00',
-                'hora_fin'              => '12:00:00',
-                'bloque'                => 'bloque_1',
-                'fk_usuario_instructor' => $usuarioIdSesion,
-                'instructor_nombre'     => $_SESSION['usuario_nombre'] ?? 'Instructor',
-                'es_hora_exacta'        => false,
-                'es_fallback'           => true
-            ];
-        }
-
+        // Si hoy SÍ hay clase programada para el instructor/ficha:
         if (!empty($claseMomento)) {
             $numFichaActual = $claseMomento['fk_ficha'] ?? (!empty($fichas) ? $fichas[0]['id'] : 0);
             $nombreMateria  = $claseMomento['materia'] ?? 'Formación';
@@ -59,6 +43,9 @@ class AsistenciaController {
                     . '|' . substr($claseMomento['hora_fin'], 0, 5)
                     . '|' . ($claseMomento['bloque'] ?? 'bloque_1');
             }
+        } else {
+            // NO hay clase programada hoy: limpiar datos de sesión de clase activa
+            unset($_SESSION['materia_actual'], $_SESSION['ficha_actual'], $_SESSION['bloque_actual']);
         }
 
         if (!$mensaje && isset($_SESSION['mensaje'])) {
@@ -69,6 +56,22 @@ class AsistenciaController {
     }
 
     public function abrirVentanaAsistencia(): void {
+        $rolSesion       = $_SESSION['rol'] ?? '';
+        $usuarioIdSesion = (int)($_SESSION['usuario_id'] ?? 0);
+
+        // Validar que realmente tenga clase hoy antes de abrir la ventana de 5 minutos
+        if ($rolSesion === 'Instructor') {
+            $claseHoy = HorarioModel::obtenerClaseDelMomento(null, null, null, $usuarioIdSesion);
+            if (!$claseHoy) {
+                $_SESSION['mensaje'] = [
+                    'texto' => "No tienes ninguna clase programada para el día de hoy en tu horario. No se puede abrir registro de asistencia.",
+                    'tipo' => "warning"
+                ];
+                header("Location: index.php?action=asistencia");
+                exit();
+            }
+        }
+
         $_SESSION['hora_apertura_asistencia'] = time();
         $_SESSION['mensaje'] = [
             'texto' => "¡Registro de asistencia abierto! Los aprendices que escaneen en los próximos 5 minutos serán marcados como PUNTUALES.",
@@ -80,6 +83,22 @@ class AsistenciaController {
 
     public function lecturaCodigoRfid()
     {
+        $rolSesion       = $_SESSION['rol'] ?? '';
+        $usuarioIdSesion = (int)($_SESSION['usuario_id'] ?? 0);
+
+        // Bloquear registro si es instructor y no tiene clase programada hoy
+        if ($rolSesion === 'Instructor') {
+            $claseHoy = HorarioModel::obtenerClaseDelMomento(null, null, null, $usuarioIdSesion);
+            if (!$claseHoy) {
+                $_SESSION['mensaje'] = [
+                    'texto' => "No tienes ninguna clase programada para el día de hoy. No es posible registrar asistencias.",
+                    'tipo' => "warning"
+                ];
+                header("Location: index.php?action=asistencia");
+                exit();
+            }
+        }
+
         // Guardar o actualizar la sesión activa de clase/materia y bloque horario si viene en POST
         if (isset($_POST['materia'])) {
             $_SESSION['materia_actual'] = trim($_POST['materia']);
