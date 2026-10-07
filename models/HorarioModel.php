@@ -186,7 +186,7 @@ class HorarioModel {
                 self::asegurarColumnasFechas($conexion);
                 self::asegurarTablaFichaAsignatura($conexion);
 
-                $where = ["(f.fk_usuario = :instructorId OR f.id_ficha IN (SELECT fk_ficha FROM ficha_instructor WHERE fk_usuario = :instructorId) OR f.id_ficha IN (SELECT fk_ficha FROM ficha_asignatura WHERE fk_usuario_instructor = :instructorId) OR f.id_ficha IN (SELECT fk_ficha FROM horario_bloque WHERE fk_usuario_instructor = :instructorId))"];
+                $where = ["(f.fk_usuario = :instructorId OR f.id_ficha IN (SELECT fk_ficha FROM ficha_asignatura WHERE fk_usuario_instructor = :instructorId) OR f.id_ficha IN (SELECT fk_ficha FROM horario_bloque WHERE fk_usuario_instructor = :instructorId))"];
                 $params = [':instructorId' => $instructorId];
 
                 if (!empty($filtros['estado'])) {

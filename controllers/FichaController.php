@@ -180,18 +180,16 @@ class FichaController {
             $id = (int)$ficha['id'];
         }
 
-        // Para instructores, filtrar los bloques del horario solo a los suyos
-        $filtroInstructorHorario = ($rolSesion === 'Instructor') ? $usuarioIdSesion : null;
-
+        // En el calendario de la ficha se muestra el horario COMPLETO (todos los instructores y materias de la ficha)
         $mesFiltro = trim($_GET['mes'] ?? '');
-        $mesesDisponibles = HorarioModel::obtenerMesesDisponiblesHorario($id, $filtroInstructorHorario);
+        $mesesDisponibles = HorarioModel::obtenerMesesDisponiblesHorario($id);
 
         if (empty($mesFiltro) && !empty($mesesDisponibles)) {
             $mesFiltro = $mesesDisponibles[0]['mes_anio'];
         }
 
-        $todosLosBloques = HorarioModel::obtenerHorarioBloquesFicha($id, null, $filtroInstructorHorario);
-        $bloques = HorarioModel::obtenerHorarioBloquesFicha($id, $mesFiltro ?: null, $filtroInstructorHorario);
+        $todosLosBloques = HorarioModel::obtenerHorarioBloquesFicha($id);
+        $bloques = HorarioModel::obtenerHorarioBloquesFicha($id, $mesFiltro ?: null);
         $bloquesJson = json_encode($todosLosBloques, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
         $instructoresFicha = HorarioModel::obtenerInstructoresDeFicha($id);
         $asignaturas = HorarioModel::obtenerAsignaturasPorFicha($id);
