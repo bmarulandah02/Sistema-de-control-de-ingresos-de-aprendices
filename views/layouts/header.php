@@ -76,19 +76,14 @@
                 <span>Horarios & Escáner Excel</span>
             </a>
 
-            <a href="index.php?action=excusas-admin" class="nav-link-item <?= (($_GET['action'] ?? '') === 'excusas-admin') ? 'active' : '' ?>">
-                <i class="bi bi-file-medical"></i>
-                <span>Excusas Médicas</span>
-            </a>
-
             <a href="index.php?action=desercion" class="nav-link-item <?= (in_array($_GET['action'] ?? '', ['desercion', 'desercion-citacion'])) ? 'active' : '' ?>">
                 <i class="bi bi-person-exclamation"></i>
                 <span>Alertas de Deserción</span>
             </a>
 
-            <a href="index.php?action=reportes" class="nav-link-item <?= (($_GET['action'] ?? '') === 'reportes') ? 'active' : '' ?>">
+            <a href="index.php?action=reportes" class="nav-link-item <?= (in_array($_GET['action'] ?? '', ['reportes', 'excusas-admin'])) ? 'active' : '' ?>">
                 <i class="bi bi-file-earmark-bar-graph"></i>
-                <span>Reportes PDF/Excel</span>
+                <span>Reportes / Horarios</span>
             </a>
             <?php else: ?>
             <div class="nav-section-title">Portal Aprendiz</div>

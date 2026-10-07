@@ -69,6 +69,13 @@ class ReporteController {
             }));
         }
 
+        $fichaActualHorario = HorarioModel::obtenerFichaPorId($fichaHorarioId);
+        $todosLosBloquesFicha = HorarioModel::obtenerHorarioBloquesFicha($fichaHorarioId);
+        $bloquesParaCalendario = ($instructorHorarioId && $instructorHorarioId > 0)
+            ? array_values(array_filter($todosLosBloquesFicha, fn($b) => (int)($b['fk_usuario_instructor'] ?? 0) === $instructorHorarioId))
+            : $todosLosBloquesFicha;
+        $bloquesJson = json_encode($bloquesParaCalendario, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
+
         require __DIR__ . '/../views/admin/reportes.php';
     }
 

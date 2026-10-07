@@ -1,0 +1,413 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   stylehorario.css — ESTILOS DEL CALENDARIO OFICIAL Y REPORTES (SENA)
+   Grilla Horaria 6:00 am a 10:00 pm, Vistas Google Calendar, Temas Light/Dark
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ─── CONTENEDOR PRINCIPAL DEL CALENDARIO ─── */
+.gcal-container {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+    overflow: hidden;
+    margin-bottom: 2rem;
+}
+
+/* ─── BARRA SUPERIOR DE CONTROL / TOOLBAR ─── */
+.gcal-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid var(--border);
+    background: var(--card);
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.gcal-nav-group {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.gcal-btn-circle {
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: 50%;
+    border: 1px solid var(--border);
+    background: var(--background);
+    color: var(--foreground);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 0.9375rem;
+    transition: all 0.15s ease;
+}
+.gcal-btn-circle:hover {
+    background: var(--muted);
+    border-color: var(--sena-brand, #059669);
+    color: var(--sena-brand, #059669);
+}
+
+.gcal-btn-today {
+    padding: 0.4rem 0.875rem;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border);
+    background: var(--background);
+    color: var(--foreground);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+.gcal-btn-today:hover {
+    background: var(--muted);
+    border-color: var(--primary, #059669);
+}
+
+.gcal-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--foreground);
+    margin-left: 0.5rem;
+    min-width: 220px;
+}
+
+/* ─── CONMUTADOR DE VISTAS (Semana, Mes, Día, Agenda) ─── */
+.gcal-view-switcher {
+    display: flex;
+    background: var(--muted);
+    padding: 0.25rem;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border);
+    gap: 0.25rem;
+}
+
+.gcal-view-btn {
+    border: none;
+    background: transparent;
+    padding: 0.4rem 0.875rem;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--muted-foreground);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+.gcal-view-btn.active {
+    background: var(--background);
+    color: var(--foreground);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+}
+.gcal-view-btn:hover:not(.active) {
+    color: var(--foreground);
+}
+
+/* ─── VISTA MES ─── */
+.gcal-month-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    border-bottom: 1px solid var(--border);
+}
+.gcal-month-header {
+    background: var(--muted);
+    padding: 0.625rem;
+    text-align: center;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--muted-foreground);
+    border-right: 1px solid var(--border);
+}
+.gcal-month-header:last-child {
+    border-right: none;
+}
+
+.gcal-month-body {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    background: var(--border);
+    gap: 1px;
+}
+.gcal-day-cell {
+    background: var(--card);
+    min-height: 120px;
+    padding: 0.375rem 0.5rem;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    transition: background 0.15s ease;
+}
+.gcal-day-cell.other-month {
+    background: rgba(0, 0, 0, 0.03);
+    opacity: 0.4;
+}
+.gcal-day-cell.is-today {
+    background: rgba(5, 150, 105, 0.06);
+}
+
+.gcal-day-num {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--muted-foreground);
+    width: 1.5rem;
+    height: 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    margin-bottom: 0.25rem;
+}
+.gcal-day-cell.is-today .gcal-day-num {
+    background: var(--sena-brand, #059669);
+    color: #fff;
+}
+
+.gcal-events-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    overflow: hidden;
+}
+
+.gcal-event-pill {
+    padding: 0.25rem 0.45rem;
+    border-radius: 4px;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    cursor: pointer;
+    transition: transform 0.12s ease, box-shadow 0.12s ease;
+    border-left: 3px solid transparent;
+}
+.gcal-event-pill:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+/* Colores de materias en Tema Claro */
+.ev-tecnica {
+    background: #ecfdf5;
+    color: #065f46;
+    border-left-color: #059669;
+}
+.ev-bilinguismo {
+    background: #eff6ff;
+    color: #1e40af;
+    border-left-color: #2563eb;
+}
+.ev-transversal {
+    background: #fef3c7;
+    color: #92400e;
+    border-left-color: #d97706;
+}
+.ev-social {
+    background: #f3e8ff;
+    color: #6b21a8;
+    border-left-color: #8b5cf6;
+}
+
+/* Colores de materias en Tema Oscuro (Modo Dark SENA) */
+[data-theme="dark"] .ev-tecnica {
+    background: rgba(5, 150, 105, 0.22);
+    color: #6ee7b7;
+    border-left-color: #10b981;
+    border: 1px solid rgba(16, 185, 129, 0.35);
+}
+[data-theme="dark"] .ev-bilinguismo {
+    background: rgba(37, 99, 235, 0.22);
+    color: #93c5fd;
+    border-left-color: #3b82f6;
+    border: 1px solid rgba(59, 130, 246, 0.35);
+}
+[data-theme="dark"] .ev-transversal {
+    background: rgba(217, 119, 6, 0.22);
+    color: #fcd34d;
+    border-left-color: #f59e0b;
+    border: 1px solid rgba(245, 158, 11, 0.35);
+}
+[data-theme="dark"] .ev-social {
+    background: rgba(139, 92, 246, 0.22);
+    color: #c4b5fd;
+    border-left-color: #8b5cf6;
+    border: 1px solid rgba(139, 92, 246, 0.35);
+}
+
+/* ─── VISTA SEMANA (HORAS 6:00 AM A 10:00 PM) ─── */
+.gcal-week-container {
+    display: flex;
+    flex-direction: column;
+    overflow-x: auto;
+    max-height: 760px;
+    overflow-y: auto;
+    position: relative;
+}
+
+.gcal-week-header-row {
+    display: grid;
+    grid-template-columns: 80px repeat(7, minmax(130px, 1fr));
+    border-bottom: 1px solid var(--border);
+    background: var(--muted);
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+.gcal-week-header-col {
+    padding: 0.625rem 0.25rem;
+    text-align: center;
+    border-right: 1px solid var(--border);
+    font-size: 0.75rem;
+}
+.gcal-week-header-col:last-child {
+    border-right: none;
+}
+.gcal-week-day-title {
+    font-weight: 700;
+    color: var(--muted-foreground);
+    text-transform: uppercase;
+    font-size: 0.6875rem;
+}
+.gcal-week-day-circle {
+    font-size: 1.125rem;
+    font-weight: 800;
+    color: var(--foreground);
+    width: 2rem;
+    height: 2rem;
+    border-radius: 50%;
+    margin: 0.125rem auto 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.gcal-week-header-col.is-today .gcal-week-day-circle {
+    background: var(--sena-brand, #059669);
+    color: #fff;
+}
+
+.gcal-week-body {
+    display: grid;
+    grid-template-columns: 80px repeat(7, minmax(130px, 1fr));
+    position: relative;
+    /* 17 franjas horarias (6 a 22) * 56px = 952px */
+    height: 952px;
+}
+.gcal-time-col {
+    border-right: 1px solid var(--border);
+    background: var(--background);
+    user-select: none;
+}
+.gcal-time-slot-label {
+    height: 56px;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    color: var(--muted-foreground);
+    text-align: right;
+    padding-right: 0.5rem;
+    transform: translateY(-8px);
+    box-sizing: border-box;
+}
+
+.gcal-week-day-col {
+    border-right: 1px solid var(--border);
+    position: relative;
+    background: var(--card);
+}
+.gcal-week-day-col:last-child {
+    border-right: none;
+}
+.gcal-grid-hour-line {
+    height: 56px;
+    border-bottom: 1px dashed rgba(125, 125, 125, 0.18);
+    box-sizing: border-box;
+}
+
+/* Tarjeta de bloque horario con horas visibles */
+.gcal-week-card {
+    position: absolute;
+    left: 4px;
+    right: 4px;
+    border-radius: 6px;
+    padding: 0.4rem 0.55rem;
+    cursor: pointer;
+    overflow: hidden;
+    transition: all 0.15s ease;
+    border-left: 3px solid;
+    z-index: 5;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+.gcal-week-card:hover {
+    z-index: 15;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.22);
+    transform: translateY(-1px);
+}
+
+/* ─── VISTA DÍA (HORAS 6:00 AM A 10:00 PM) ─── */
+.gcal-day-container {
+    display: grid;
+    grid-template-columns: 90px 1fr;
+    position: relative;
+    height: 952px;
+    max-height: 760px;
+    overflow-y: auto;
+}
+
+/* ─── MODAL DETALLES DEL EVENTO (ESTILO GOOGLE CALENDAR) ─── */
+.gcal-modal-backdrop {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.55);
+    backdrop-filter: blur(4px);
+    z-index: 9999;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+}
+.gcal-modal {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    width: 100%;
+    max-width: 520px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+    overflow: hidden;
+    animation: gcalModalIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+@keyframes gcalModalIn {
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
+}
+
+.gcal-modal-header-strip {
+    height: 8px;
+    background: #059669;
+}
+.gcal-modal-body {
+    padding: 1.5rem;
+}
+
+/* ─── BARRA DE REFERENCIA RÁPIDA DE FRANJAS HORARIAS ─── */
+.jornada-badge-bar {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    background: var(--muted);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 0.5rem 0.875rem;
+    margin-bottom: 1rem;
+    font-size: 0.8125rem;
+}
