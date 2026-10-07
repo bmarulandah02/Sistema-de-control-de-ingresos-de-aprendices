@@ -19,7 +19,9 @@ class FichaController {
             'estado' => trim($_GET['estado'] ?? 'Activo')
         ];
 
+        // Instructores solo pueden ver sus propias fichas activas — bloquear estado vía URL
         if ($rolSesion === 'Instructor') {
+            $filtros['estado'] = 'Activo';
             $fichas = HorarioModel::obtenerFichasPorInstructor($usuarioIdSesion, $filtros);
         } else {
             $fichas = HorarioModel::obtenerTodasFichas($filtros);

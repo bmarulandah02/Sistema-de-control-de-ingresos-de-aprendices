@@ -8,7 +8,7 @@ $fichas = $fichas ?? [];
 <div class="page-header">
     <div>
         <h1 class="page-header-title">Fichas de Formación</h1>
-        <div class="page-header-subtitle">Gestión de fichas, programas e instructores encargados</div>
+        <div class="page-header-subtitle"><?= (($_SESSION['rol'] ?? '') === 'Instructor') ? 'Fichas de formación asignadas a tu cuenta' : 'Gestión de fichas, programas e instructores encargados' ?></div>
     </div>
     <?php if (($_SESSION['rol'] ?? '') === 'Administrador'): ?>
     <div style="display:flex; gap:0.5rem;">
@@ -29,13 +29,14 @@ $fichas = $fichas ?? [];
     <form method="GET" action="index.php" style="display:flex; flex-wrap:wrap; gap:1rem; align-items:flex-end; justify-content:space-between;">
         <input type="hidden" name="action" value="fichas">
 
-        <!-- Pestañas de Estado -->
+        <!-- Pestañas de Estado — solo Administrador ve todas las pestañas -->
         <div style="display:flex; gap:0.375rem; background:var(--muted); padding:0.25rem; border-radius:var(--radius-md);">
             <a href="index.php?action=fichas&estado=Activo<?= !empty($_GET['q']) ? '&q='.urlencode($_GET['q']) : '' ?>" 
                class="btn-shadcn <?= $estadoFiltro === 'Activo' ? 'btn-shadcn-primary' : 'btn-shadcn-ghost' ?>" 
                style="padding:0.375rem 0.875rem; font-size:0.8125rem; text-decoration:none;">
                 <i class="bi bi-check-circle me-1"></i>Activas
             </a>
+            <?php if (($_SESSION['rol'] ?? '') === 'Administrador'): ?>
             <a href="index.php?action=fichas&estado=Finalizado<?= !empty($_GET['q']) ? '&q='.urlencode($_GET['q']) : '' ?>" 
                class="btn-shadcn <?= $estadoFiltro === 'Finalizado' ? 'btn-shadcn-primary' : 'btn-shadcn-ghost' ?>" 
                style="padding:0.375rem 0.875rem; font-size:0.8125rem; text-decoration:none;">
@@ -46,6 +47,7 @@ $fichas = $fichas ?? [];
                style="padding:0.375rem 0.875rem; font-size:0.8125rem; text-decoration:none;">
                 <i class="bi bi-collection me-1"></i>Todas
             </a>
+            <?php endif; ?>
         </div>
 
         <input type="hidden" name="estado" value="<?= htmlspecialchars($estadoFiltro) ?>">
