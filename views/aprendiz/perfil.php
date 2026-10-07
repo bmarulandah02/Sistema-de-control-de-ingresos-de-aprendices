@@ -1,5 +1,9 @@
 <?php
 $pageTitle = 'Mi Perfil — Control de Ingresos SENA';
+$aprendiz = $aprendiz ?? null;
+$usuario = $usuario ?? null;
+$asistencias = $asistencias ?? [];
+$reporteFaltas = $reporteFaltas ?? ['faltas' => [], 'total_faltas' => 0];
 require __DIR__ . '/../layouts/header.php';
 ?>
 
@@ -25,11 +29,11 @@ require __DIR__ . '/../layouts/header.php';
                 <?= strtoupper(substr($_SESSION['nombre'] ?? 'U', 0, 1)) ?>
             </div>
             <h3 style="font-size:1.1rem; font-weight:700; margin:0;"><?= htmlspecialchars($_SESSION['nombre'] ?? 'Usuario') ?></h3>
-            <div style="font-size:0.875rem; color:var(--muted-foreground); margin-top:0.25rem;"><?= htmlspecialchars($_SESSION['correo'] ?? '') ?></div>
+            <div style="font-size:0.875rem; color:var(--muted-foreground); margin-top:0.25rem;"><?= htmlspecialchars($_SESSION['correo'] ?? ($usuario['nombre_usuario'] ?? '')) ?></div>
 
             <div style="margin-top:0.75rem; display:flex; justify-content:center; gap:0.375rem; align-items:center;">
                 <span class="shadcn-badge badge-activo"><i class="bi bi-shield-check me-1"></i><?= htmlspecialchars($_SESSION['rol'] ?? 'Rol') ?></span>
-                <?php if (isset($aprendiz)): ?>
+                <?php if (!empty($aprendiz)): ?>
                     <?php 
                         $estAp = $aprendiz['estado'] ?? 'Activo';
                         $stBadgeAp = 'badge-puntual';
@@ -41,12 +45,21 @@ require __DIR__ . '/../layouts/header.php';
                 <?php endif; ?>
             </div>
 
-            <?php if (isset($aprendiz)): ?>
+            <?php if (!empty($aprendiz)): ?>
             <hr style="border:0; border-top:1px solid var(--border); margin:1.25rem 0;">
             <div style="text-align:left; font-size:0.875rem; display:flex; flex-direction:column; gap:0.625rem;">
                 <div><strong>Ficha:</strong> <?= htmlspecialchars($aprendiz['numero_ficha'] ?? '—') ?></div>
                 <div><strong>Programa:</strong> <?= htmlspecialchars($aprendiz['programa'] ?? '—') ?></div>
                 <div><strong>Documento:</strong> <?= htmlspecialchars($aprendiz['documento'] ?? '—') ?></div>
+            </div>
+            <?php elseif (!empty($usuario)): ?>
+            <hr style="border:0; border-top:1px solid var(--border); margin:1.25rem 0;">
+            <div style="text-align:left; font-size:0.875rem; display:flex; flex-direction:column; gap:0.625rem;">
+                <div><strong>Identificación:</strong> <?= htmlspecialchars($usuario['identificacion'] ?? '—') ?></div>
+                <div><strong>Usuario/Correo:</strong> <?= htmlspecialchars($usuario['nombre_usuario'] ?? '—') ?></div>
+                <?php if (!empty($usuario['telefono'])): ?>
+                <div><strong>Teléfono:</strong> <?= htmlspecialchars($usuario['telefono']) ?></div>
+                <?php endif; ?>
             </div>
             <?php endif; ?>
         </div>
@@ -63,7 +76,7 @@ require __DIR__ . '/../layouts/header.php';
                 <div style="margin-bottom: 1.25rem;">
                     <label style="display:block; font-size:0.875rem; font-weight:500; margin-bottom:0.375rem;">Número de Teléfono</label>
                     <input type="text" name="telefono" class="shadcn-input" placeholder="3001234567" 
-                           value="<?= htmlspecialchars($aprendiz['telefono'] ?? '') ?>">
+                           value="<?= htmlspecialchars($aprendiz['telefono'] ?? $usuario['telefono'] ?? '') ?>">
                 </div>
 
                 <div style="margin-bottom: 1.5rem;">
@@ -86,7 +99,7 @@ require __DIR__ . '/../layouts/header.php';
 </div>
 
 <!-- ── CONTENEDOR 2 COLUMNAS EN PANTALLAS GRANDES: FALTAS Y ASISTENCIAS ── -->
-<?php if (isset($aprendiz)): ?>
+<?php if (!empty($aprendiz)): ?>
 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 520px), 1fr)); gap: 1.5rem; margin-bottom: 2rem; align-items: start;">
 
     <!-- ── COLUMNA 1: MIS INASISTENCIAS DEL MES ─────────────── -->

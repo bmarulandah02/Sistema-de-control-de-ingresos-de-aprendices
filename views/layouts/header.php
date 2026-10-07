@@ -105,7 +105,11 @@
             <?php endif; ?>
         </nav>
 
-        <div class="sidebar-footer">
+        <div class="sidebar-footer" style="display:flex; flex-direction:column; gap:0.25rem;">
+            <a href="index.php?action=mi-perfil" class="nav-link-item <?= (($_GET['action'] ?? '') === 'mi-perfil') ? 'active' : '' ?>">
+                <i class="bi bi-person-circle"></i>
+                <span>Mi Perfil</span>
+            </a>
             <a href="index.php?action=logout" class="nav-link-item text-danger">
                 <i class="bi bi-box-arrow-right"></i>
                 <span>Cerrar sesión</span>

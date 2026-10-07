@@ -132,6 +132,7 @@ class UsuarioController {
      */
     public function miPerfil(): void {
         $usuarioId = (int) ($_SESSION['usuario_id'] ?? 0);
+        $usuario = UsuarioModel::obtenerPorId($usuarioId);
         $aprendiz = AprendizModel::obtenerPorUsuarioId($usuarioId);
         $asistencias = [];
         $mesSeleccionado = $_GET['mes'] ?? date('Y-m');

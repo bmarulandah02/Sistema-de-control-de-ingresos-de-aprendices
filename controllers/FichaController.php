@@ -143,15 +143,39 @@ class FichaController {
      * Muestra la vista interactiva de horario para una ficha específica
      */
     public function horario(): void {
-        $id = (int)($_GET['id'] ?? $_GET['ficha_id'] ?? 3234082);
+        $rolSesion = $_SESSION['rol'] ?? '';
+        $usuarioIdSesion = (int)($_SESSION['usuario_id'] ?? 0);
+
+        if ($rolSesion === 'Instructor') {
+            $todasFichas = HorarioModel::obtenerFichasPorInstructor($usuarioIdSesion, ['estado' => 'Activo']);
+            if (empty($todasFichas)) {
+                $_SESSION['mensaje'] = ['tipo' => 'warning', 'texto' => 'No tienes fichas asociadas actualmente.'];
+                header('Location: index.php?action=fichas');
+                exit();
+            }
+        } else {
+            $todasFichas = HorarioModel::obtenerTodasFichas(['estado' => 'Activo']);
+        }
+
+        $idSolicitado = isset($_GET['id']) ? (int)$_GET['id'] : (isset($_GET['ficha_id']) ? (int)$_GET['ficha_id'] : null);
+
+        // Si es instructor, asegurar que solo pueda ver fichas a las que está asociado
+        if ($rolSesion === 'Instructor') {
+            $idsAsignados = array_map(fn($f) => (int)$f['id'], $todasFichas);
+            if ($idSolicitado && in_array($idSolicitado, $idsAsignados)) {
+                $id = $idSolicitado;
+            } else {
+                $id = (int)$todasFichas[0]['id'];
+            }
+        } else {
+            $id = $idSolicitado ?: (!empty($todasFichas[0]['id']) ? (int)$todasFichas[0]['id'] : 3234082);
+        }
+
         $ficha = HorarioModel::obtenerFichaPorId($id);
 
-        if (!$ficha) {
-            $todas = HorarioModel::obtenerTodasFichas(['estado' => 'Activo']);
-            if (!empty($todas)) {
-                $ficha = $todas[0];
-                $id = (int)$ficha['id'];
-            }
+        if (!$ficha && !empty($todasFichas)) {
+            $ficha = $todasFichas[0];
+            $id = (int)$ficha['id'];
         }
 
         $mesFiltro = trim($_GET['mes'] ?? '');
@@ -166,7 +190,6 @@ class FichaController {
         $bloquesJson = json_encode($todosLosBloques, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
         $instructoresFicha = HorarioModel::obtenerInstructoresDeFicha($id);
         $asignaturas = HorarioModel::obtenerAsignaturasPorFicha($id);
-        $todasFichas = HorarioModel::obtenerTodasFichas(['estado' => 'Activo']);
 
         require __DIR__ . '/../views/fichas/horario.php';
     }
@@ -180,13 +203,47 @@ class FichaController {
             exit();
         }
 
-        $idFichaDefault = (int)($_GET['ficha_id'] ?? 3234082);
-        $todasFichas = HorarioModel::obtenerTodasFichas(['estado' => 'Activo']);
+        $rolSesion = $_SESSION['rol'] ?? '';
+        $usuarioIdSesion = (int)($_SESSION['usuario_id'] ?? 0);
+
+        if ($rolSesion === 'Instructor') {
+            $todasFichas = HorarioModel::obtenerFichasPorInstructor($usuarioIdSesion, ['estado' => 'Activo']);
+            if (empty($todasFichas)) {
+                $_SESSION['mensaje'] = ['tipo' => 'warning', 'texto' => 'No tienes fichas asociadas para importar horarios.'];
+                header('Location: index.php?action=fichas');
+                exit();
+            }
+        } else {
+            $todasFichas = HorarioModel::obtenerTodasFichas(['estado' => 'Activo']);
+        }
+
+        $idFichaDefault = !empty($todasFichas[0]['id']) ? (int)$todasFichas[0]['id'] : 3234082;
+        if (!empty($_GET['ficha_id'])) {
+            $idGet = (int)$_GET['ficha_id'];
+            if ($rolSesion !== 'Instructor' || in_array($idGet, array_map(fn($f) => (int)$f['id'], $todasFichas))) {
+                $idFichaDefault = $idGet;
+            }
+        }
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $idFicha = (int)($_POST['ficha_id'] ?? $idFichaDefault);
             $esEjemplo = !empty($_POST['usar_ejemplo']);
             $esAjax = !empty($_POST['ajax']) || (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest');
+
+            if ($rolSesion === 'Instructor') {
+                $idsAsignados = array_map(fn($f) => (int)$f['id'], $todasFichas);
+                if (!in_array($idFicha, $idsAsignados)) {
+                    $errorMsg = 'No tienes permisos para importar horarios en una ficha que no tienes asignada.';
+                    if ($esAjax) {
+                        header('Content-Type: application/json; charset=utf-8');
+                        echo json_encode(['exito' => false, 'mensaje' => $errorMsg]);
+                        exit();
+                    }
+                    $error = $errorMsg;
+                    require __DIR__ . '/../views/fichas/importar_horario.php';
+                    return;
+                }
+            }
 
             $rutaArchivo = '';
 
@@ -244,7 +301,20 @@ class FichaController {
      * Vista imprimible / exportable del horario
      */
     public function imprimirHorario(): void {
+        $rolSesion = $_SESSION['rol'] ?? '';
+        $usuarioIdSesion = (int)($_SESSION['usuario_id'] ?? 0);
+
         $id = (int)($_GET['id'] ?? $_GET['ficha_id'] ?? 3234082);
+
+        if ($rolSesion === 'Instructor') {
+            $fichasInstructor = HorarioModel::obtenerFichasPorInstructor($usuarioIdSesion);
+            $idsAsignados = array_map(fn($f) => (int)$f['id'], $fichasInstructor);
+            if (!in_array($id, $idsAsignados)) {
+                header('Location: index.php?action=fichas&error=sin_permiso');
+                exit();
+            }
+        }
+
         $mes = trim($_GET['mes'] ?? '');
         $ficha = HorarioModel::obtenerFichaPorId($id);
         $bloques = HorarioModel::obtenerHorarioBloquesFicha($id, $mes ?: null);
