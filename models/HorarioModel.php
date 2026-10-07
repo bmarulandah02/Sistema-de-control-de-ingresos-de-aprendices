@@ -1519,5 +1519,64 @@ public function obtenerHorarioFicha($identificadorFicha, $fechaActual)
         }
         return null;
     }
+
+    /**
+     * Cuenta cuántos bloques de horario tiene registrados una ficha
+     */
+    public static function contarBloquesHorarioFicha(int $idFicha): int {
+        try {
+            $mysql = new MySQL();
+            $mysql->conectarBD();
+            $conexion = $mysql->getConexion();
+            if ($conexion) {
+                self::asegurarTablasHorario($conexion);
+                $stmt = $conexion->prepare("SELECT COUNT(*) FROM horario_bloque WHERE fk_ficha = :ficha");
+                $stmt->execute([':ficha' => $idFicha]);
+                return (int)$stmt->fetchColumn();
+            }
+        } catch (Exception $e) {}
+        return 0;
+    }
+
+    /**
+     * Elimina por completo el horario de una ficha (bloques, asignaturas de esa ficha y vínculos)
+     * Acción permitida únicamente para el Administrador
+     */
+    public static function eliminarHorarioCompletoFicha(int $idFicha): array {
+        try {
+            $mysql = new MySQL();
+            $mysql->conectarBD();
+            $conexion = $mysql->getConexion();
+            if ($conexion) {
+                self::asegurarTablasHorario($conexion);
+                self::asegurarTablaFichaAsignatura($conexion);
+
+                $stmtCnt = $conexion->prepare("SELECT COUNT(*) FROM horario_bloque WHERE fk_ficha = :ficha");
+                $stmtCnt->execute([':ficha' => $idFicha]);
+                $totalBloques = (int)$stmtCnt->fetchColumn();
+
+                // 1. Borrar bloques de horario
+                $stmtDel = $conexion->prepare("DELETE FROM horario_bloque WHERE fk_ficha = :ficha");
+                $stmtDel->execute([':ficha' => $idFicha]);
+
+                // 2. Borrar asignaturas vinculadas a esta ficha
+                $stmtDelAsig = $conexion->prepare("DELETE FROM ficha_asignatura WHERE fk_ficha = :ficha");
+                $stmtDelAsig->execute([':ficha' => $idFicha]);
+
+                // 3. Borrar instructores en ficha_instructor para esta ficha si no son el titular
+                $stmtDelFi = $conexion->prepare("DELETE FROM ficha_instructor WHERE fk_ficha = :ficha AND fk_usuario NOT IN (SELECT fk_usuario FROM ficha WHERE id_ficha = :ficha2)");
+                $stmtDelFi->execute([':ficha' => $idFicha, ':ficha2' => $idFicha]);
+
+                return [
+                    'exito' => true,
+                    'mensaje' => "El horario de la Ficha {$idFicha} ha sido eliminado con éxito ({$totalBloques} bloques borrados).",
+                    'bloques_eliminados' => $totalBloques
+                ];
+            }
+        } catch (Exception $e) {
+            return ['exito' => false, 'mensaje' => 'Error al eliminar el horario: ' . $e->getMessage()];
+        }
+        return ['exito' => false, 'mensaje' => 'Error de conexión con la base de datos.'];
+    }
 }
 ?>

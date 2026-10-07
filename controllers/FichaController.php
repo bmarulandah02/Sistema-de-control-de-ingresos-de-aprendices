@@ -198,7 +198,8 @@ class FichaController {
     }
 
     /**
-     * Muestra el panel de importación y escaneo de Excel de horarios y procesa la carga
+     * Muestra el panel de importación y escaneo de Excel de horarios y procesa la carga.
+     * Solo permitido para el Administrador o el Instructor Encargado (titular) de la ficha.
      */
     public function importarHorario(): void {
         if (($_SESSION['rol'] ?? '') !== 'Administrador' && ($_SESSION['rol'] ?? '') !== 'Instructor') {
@@ -210,9 +211,17 @@ class FichaController {
         $usuarioIdSesion = (int)($_SESSION['usuario_id'] ?? 0);
 
         if ($rolSesion === 'Instructor') {
-            $todasFichas = HorarioModel::obtenerFichasPorInstructor($usuarioIdSesion, ['estado' => 'Activo']);
+            $fichasInstructor = HorarioModel::obtenerFichasPorInstructor($usuarioIdSesion, ['estado' => 'Activo']);
+            // Un instructor solo puede importar horarios en las fichas donde sea el instructor encargado (titular)
+            $todasFichas = array_values(array_filter($fichasInstructor, function($f) use ($usuarioIdSesion) {
+                return (int)($f['instructor_id'] ?? 0) === $usuarioIdSesion;
+            }));
+
             if (empty($todasFichas)) {
-                $_SESSION['mensaje'] = ['tipo' => 'warning', 'texto' => 'No tienes fichas asociadas para importar horarios.'];
+                $_SESSION['mensaje'] = [
+                    'tipo' => 'warning',
+                    'texto' => 'Acceso restringido: Solo el Administrador o el instructor titular/encargado puede subir horarios. No eres el encargado de ninguna ficha activa.'
+                ];
                 header('Location: index.php?action=fichas');
                 exit();
             }
@@ -233,19 +242,48 @@ class FichaController {
             $esEjemplo = !empty($_POST['usar_ejemplo']);
             $esAjax = !empty($_POST['ajax']) || (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest');
 
-            if ($rolSesion === 'Instructor') {
-                $idsAsignados = array_map(fn($f) => (int)$f['id'], $todasFichas);
-                if (!in_array($idFicha, $idsAsignados)) {
-                    $errorMsg = 'No tienes permisos para importar horarios en una ficha que no tienes asignada.';
-                    if ($esAjax) {
-                        header('Content-Type: application/json; charset=utf-8');
-                        echo json_encode(['exito' => false, 'mensaje' => $errorMsg]);
-                        exit();
-                    }
-                    $error = $errorMsg;
-                    require __DIR__ . '/../views/fichas/importar_horario.php';
-                    return;
+            // 1. Validar permisos: solo Administrador o el Instructor Encargado (titular) de esta ficha
+            $fichaDestino = HorarioModel::obtenerFichaPorId($idFicha);
+            $esAdmin = ($rolSesion === 'Administrador');
+            $esEncargado = ($fichaDestino && (int)($fichaDestino['instructor_id'] ?? 0) === $usuarioIdSesion);
+
+            if (!$esAdmin && !$esEncargado) {
+                $errorMsg = "Acceso Denegado: Solo el Administrador o el instructor encargado/titular de la Ficha {$idFicha} puede subir o modificar su horario.";
+                if ($esAjax) {
+                    header('Content-Type: application/json; charset=utf-8');
+                    echo json_encode(['exito' => false, 'mensaje' => $errorMsg]);
+                    exit();
                 }
+                $error = $errorMsg;
+                require __DIR__ . '/../views/fichas/importar_horario.php';
+                return;
+            }
+
+            // 2. Validar si ya existe un horario registrado para esta ficha
+            $bloquesExistentes = HorarioModel::contarBloquesHorarioFicha($idFicha);
+            if ($bloquesExistentes > 0) {
+                $errorMsg = "Esta Ficha ({$idFicha}) ya tiene un horario vinculado con {$bloquesExistentes} bloques de clase programados. Para evitar duplicidades o sobreescritura accidental, no es posible subir otro horario encima.";
+                if ($rolSesion !== 'Administrador') {
+                    $errorMsg .= " Si se cargó un horario equivocado o se requiere reemplazarlo, únicamente el Administrador tiene la opción de eliminar el horario actual para permitir una nueva carga.";
+                } else {
+                    $errorMsg .= " Como Administrador, puedes usar la opción 'Eliminar Horario de la Ficha' para borrarlo y permitir cargar un archivo nuevo.";
+                }
+
+                if ($esAjax) {
+                    header('Content-Type: application/json; charset=utf-8');
+                    echo json_encode([
+                        'exito' => false,
+                        'mensaje' => $errorMsg,
+                        'horario_existente' => true,
+                        'es_admin' => $esAdmin,
+                        'bloques_existentes' => $bloquesExistentes,
+                        'ficha_id' => $idFicha
+                    ]);
+                    exit();
+                }
+                $error = $errorMsg;
+                require __DIR__ . '/../views/fichas/importar_horario.php';
+                return;
             }
 
             $rutaArchivo = '';
@@ -298,6 +336,56 @@ class FichaController {
         }
 
         require __DIR__ . '/../views/fichas/importar_horario.php';
+    }
+
+    /**
+     * Elimina por completo el horario de una ficha (acción exclusiva del Administrador)
+     */
+    public function eliminarHorario(): void {
+        $rolSesion = $_SESSION['rol'] ?? '';
+        if ($rolSesion !== 'Administrador') {
+            $_SESSION['mensaje'] = [
+                'texto' => 'Acceso denegado: Únicamente el Administrador tiene permisos para eliminar el horario de una ficha.',
+                'tipo' => 'error'
+            ];
+            header('Location: index.php?action=fichas');
+            exit();
+        }
+
+        $idFicha = (int)($_POST['ficha_id'] ?? $_GET['ficha_id'] ?? $_GET['id'] ?? 0);
+        if ($idFicha <= 0) {
+            $_SESSION['mensaje'] = ['texto' => 'ID de ficha no válido.', 'tipo' => 'error'];
+            header('Location: index.php?action=fichas');
+            exit();
+        }
+
+        $resultado = HorarioModel::eliminarHorarioCompletoFicha($idFicha);
+
+        $esAjax = !empty($_POST['ajax']) || (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest');
+        if ($esAjax) {
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode($resultado);
+            exit();
+        }
+
+        if ($resultado['exito']) {
+            $_SESSION['mensaje'] = [
+                'texto' => "Horario de la Ficha {$idFicha} eliminado correctamente ({$resultado['bloques_eliminados']} bloques borrados). Ahora se puede subir el horario correcto.",
+                'tipo' => 'success'
+            ];
+        } else {
+            $_SESSION['mensaje'] = [
+                'texto' => $resultado['mensaje'] ?? 'Error al eliminar el horario.',
+                'tipo' => 'error'
+            ];
+        }
+
+        $redirect = $_GET['redirect'] ?? '';
+        $destino = ($redirect === 'importar')
+            ? "index.php?action=ficha-horario-importar&ficha_id={$idFicha}"
+            : "index.php?action=ficha-horario&id={$idFicha}";
+        header("Location: {$destino}");
+        exit();
     }
 
     /**

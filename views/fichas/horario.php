@@ -14,6 +14,12 @@ $mesFiltro = $mesFiltro ?? '';
 
 // Contadores rápidos
 $totalHorasSemestre = count($todosLosBloques) * 3;
+
+$rolSesion = $_SESSION['rol'] ?? '';
+$usuarioIdSesion = (int)($_SESSION['usuario_id'] ?? 0);
+$esAdmin = ($rolSesion === 'Administrador');
+$esEncargado = ($rolSesion === 'Instructor' && (int)($ficha['instructor_id'] ?? 0) === $usuarioIdSesion);
+$puedeImportar = $esAdmin || $esEncargado;
 ?>
 
 <style>
@@ -427,6 +433,27 @@ $totalHorasSemestre = count($todosLosBloques) * 3;
 }
 </style>
 
+<?php if (isset($_SESSION['mensaje'])): 
+    $msg = $_SESSION['mensaje'];
+    unset($_SESSION['mensaje']);
+    $esError = in_array($msg['tipo'] ?? '', ['error', 'danger']);
+    $esWarn = ($msg['tipo'] ?? '') === 'warning';
+    $bgColor = $esError ? 'rgba(239,68,68,0.1)' : ($esWarn ? 'rgba(245,158,11,0.1)' : 'rgba(16,185,129,0.1)');
+    $borderColor = $esError ? '#ef4444' : ($esWarn ? '#f59e0b' : '#10b981');
+    $textColor = $esError ? '#dc2626' : ($esWarn ? '#d97706' : '#059669');
+    $icono = $esError ? 'bi-x-circle-fill' : ($esWarn ? 'bi-exclamation-triangle-fill' : 'bi-check-circle-fill');
+?>
+    <div style="background:<?= $bgColor ?>; border:1px solid <?= $borderColor ?>; color:<?= $textColor ?>; padding:0.875rem 1.25rem; border-radius:var(--radius-md); margin-bottom:1.25rem; display:flex; align-items:center; justify-content:space-between; gap:1rem;">
+        <div style="display:flex; align-items:center; gap:0.625rem; font-weight:500; font-size:0.9375rem;">
+            <i class="bi <?= $icono ?>" style="font-size:1.25rem;"></i>
+            <span><?= htmlspecialchars($msg['texto'] ?? '') ?></span>
+        </div>
+        <button type="button" class="btn-shadcn btn-shadcn-ghost" style="padding:0.25rem; color:<?= $textColor ?>;" onclick="this.parentElement.remove()">
+            <i class="bi bi-x-lg"></i>
+        </button>
+    </div>
+<?php endif; ?>
+
 <div class="page-header" style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:1rem;">
     <div>
         <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.25rem;">
@@ -447,10 +474,17 @@ $totalHorasSemestre = count($todosLosBloques) * 3;
         </div>
     </div>
 
-    <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
-        <a href="index.php?action=ficha-horario-importar&ficha_id=<?= $id ?>" class="btn-shadcn btn-shadcn-primary">
-            <i class="bi bi-file-earmark-arrow-up me-1"></i>Escanear / Importar Excel
-        </a>
+    <div style="display:flex; gap:0.5rem; flex-wrap:wrap; align-items:center;">
+        <?php if ($puedeImportar): ?>
+            <a href="index.php?action=ficha-horario-importar&ficha_id=<?= $id ?>" class="btn-shadcn btn-shadcn-primary">
+                <i class="bi bi-file-earmark-arrow-up me-1"></i>Escanear / Importar Excel
+            </a>
+        <?php endif; ?>
+        <?php if ($esAdmin && !empty($todosLosBloques)): ?>
+            <button type="button" onclick="confirmarEliminarHorario(<?= $id ?>, '<?= htmlspecialchars($ficha['numero_ficha'] ?? $id, ENT_QUOTES) ?>')" class="btn-shadcn btn-shadcn-destructive" style="background:#dc2626; color:#fff;" title="Eliminar el horario completo de esta ficha (Solo Administrador)">
+                <i class="bi bi-trash3 me-1"></i>Eliminar Horario
+            </button>
+        <?php endif; ?>
         <a href="index.php?action=reporte-horario-pdf&ficha_id=<?= $id ?>" target="_blank" class="btn-shadcn btn-shadcn-outline">
             <i class="bi bi-printer me-1"></i>Imprimir / PDF Mensual
         </a>
@@ -1216,6 +1250,29 @@ function gcalCerrarModal(e) {
 function escaparHtml(texto) {
     if (!texto) return '';
     return texto.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function confirmarEliminarHorario(idFicha, numFicha) {
+    Swal.fire({
+        title: '¿Eliminar horario completo?',
+        html: `Esta acción eliminará todos los bloques de horario registrados para la <strong>Ficha ${numFicha || idFicha}</strong>.<br><br>Permitirá cargar un horario nuevo en caso de haber subido el archivo equivocado.<br><br><span style="color:#dc2626; font-weight:600;">Acción exclusiva para el Administrador.</span>`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#dc2626',
+        cancelButtonColor: '#64748b',
+        confirmButtonText: '<i class="bi bi-trash3 me-1"></i>Sí, eliminar horario',
+        cancelButtonText: 'Cancelar'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            Swal.fire({
+                title: 'Eliminando horario...',
+                text: 'Borrando bloques y asignaciones...',
+                allowOutsideClick: false,
+                didOpen: () => { Swal.showLoading(); }
+            });
+            window.location.href = 'index.php?action=ficha-horario-eliminar&ficha_id=' + idFicha;
+        }
+    });
 }
 
 // Iniciar al cargar

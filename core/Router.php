@@ -70,7 +70,7 @@ class Router {
             'login', 'logout', 'dashboard', 'usuarios', 'usuario-crear', 'usuario-editar',
             'usuario-actualizar', 'usuario-eliminar', 'asistencia', 'registrar-ingreso',
             'abrir-sesion-asistencia', 'cerrar-jornada', 'historial', 'fichas', 'ficha-crear', 'ficha-editar',
-            'ficha-guardar', 'ficha-eliminar', 'ficha-reactivar', 'ficha-horario', 'ficha-horario-importar', 'ficha-horario-imprimir',
+            'ficha-guardar', 'ficha-eliminar', 'ficha-reactivar', 'ficha-horario', 'ficha-horario-importar', 'ficha-horario-imprimir', 'ficha-horario-eliminar',
             'reportes', 'excusas-admin', 'reporte-pdf', 'reporte-excel', 'reporte-horario-excel', 'reporte-horario-pdf',
             'desercion', 'desercion-citacion', 'desercion-aviso-guardar', 'desercion-exportar',
             'mi-perfil', 'mi-perfil-guardar', 'reporte-faltas-aprendiz', 'excusa-subir', 'excusa-editar', 'excusa-aprobar', 'excusa-rechazar', 'mis-excusas', '403', '404'
@@ -229,6 +229,9 @@ class Router {
                 break;
             case 'ficha-horario-imprimir':
                 (new FichaController())->imprimirHorario();
+                break;
+            case 'ficha-horario-eliminar':
+                (new FichaController())->eliminarHorario();
                 break;
             case 'reportes':
             case 'excusas-admin':

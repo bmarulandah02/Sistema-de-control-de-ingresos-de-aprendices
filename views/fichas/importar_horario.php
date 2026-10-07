@@ -11,7 +11,38 @@ foreach ($todasFichas as $f) {
         break;
     }
 }
+if (!$fichaActual && !empty($todasFichas)) {
+    $fichaActual = $todasFichas[0];
+    $idFichaDefault = (int)$fichaActual['id'];
+}
+
+$rolSesion = $_SESSION['rol'] ?? '';
+$usuarioIdSesion = (int)($_SESSION['usuario_id'] ?? 0);
+$esAdmin = ($rolSesion === 'Administrador');
+
+$bloquesFichaActual = HorarioModel::contarBloquesHorarioFicha($idFichaDefault);
 ?>
+
+<?php if (isset($_SESSION['mensaje'])): 
+    $msg = $_SESSION['mensaje'];
+    unset($_SESSION['mensaje']);
+    $esError = in_array($msg['tipo'] ?? '', ['error', 'danger']);
+    $esWarn = ($msg['tipo'] ?? '') === 'warning';
+    $bgColor = $esError ? 'rgba(239,68,68,0.1)' : ($esWarn ? 'rgba(245,158,11,0.1)' : 'rgba(16,185,129,0.1)');
+    $borderColor = $esError ? '#ef4444' : ($esWarn ? '#f59e0b' : '#10b981');
+    $textColor = $esError ? '#dc2626' : ($esWarn ? '#d97706' : '#059669');
+    $icono = $esError ? 'bi-x-circle-fill' : ($esWarn ? 'bi-exclamation-triangle-fill' : 'bi-check-circle-fill');
+?>
+    <div style="background:<?= $bgColor ?>; border:1px solid <?= $borderColor ?>; color:<?= $textColor ?>; padding:0.875rem 1.25rem; border-radius:var(--radius-md); margin-bottom:1.25rem; display:flex; align-items:center; justify-content:space-between; gap:1rem;">
+        <div style="display:flex; align-items:center; gap:0.625rem; font-weight:500; font-size:0.9375rem;">
+            <i class="bi <?= $icono ?>" style="font-size:1.25rem;"></i>
+            <span><?= htmlspecialchars($msg['texto'] ?? '') ?></span>
+        </div>
+        <button type="button" class="btn-shadcn btn-shadcn-ghost" style="padding:0.25rem; color:<?= $textColor ?>;" onclick="this.parentElement.remove()">
+            <i class="bi bi-x-lg"></i>
+        </button>
+    </div>
+<?php endif; ?>
 
 <div class="page-header" style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:1rem;">
     <div>
@@ -77,6 +108,43 @@ foreach ($todasFichas as $f) {
         </div>
     </div>
 </div>
+
+<!-- ── ALERTA DE HORARIO PREVIO EXISTENTE EN ESTA FICHA ──────────────── -->
+<?php if ($bloquesFichaActual > 0): ?>
+<div class="shadcn-card" style="margin-bottom:1.5rem; padding:1.25rem 1.5rem; background:rgba(239,68,68,0.06); border:1px solid rgba(239,68,68,0.25); border-left:4px solid #ef4444; border-radius:var(--radius-lg);">
+    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem;">
+        <div style="display:flex; align-items:flex-start; gap:0.875rem; max-width:720px;">
+            <div style="width:2.5rem; height:2.5rem; border-radius:50%; background:rgba(239,68,68,0.12); color:#dc2626; display:flex; align-items:center; justify-content:center; font-size:1.25rem; flex-shrink:0;">
+                <i class="bi bi-exclamation-triangle-fill"></i>
+            </div>
+            <div>
+                <h4 style="font-size:1rem; font-weight:700; color:var(--foreground); margin:0 0 0.25rem 0;">
+                    Esta Ficha ya tiene un Horario Vinculado
+                </h4>
+                <p style="font-size:0.875rem; color:var(--muted-foreground); margin:0; line-height:1.45;">
+                    La ficha <strong><?= $idFichaDefault ?></strong> actualmente cuenta con <strong><?= $bloquesFichaActual ?></strong> bloques de clase registrados. Para proteger la información y evitar duplicados, <strong>no es posible subir otro horario</strong> encima.
+                    <?php if ($esAdmin): ?>
+                        <br><span style="color:#dc2626; font-weight:600;">Como Administrador, si se subió el horario de la ficha equivocada o se necesita reemplazar, puedes eliminarlo aquí para permitir una nueva carga limpia.</span>
+                    <?php else: ?>
+                        <br><span style="color:#d97706; font-weight:600;">Si este horario fue cargado por error en la ficha equivocada, únicamente el Administrador tiene la opción de eliminarlo.</span>
+                    <?php endif; ?>
+                </p>
+            </div>
+        </div>
+
+        <div style="display:flex; gap:0.5rem; align-items:center;">
+            <a href="index.php?action=ficha-horario&id=<?= $idFichaDefault ?>" class="btn-shadcn btn-shadcn-outline">
+                <i class="bi bi-calendar3 me-1"></i>Ver Horario Actual
+            </a>
+            <?php if ($esAdmin): ?>
+                <button type="button" onclick="confirmarEliminarHorario(<?= $idFichaDefault ?>, '<?= htmlspecialchars($idFichaDefault, ENT_QUOTES) ?>')" class="btn-shadcn btn-shadcn-destructive" style="background:#dc2626; color:#fff;" title="Eliminar el horario completo de esta ficha (Solo Administrador)">
+                    <i class="bi bi-trash3 me-1"></i>Eliminar Horario de la Ficha
+                </button>
+            <?php endif; ?>
+        </div>
+    </div>
+</div>
+<?php endif; ?>
 
 <!-- ── PANEL DE CARGA DE HORARIO EXCEL ────────────────────────────────────── -->
 <div class="shadcn-card" style="padding:1.75rem; margin-bottom:1.5rem;">
@@ -300,10 +368,7 @@ foreach ($todasFichas as $f) {
 let archivoSeleccionado = null;
 
 function actualizarFichaDestino(idFicha) {
-    const btnVer = document.getElementById('btnVerHorarioResultado');
-    if (btnVer) {
-        btnVer.href = 'index.php?action=ficha-horario&id=' + idFicha;
-    }
+    window.location.href = 'index.php?action=ficha-horario-importar&ficha_id=' + idFicha;
 }
 
 function handleDragOver(e) {
@@ -458,11 +523,45 @@ async function iniciarEscaneo(esEjemplo) {
             if (data.exito) {
                 mostrarResultados(data, idFicha);
             } else {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Error en el Escáner',
-                    text: data.mensaje || 'Ocurrió un error al procesar el archivo.'
-                });
+                panelSim.style.display = 'none';
+                if (data.horario_existente) {
+                    if (data.es_admin) {
+                        Swal.fire({
+                            icon: 'warning',
+                            title: 'Horario Ya Registrado',
+                            html: `<div style="text-align:left; font-size:0.9rem; line-height:1.5;">
+                                <p>La <strong>Ficha ${data.ficha_id}</strong> ya tiene un horario vinculado con <strong>${data.bloques_existentes || 0}</strong> bloques de clase.</p>
+                                <p style="color:#dc2626; font-weight:600;">Para evitar duplicidades o sobreescritura accidental, no es posible subir otro horario encima.</p>
+                                <p>Como <strong>Administrador</strong>, si subiste el archivo por equivocación a la ficha equivocada o necesitas actualizarlo, puedes eliminar el horario actual para permitir la nueva subida.</p>
+                            </div>`,
+                            showCancelButton: true,
+                            confirmButtonText: '<i class="bi bi-trash3 me-1"></i>Eliminar Horario Anterior',
+                            cancelButtonText: 'Cancelar',
+                            confirmButtonColor: '#dc2626',
+                            cancelButtonColor: '#64748b'
+                        }).then((result) => {
+                            if (result.isConfirmed) {
+                                ejecutarEliminacionHorario(data.ficha_id);
+                            }
+                        });
+                    } else {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Horario Ya Vinculado',
+                            html: `<div style="text-align:left; font-size:0.9rem; line-height:1.5;">
+                                <p>La <strong>Ficha ${data.ficha_id}</strong> ya cuenta con un horario registrado con <strong>${data.bloques_existentes || 0}</strong> bloques de clase.</p>
+                                <p style="color:#d97706; font-weight:600;">Para evitar molestias o sobreescrituras, el sistema no permite subir otro horario sobre esta ficha.</p>
+                                <p>En caso de haberse subido un horario a la ficha equivocada, únicamente el <strong>Administrador</strong> tiene la potestad de eliminarlo.</p>
+                            </div>`
+                        });
+                    }
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error en el Escáner',
+                        text: data.mensaje || 'Ocurrió un error al procesar el archivo.'
+                    });
+                }
             }
             const btnEj = document.getElementById('btnEscanearEjemplo');
             if (btnEj) btnEj.disabled = false;
@@ -601,6 +700,69 @@ function copiarCredenciales(correo, clave) {
 function reiniciarEscaneo() {
     document.getElementById('panelResultados').style.display = 'none';
     window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function confirmarEliminarHorario(idFicha, numFicha) {
+    Swal.fire({
+        title: '¿Eliminar horario completo?',
+        html: `Esta acción eliminará todos los bloques de horario registrados para la <strong>Ficha ${numFicha || idFicha}</strong>.<br><br>Permitirá cargar un horario nuevo en caso de haber subido el archivo a la ficha equivocada.<br><br><span style="color:#dc2626; font-weight:600;">Acción exclusiva para el Administrador.</span>`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#dc2626',
+        cancelButtonColor: '#64748b',
+        confirmButtonText: '<i class="bi bi-trash3 me-1"></i>Sí, eliminar horario',
+        cancelButtonText: 'Cancelar'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            ejecutarEliminacionHorario(idFicha);
+        }
+    });
+}
+
+function ejecutarEliminacionHorario(idFicha) {
+    Swal.fire({
+        title: 'Eliminando horario...',
+        text: 'Por favor espera mientras se limpian los bloques.',
+        allowOutsideClick: false,
+        didOpen: () => { Swal.showLoading(); }
+    });
+
+    const formData = new FormData();
+    formData.append('ficha_id', idFicha);
+    formData.append('ajax', '1');
+
+    fetch('index.php?action=ficha-horario-eliminar', {
+        method: 'POST',
+        body: formData,
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.exito) {
+            Swal.fire({
+                icon: 'success',
+                title: 'Horario Eliminado',
+                text: data.mensaje || 'Se eliminó el horario de la ficha correctamente.',
+                confirmButtonColor: '#059669'
+            }).then(() => {
+                window.location.href = 'index.php?action=ficha-horario-importar&ficha_id=' + idFicha;
+            });
+        } else {
+            Swal.fire({
+                icon: 'error',
+                title: 'No se pudo eliminar',
+                text: data.mensaje || 'Error al intentar eliminar el horario.'
+            });
+        }
+    })
+    .catch(err => {
+        console.error(err);
+        Swal.fire({
+            icon: 'error',
+            title: 'Error de Comunicación',
+            text: 'Ocurrió un error al comunicarse con el servidor.'
+        });
+    });
 }
 </script>
 
