@@ -1,5 +1,6 @@
 # ──────────────────────────────────────────────
 #  Configuración Apache .htaccess — Sistema Control de Ingresos
+#  Ubicación: config/apache/.htaccess
 # ──────────────────────────────────────────────
 
 # Configurar páginas de error personalizadas de Apache
@@ -8,3 +9,9 @@ ErrorDocument 403 /sistema-ingreso/Sistema-de-control-de-ingresos-de-aprendices/
 
 # Desactivar la vista de directorios por seguridad
 Options -Indexes
+
+# Protección contra acceso a archivos ocultos y de configuración
+<FilesMatch "^\.">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
