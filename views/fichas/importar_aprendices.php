@@ -576,8 +576,12 @@ function procesarBufferExcel(buffer, nombreArchivo) {
                 headerRowIndex = r;
                 // Mapear columnas
                 row.forEach((colName, idx) => {
-                    if (colName.includes('identifica') || colName.includes('documento') || colName === 'cc' || colName === 'ti') {
-                        if (!colMap.identificacion) colMap.identificacion = idx;
+                    if (colName.includes('tipo') && (colName.includes('documento') || colName.includes('doc'))) {
+                        colMap.tipo_documento = idx;
+                    } else if (colName.includes('identifica') || colName.includes('número') || colName.includes('numero') || colName.includes('documento') || colName.includes('cédula') || colName.includes('cedula')) {
+                        if (colMap.identificacion === undefined || colName.includes('identifica') || colName.includes('número') || colName.includes('numero')) {
+                            colMap.identificacion = idx;
+                        }
                     } else if (colName.includes('apellido')) {
                         colMap.apellidos = idx;
                     } else if (colName.includes('nombre')) {
@@ -599,12 +603,23 @@ function procesarBufferExcel(buffer, nombreArchivo) {
             headerRowIndex = 0;
             const row0 = rawRows[0].map(c => String(c).trim().toLowerCase());
             row0.forEach((colName, idx) => {
-                if (colName.includes('identifica') || colName.includes('documento')) colMap.identificacion = idx;
-                if (colName.includes('nombre')) colMap.nombres = idx;
-                if (colName.includes('apellido')) colMap.apellidos = idx;
-                if (colName.includes('correo') || colName.includes('email')) colMap.correo = idx;
-                if (colName.includes('telefono') || colName.includes('celular')) colMap.telefono = idx;
-                if (colName.includes('direccion')) colMap.direccion = idx;
+                if (colName.includes('tipo') && (colName.includes('documento') || colName.includes('doc'))) {
+                    colMap.tipo_documento = idx;
+                } else if (colName.includes('identifica') || colName.includes('número') || colName.includes('numero') || colName.includes('documento') || colName.includes('cédula') || colName.includes('cedula')) {
+                    if (colMap.identificacion === undefined || colName.includes('identifica') || colName.includes('número') || colName.includes('numero')) {
+                        colMap.identificacion = idx;
+                    }
+                } else if (colName.includes('apellido')) {
+                    colMap.apellidos = idx;
+                } else if (colName.includes('nombre')) {
+                    colMap.nombres = idx;
+                } else if (colName.includes('correo') || colName.includes('email') || colName.includes('e-mail')) {
+                    colMap.correo = idx;
+                } else if (colName.includes('telefono') || colName.includes('teléfono') || colName.includes('celular') || colName.includes('movil')) {
+                    colMap.telefono = idx;
+                } else if (colName.includes('direccion') || colName.includes('dirección') || colName.includes('domicilio')) {
+                    colMap.direccion = idx;
+                }
             });
         }
 
