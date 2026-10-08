@@ -1,0 +1,12 @@
+database/
+config/
+
+# Logs y almacenamiento temporal
+*.log
+/logs/
+/storage/logs/
+/temp/
+/cache/
+# Cargas / subidas de usuarios (si no deben versionarse)
+/public/uploads/*
+!/public/uploads/.gitkeep
