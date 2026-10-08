@@ -12,7 +12,8 @@
     <!-- SweetAlert2 -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <!-- CSS Shadcn Admin -->
-    <link href="public/css/styles.css" rel="stylesheet">
+    <?php $stylesVersion = file_exists(__DIR__ . '/../../public/css/styles.css') ? filemtime(__DIR__ . '/../../public/css/styles.css') : time(); ?>
+    <link href="public/css/styles.css?v=<?= $stylesVersion ?>" rel="stylesheet">
     <script>
         (function() {
             const savedTheme = localStorage.getItem('theme') || 'light';

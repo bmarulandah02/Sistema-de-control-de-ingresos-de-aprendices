@@ -411,3 +411,81 @@
     margin-bottom: 1rem;
     font-size: 0.8125rem;
 }
+
+/* ─── INSIGNIA Y EFECTO EN CLASE AHORA (PULSE) ─── */
+.badge-en-curso-pulse {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    background: #10b981;
+    color: #ffffff !important;
+    font-size: 0.65rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    padding: 0.15rem 0.45rem;
+    border-radius: 9999px;
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+    animation: gcalPulseBadge 1.8s infinite;
+}
+
+@keyframes gcalPulseBadge {
+    0% {
+        box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.8);
+    }
+    70% {
+        box-shadow: 0 0 0 7px rgba(16, 185, 129, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+    }
+}
+
+.gcal-card-en-curso {
+    border: 2px solid #10b981 !important;
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25) !important;
+    z-index: 10 !important;
+}
+
+/* ─── RESPONSIVIDAD PARA DISPOSITIVOS MÓVILES (< 768px) ─── */
+.gcal-view-select-mobile {
+    display: none;
+}
+
+@media (max-width: 768px) {
+    .gcal-view-switcher {
+        display: none !important;
+    }
+    .gcal-view-select-mobile {
+        display: inline-flex !important;
+        width: 100%;
+        max-width: 220px;
+        padding: 0.45rem 0.75rem;
+        font-size: 0.8125rem;
+        font-weight: 600;
+        border-radius: var(--radius-md);
+        background: var(--background);
+        color: var(--foreground);
+        border: 1px solid var(--border);
+    }
+    .gcal-toolbar {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.75rem;
+        padding: 0.875rem;
+    }
+    .gcal-nav-group {
+        justify-content: space-between;
+        width: 100%;
+        flex-wrap: wrap;
+    }
+    .gcal-title {
+        font-size: 1.05rem;
+        min-width: unset;
+        text-align: center;
+        width: 100%;
+        order: 3;
+        margin: 0.5rem 0 0 0;
+    }
+}
+

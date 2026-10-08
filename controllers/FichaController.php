@@ -414,4 +414,35 @@ class FichaController {
 
         require __DIR__ . '/../views/fichas/horario_imprimir.php';
     }
+
+    /**
+     * API REST Asíncrona: Retorna los bloques de horario en formato JSON
+     * Útil para paginación dinámica por mes o lazy loading sin recargar la página.
+     */
+    public function apiBloques(): void {
+        header('Content-Type: application/json; charset=utf-8');
+        
+        $id = (int)($_GET['id'] ?? $_GET['ficha_id'] ?? 0);
+        $mes = trim($_GET['mes'] ?? '');
+
+        if ($id <= 0) {
+            echo json_encode([
+                'success' => false,
+                'mensaje' => 'ID de ficha no válido',
+                'bloques' => []
+            ], JSON_UNESCAPED_UNICODE);
+            exit();
+        }
+
+        $bloques = HorarioModel::obtenerHorarioBloquesFicha($id, $mes ?: null);
+
+        echo json_encode([
+            'success' => true,
+            'ficha_id' => $id,
+            'mes' => $mes,
+            'total' => count($bloques),
+            'bloques' => $bloques
+        ], JSON_UNESCAPED_UNICODE);
+        exit();
+    }
 }

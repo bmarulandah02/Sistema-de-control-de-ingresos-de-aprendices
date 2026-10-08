@@ -146,6 +146,7 @@
 
     <!-- Formulario de inicio de sesión -->
     <form method="POST" action="index.php?action=login">
+        <?= Csrf::campoHtml() ?>
         <div class="auth-input-group">
             <label style="display:block; font-size:0.8125rem; font-weight:600; margin-bottom:0.375rem; color:#1e293b;">
                 Usuario, correo o identificación

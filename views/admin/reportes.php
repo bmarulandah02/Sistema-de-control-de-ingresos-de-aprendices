@@ -29,7 +29,8 @@ $mesesEspanol = [
 ];
 ?>
 
-<link rel="stylesheet" href="public/css/stylehorario.css">
+<?php $styleHorarioVersion = file_exists(__DIR__ . '/../../public/css/stylehorario.css') ? filemtime(__DIR__ . '/../../public/css/stylehorario.css') : time(); ?>
+<link rel="stylesheet" href="public/css/stylehorario.css?v=<?= $styleHorarioVersion ?>">
 
 <div class="page-header" style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:1rem;">
     <div>
@@ -422,6 +423,14 @@ $mesesEspanol = [
                     </button>
                 </div>
 
+                <!-- Selector Desplegable para Móviles (< 768px) -->
+                <select id="gcalViewSelectMobile" class="shadcn-select gcal-view-select-mobile" onchange="gcalCambiarVista(this.value)">
+                    <option value="semana" selected>📅 Semana</option>
+                    <option value="mes">🗓️ Mes</option>
+                    <option value="dia">📆 Día</option>
+                    <option value="agenda">📋 Agenda</option>
+                </select>
+
                 <button type="button" class="btn-shadcn btn-shadcn-outline" id="btnToggleTabla" onclick="toggleTablaDetalle()" style="padding:0.4rem 0.875rem; font-size:0.8125rem;">
                     <i class="bi bi-table me-1"></i><span id="txtToggleTabla">Ver Tabla Detallada</span>
                 </button>
@@ -526,7 +535,12 @@ $mesesEspanol = [
             
             <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:1rem;">
                 <div>
-                    <span id="gcalModalBadge" class="shadcn-badge badge-primary" style="margin-bottom:0.5rem; display:inline-block;">Técnica</span>
+                    <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.5rem; flex-wrap:wrap;">
+                        <span id="gcalModalBadge" class="shadcn-badge badge-primary">Técnica</span>
+                        <span id="gcalModalLiveIndicator" class="badge-en-curso-pulse" style="display:none;">
+                            <i class="bi bi-broadcast"></i> EN CLASE AHORA
+                        </span>
+                    </div>
                     <h2 id="gcalModalMateria" style="font-size:1.25rem; font-weight:700; margin:0; color:var(--foreground); line-height:1.3;">
                         Nombre de la Materia
                     </h2>
@@ -661,6 +675,24 @@ function obtenerBloquesFiltrados() {
     return GCAL_BLOQUES.filter(b => (b.instructor_nombre || '').toLowerCase().includes(q));
 }
 
+function estaEnCursoAhora(b) {
+    if (!b || !b.fecha || !b.hora_inicio || !b.hora_fin) return false;
+    const ahora = new Date();
+    const y = ahora.getFullYear();
+    const m = String(ahora.getMonth() + 1).padStart(2, '0');
+    const d = String(ahora.getDate()).padStart(2, '0');
+    const hoyStr = `${y}-${m}-${d}`;
+    if (b.fecha !== hoyStr) return false;
+
+    const minActual = (ahora.getHours() * 60) + ahora.getMinutes();
+    const [iniH, iniM] = b.hora_inicio.substring(0, 5).split(':').map(Number);
+    const [finH, finM] = b.hora_fin.substring(0, 5).split(':').map(Number);
+    const minIni = (iniH * 60) + (iniM || 0);
+    const minFin = (finH * 60) + (finM || 0);
+
+    return (minActual >= minIni && minActual <= minFin);
+}
+
 function gcalCambiarVista(nuevaVista) {
     gcalEstado.vista = nuevaVista;
     document.querySelectorAll('.gcal-view-btn').forEach(btn => btn.classList.remove('active'));
@@ -668,6 +700,10 @@ function gcalCambiarVista(nuevaVista) {
     else if (nuevaVista === 'mes') document.getElementById('btnViewMes')?.classList.add('active');
     else if (nuevaVista === 'dia') document.getElementById('btnViewDia')?.classList.add('active');
     else if (nuevaVista === 'agenda') document.getElementById('btnViewAgenda')?.classList.add('active');
+
+    const selMob = document.getElementById('gcalViewSelectMobile');
+    if (selMob) selMob.value = nuevaVista;
+
     gcalRenderizar();
 }
 
@@ -1127,6 +1163,13 @@ function gcalAbrirModal(idBloque) {
     const bloqueCod  = encodeURIComponent(hIni + '|' + hFin + '|' + (b.bloque || 'Bloque 1'));
     document.getElementById('gcalModalBtnAsistencia').href = `index.php?action=asistencia&materia=${materiaCod}&bloque=${bloqueCod}`;
 
+    // Indicador en vivo dentro del modal
+    const enCurso = estaEnCursoAhora(b);
+    const liveIndicator = document.getElementById('gcalModalLiveIndicator');
+    if (liveIndicator) {
+        liveIndicator.style.display = enCurso ? 'inline-flex' : 'none';
+    }
+
     const modal = document.getElementById('gcalModal');
     modal.style.display = 'flex';
 }
@@ -1136,6 +1179,16 @@ function gcalCerrarModal(e) {
         document.getElementById('gcalModal').style.display = 'none';
     }
 }
+
+// Cierre ágil del modal con la tecla Escape (ESC)
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' || e.key === 'Esc') {
+        const modal = document.getElementById('gcalModal');
+        if (modal && modal.style.display === 'flex') {
+            gcalCerrarModal();
+        }
+    }
+});
 
 function escaparHtml(texto) {
     if (!texto) return '';

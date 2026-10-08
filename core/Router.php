@@ -15,11 +15,31 @@ require_once __DIR__ . '/../controllers/ReporteController.php';
 require_once __DIR__ . '/../controllers/ExcusaController.php';
 require_once __DIR__ . '/../models/DesercionModel.php';
 require_once __DIR__ . '/../controllers/DesercionController.php';
+require_once __DIR__ . '/Csrf.php';
+
 class Router {
 
     public static function dispatch(): void {
         $action = $_GET['action'] ?? null;
         $estaAutenticado = isset($_SESSION['usuario_id']);
+
+        // Control de Inactividad (Cierre automático de sesión tras 30 minutos sin interacción)
+        if ($estaAutenticado) {
+            $inactividadMaxima = 1800; // 30 minutos = 1800 segundos
+            $ultimoAcceso = $_SESSION['ultimo_acceso'] ?? time();
+            if ((time() - $ultimoAcceso) > $inactividadMaxima) {
+                session_unset();
+                session_destroy();
+                session_start();
+                $_SESSION['mensaje'] = [
+                    'tipo' => 'warning',
+                    'texto' => 'Tu sesión ha finalizado automáticamente por 30 minutos de inactividad.'
+                ];
+                header('Location: index.php?action=login');
+                exit();
+            }
+            $_SESSION['ultimo_acceso'] = time();
+        }
 
         // 1. Manejo del Cierre de Sesión
         if ($action === 'logout') {
@@ -72,6 +92,7 @@ class Router {
             'abrir-sesion-asistencia', 'cerrar-jornada', 'historial', 'fichas', 'ficha-crear', 'ficha-editar',
             'ficha-guardar', 'ficha-eliminar', 'ficha-reactivar', 'ficha-horario', 'ficha-horario-importar', 'ficha-horario-imprimir', 'ficha-horario-eliminar',
             'reportes', 'excusas-admin', 'reporte-pdf', 'reporte-excel', 'reporte-horario-excel', 'reporte-horario-pdf',
+            'api-bloques',
             'desercion', 'desercion-citacion', 'desercion-aviso-guardar', 'desercion-exportar',
             'mi-perfil', 'mi-perfil-guardar', 'reporte-faltas-aprendiz', 'excusa-subir', 'excusa-editar', 'excusa-aprobar', 'excusa-rechazar', 'mis-excusas', '403', '404'
         ];
@@ -232,6 +253,9 @@ class Router {
                 break;
             case 'ficha-horario-eliminar':
                 (new FichaController())->eliminarHorario();
+                break;
+            case 'api-bloques':
+                (new FichaController())->apiBloques();
                 break;
             case 'reportes':
             case 'excusas-admin':

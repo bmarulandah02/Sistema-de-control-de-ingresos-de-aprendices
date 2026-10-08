@@ -22,7 +22,8 @@ $esEncargado = ($rolSesion === 'Instructor' && (int)($ficha['instructor_id'] ?? 
 $puedeImportar = $esAdmin || $esEncargado;
 ?>
 
-<link rel="stylesheet" href="public/css/stylehorario.css">
+<?php $styleHorarioVersion = file_exists(__DIR__ . '/../../public/css/stylehorario.css') ? filemtime(__DIR__ . '/../../public/css/stylehorario.css') : time(); ?>
+<link rel="stylesheet" href="public/css/stylehorario.css?v=<?= $styleHorarioVersion ?>">
 
 <?php if (isset($_SESSION['mensaje'])): 
     $msg = $_SESSION['mensaje'];
@@ -182,6 +183,14 @@ $puedeImportar = $esAdmin || $esEncargado;
                 <i class="bi bi-card-checklist me-1"></i>Agenda
             </button>
         </div>
+
+        <!-- Selector Desplegable Compacto para Móviles (< 768px) -->
+        <select id="gcalViewSelectMobile" class="shadcn-select gcal-view-select-mobile" onchange="gcalCambiarVista(this.value)">
+            <option value="semana" selected>📅 Semana (Horario)</option>
+            <option value="mes">🗓️ Mes</option>
+            <option value="dia">📆 Día</option>
+            <option value="agenda">📋 Agenda</option>
+        </select>
     </div>
 
     <!-- Contenedor dinámico donde se renderizan las vistas -->
@@ -199,7 +208,12 @@ $puedeImportar = $esAdmin || $esEncargado;
             
             <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:1rem;">
                 <div>
-                    <span id="gcalModalBadge" class="shadcn-badge badge-primary" style="margin-bottom:0.5rem; display:inline-block;">Técnica</span>
+                    <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.5rem; flex-wrap:wrap;">
+                        <span id="gcalModalBadge" class="shadcn-badge badge-primary">Técnica</span>
+                        <span id="gcalModalLiveIndicator" class="badge-en-curso-pulse" style="display:none;">
+                            <i class="bi bi-broadcast"></i> EN CLASE AHORA
+                        </span>
+                    </div>
                     <h2 id="gcalModalMateria" style="font-size:1.25rem; font-weight:700; margin:0; color:var(--foreground); line-height:1.3;">
                         Nombre de la Materia
                     </h2>
@@ -343,16 +357,57 @@ function obtenerBloquesFiltrados() {
     return GCAL_BLOQUES.filter(b => (b.instructor_nombre || '').toLowerCase().includes(q));
 }
 
+// ─── VERIFICAR SI UN BLOQUE ESTÁ EN CURSO AHORA (TIEMPO REAL) ───
+function estaEnCursoAhora(b) {
+    if (!b || !b.fecha || !b.hora_inicio || !b.hora_fin) return false;
+    const ahora = new Date();
+    const y = ahora.getFullYear();
+    const m = String(ahora.getMonth() + 1).padStart(2, '0');
+    const d = String(ahora.getDate()).padStart(2, '0');
+    const hoyStr = `${y}-${m}-${d}`;
+    if (b.fecha !== hoyStr) return false;
+
+    const minActual = (ahora.getHours() * 60) + ahora.getMinutes();
+    const [iniH, iniM] = b.hora_inicio.substring(0, 5).split(':').map(Number);
+    const [finH, finM] = b.hora_fin.substring(0, 5).split(':').map(Number);
+    const minIni = (iniH * 60) + (iniM || 0);
+    const minFin = (finH * 60) + (finM || 0);
+
+    return (minActual >= minIni && minActual <= minFin);
+}
+
+// ─── CARGA ASÍNCRONA DE BLOQUES (API REST / AJAX) ───
+async function gcalCargarBloquesAsync(idFicha, mesFiltro = '') {
+    try {
+        const url = `index.php?action=api-bloques&id=${idFicha}${mesFiltro ? '&mes=' + encodeURIComponent(mesFiltro) : ''}`;
+        const res = await fetch(url);
+        const data = await res.json();
+        if (data.success && Array.isArray(data.bloques)) {
+            GCAL_BLOQUES.length = 0;
+            GCAL_BLOQUES.push(...data.bloques);
+            gcalRenderizar();
+            return true;
+        }
+    } catch (e) {
+        console.warn('Carga asíncrona de bloques no disponible:', e);
+    }
+    return false;
+}
+
 // ─── CONTROLADOR DE VISTAS ───
 function gcalCambiarVista(nuevaVista) {
     gcalEstado.vista = nuevaVista;
 
-    // Actualizar botones de conmutador
+    // Actualizar botones de conmutador en escritorio
     document.querySelectorAll('.gcal-view-btn').forEach(btn => btn.classList.remove('active'));
     if (nuevaVista === 'semana') document.getElementById('btnViewSemana').classList.add('active');
     else if (nuevaVista === 'mes') document.getElementById('btnViewMes').classList.add('active');
     else if (nuevaVista === 'dia') document.getElementById('btnViewDia').classList.add('active');
     else if (nuevaVista === 'agenda') document.getElementById('btnViewAgenda').classList.add('active');
+
+    // Sincronizar selector móvil si existe
+    const selMob = document.getElementById('gcalViewSelectMobile');
+    if (selMob) selMob.value = nuevaVista;
 
     gcalRenderizar();
 }
@@ -495,15 +550,19 @@ function renderizarVistaSemana(area, titleEl) {
             const colorInfo = obtenerClaseColor(b.materia);
             const nombreLimpio = formatearNombreMateria(b.materia);
             const nombreBloque = (b.bloque === 'bloque1') ? 'Bloque 1' : ((b.bloque === 'bloque2') ? 'Bloque 2' : (b.bloque || 'Bloque'));
+            const enCurso = estaEnCursoAhora(b);
+            const badgeEnCurso = enCurso ? `<span class="badge-en-curso-pulse"><i class="bi bi-broadcast"></i> EN CLASE</span>` : '';
+            const cardClaseExtra = enCurso ? 'gcal-card-en-curso' : '';
 
             html += `
-                <div class="gcal-week-card ${colorInfo.css}" 
+                <div class="gcal-week-card ${colorInfo.css} ${cardClaseExtra}" 
                      style="top:${topPx}px; height:${heightPx}px;"
                      onclick="gcalAbrirModal(${b.id_horario_bloque})"
                      title="${hIni} a ${hFin}: ${b.materia}">
                     <div>
-                        <div style="font-size:0.6875rem; font-weight:800; display:flex; justify-content:space-between; margin-bottom:0.125rem;">
+                        <div style="font-size:0.6875rem; font-weight:800; display:flex; justify-content:space-between; align-items:center; margin-bottom:0.125rem; gap:0.25rem;">
                             <span>${nombreBloque} • ${formatearHora12(hIni)} – ${formatearHora12(hFin)}</span>
+                            ${badgeEnCurso}
                         </div>
                         <div style="font-size:0.75rem; font-weight:700; line-height:1.25; margin-bottom:0.25rem;">
                             ${escaparHtml(nombreLimpio)}
@@ -688,15 +747,21 @@ function renderizarVistaDia(area, titleEl) {
         const colorInfo = obtenerClaseColor(b.materia);
         const nombreLimpio = formatearNombreMateria(b.materia);
         const nombreBloque = (b.bloque === 'bloque1') ? 'Bloque 1' : ((b.bloque === 'bloque2') ? 'Bloque 2' : (b.bloque || 'Bloque'));
+        const enCurso = estaEnCursoAhora(b);
+        const badgeEnCurso = enCurso ? `<span class="badge-en-curso-pulse ms-2"><i class="bi bi-broadcast"></i> EN CLASE</span>` : '';
+        const cardClaseExtra = enCurso ? 'gcal-card-en-curso' : '';
 
         html += `
-            <div class="gcal-week-card ${colorInfo.css}" 
+            <div class="gcal-week-card ${colorInfo.css} ${cardClaseExtra}" 
                  style="top:${topPx}px; height:${heightPx}px; left:16px; right:16px; padding:0.75rem 1.25rem;"
                  onclick="gcalAbrirModal(${b.id_horario_bloque})">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.35rem;">
-                    <span class="shadcn-badge" style="background:rgba(0,0,0,0.08); font-size:0.8125rem; font-weight:700;">
-                        <i class="bi bi-clock me-1"></i>${nombreBloque} • ${formatearHora12(hIni)} – ${formatearHora12(hFin)} (${duracionMinutos / 60} horas)
-                    </span>
+                    <div style="display:flex; align-items:center; flex-wrap:wrap; gap:0.25rem;">
+                        <span class="shadcn-badge" style="background:rgba(0,0,0,0.08); font-size:0.8125rem; font-weight:700;">
+                            <i class="bi bi-clock me-1"></i>${nombreBloque} • ${formatearHora12(hIni)} – ${formatearHora12(hFin)} (${duracionMinutos / 60} horas)
+                        </span>
+                        ${badgeEnCurso}
+                    </div>
                     <span style="font-size:0.75rem; font-weight:700; text-transform:uppercase;">${colorInfo.label}</span>
                 </div>
                 <div style="font-size:1.0625rem; font-weight:800; line-height:1.3; margin-bottom:0.35rem;">
@@ -828,6 +893,13 @@ function gcalAbrirModal(idBloque) {
     const bloqueCod  = encodeURIComponent(hIni + '|' + hFin + '|' + (b.bloque || 'Bloque 1'));
     document.getElementById('gcalModalBtnAsistencia').href = `index.php?action=asistencia&materia=${materiaCod}&bloque=${bloqueCod}`;
 
+    // Indicador en vivo dentro del modal
+    const enCurso = estaEnCursoAhora(b);
+    const liveIndicator = document.getElementById('gcalModalLiveIndicator');
+    if (liveIndicator) {
+        liveIndicator.style.display = enCurso ? 'inline-flex' : 'none';
+    }
+
     const modal = document.getElementById('gcalModal');
     modal.style.display = 'flex';
 }
@@ -837,6 +909,16 @@ function gcalCerrarModal(e) {
         document.getElementById('gcalModal').style.display = 'none';
     }
 }
+
+// Cierre ágil del modal con la tecla Escape (ESC)
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' || e.key === 'Esc') {
+        const modal = document.getElementById('gcalModal');
+        if (modal && modal.style.display === 'flex') {
+            gcalCerrarModal();
+        }
+    }
+});
 
 function escaparHtml(texto) {
     if (!texto) return '';
