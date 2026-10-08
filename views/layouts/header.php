@@ -77,6 +77,11 @@
                 <span>Horarios & Escáner Excel</span>
             </a>
 
+            <a href="index.php?action=ficha-aprendices-importar" class="nav-link-item <?= (in_array($_GET['action'] ?? '', ['ficha-aprendices-importar', 'aprendices-importar'])) ? 'active' : '' ?>">
+                <i class="bi bi-file-earmark-person"></i>
+                <span>Importar Aprendices Excel</span>
+            </a>
+
             <a href="index.php?action=desercion" class="nav-link-item <?= (in_array($_GET['action'] ?? '', ['desercion', 'desercion-citacion'])) ? 'active' : '' ?>">
                 <i class="bi bi-person-exclamation"></i>
                 <span>Alertas de Deserción</span>

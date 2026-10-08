@@ -11,13 +11,17 @@ $fichas = $fichas ?? [];
         <div class="page-header-subtitle"><?= (($_SESSION['rol'] ?? '') === 'Instructor') ? 'Fichas de formación asignadas a tu cuenta' : 'Gestión de fichas, programas e instructores encargados' ?></div>
     </div>
     <?php if (($_SESSION['rol'] ?? '') === 'Administrador'): ?>
-    <div style="display:flex; gap:0.5rem;">
+    <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+        <a href="index.php?action=ficha-aprendices-importar" class="btn-shadcn btn-shadcn-outline" style="color:#059669; border-color:rgba(5,150,105,0.4);" title="Importar aprendices masivamente desde archivo Excel">
+            <i class="bi bi-person-plus-fill me-1"></i>
+            <span>Importar Aprendices Excel</span>
+        </a>
         <a href="index.php?action=ficha-horario-importar" class="btn-shadcn btn-shadcn-outline">
-            <i class="bi bi-file-earmark-excel"></i>
+            <i class="bi bi-file-earmark-excel me-1"></i>
             <span>Importar Horario Excel</span>
         </a>
         <a href="index.php?action=ficha-crear" class="btn-shadcn btn-shadcn-primary">
-            <i class="bi bi-plus-lg"></i>
+            <i class="bi bi-plus-lg me-1"></i>
             <span>+ Nueva Ficha</span>
         </a>
     </div>
@@ -164,6 +168,11 @@ $fichas = $fichas ?? [];
                             <a href="index.php?action=usuarios&ficha_id=<?= $f['id'] ?>"
                                class="btn-shadcn btn-shadcn-outline" style="padding:0.25rem 0.5rem; font-size:0.75rem; color:#059669; border-color:rgba(5,150,105,0.3);" title="Ver Aprendices de esta Ficha">
                                 <i class="bi bi-people me-1"></i>Aprendices
+                            </a>
+
+                            <a href="index.php?action=ficha-aprendices-importar&ficha_id=<?= $f['id'] ?>"
+                               class="btn-shadcn btn-shadcn-outline" style="padding:0.25rem 0.5rem; font-size:0.75rem; color:#10b981; border-color:rgba(16,185,129,0.3);" title="Importar Aprendices Excel para esta Ficha">
+                                <i class="bi bi-file-earmark-person me-1"></i>Importar Excel
                             </a>
 
                             <?php if (($_SESSION['rol'] ?? '') === 'Administrador'): ?>

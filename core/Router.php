@@ -91,6 +91,7 @@ class Router {
             'usuario-actualizar', 'usuario-eliminar', 'asistencia', 'registrar-ingreso',
             'abrir-sesion-asistencia', 'cerrar-jornada', 'historial', 'fichas', 'ficha-crear', 'ficha-editar',
             'ficha-guardar', 'ficha-eliminar', 'ficha-reactivar', 'ficha-horario', 'ficha-horario-importar', 'ficha-horario-imprimir', 'ficha-horario-eliminar',
+            'ficha-aprendices-importar', 'aprendices-importar',
             'reportes', 'excusas-admin', 'reporte-pdf', 'reporte-excel', 'reporte-horario-excel', 'reporte-horario-pdf',
             'api-bloques',
             'desercion', 'desercion-citacion', 'desercion-aviso-guardar', 'desercion-exportar',
@@ -253,6 +254,10 @@ class Router {
                 break;
             case 'ficha-horario-eliminar':
                 (new FichaController())->eliminarHorario();
+                break;
+            case 'ficha-aprendices-importar':
+            case 'aprendices-importar':
+                (new FichaController())->importarAprendices();
                 break;
             case 'api-bloques':
                 (new FichaController())->apiBloques();

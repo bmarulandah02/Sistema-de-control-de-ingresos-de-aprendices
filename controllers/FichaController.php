@@ -4,6 +4,7 @@
 // ──────────────────────────────────────────────
 
 require_once __DIR__ . '/../models/HorarioModel.php';
+require_once __DIR__ . '/../models/AprendizModel.php';
 
 class FichaController {
 
@@ -444,5 +445,152 @@ class FichaController {
             'bloques' => $bloques
         ], JSON_UNESCAPED_UNICODE);
         exit();
+    }
+
+    /**
+     * Muestra el panel de importación y escaneo de Excel de aprendices y procesa la carga masiva.
+     * Soporta lectura de la carpeta public/uploads/Aprendices/, dropzone, detección de campos nulos,
+     * asignación de contraseña sena2025 y deja el código RFID en null para administración.
+     */
+    public function importarAprendices(): void {
+        if (($_SESSION['rol'] ?? '') !== 'Administrador' && ($_SESSION['rol'] ?? '') !== 'Instructor') {
+            header('Location: index.php?action=fichas&error=sin_permiso');
+            exit();
+        }
+
+        $rolSesion = $_SESSION['rol'] ?? '';
+        $usuarioIdSesion = (int)($_SESSION['usuario_id'] ?? 0);
+
+        if ($rolSesion === 'Instructor') {
+            $todasFichas = HorarioModel::obtenerFichasPorInstructor($usuarioIdSesion, ['estado' => 'Activo']);
+            if (empty($todasFichas)) {
+                $_SESSION['mensaje'] = [
+                    'tipo' => 'warning',
+                    'texto' => 'No tienes fichas asociadas actualmente para importar aprendices.'
+                ];
+                header('Location: index.php?action=fichas');
+                exit();
+            }
+        } else {
+            $todasFichas = HorarioModel::obtenerTodasFichas(['estado' => 'Activo']);
+        }
+
+        $idFichaDefault = !empty($todasFichas[0]['id']) ? (int)$todasFichas[0]['id'] : 3234082;
+        if (!empty($_GET['ficha_id'])) {
+            $idGet = (int)$_GET['ficha_id'];
+            if ($rolSesion !== 'Instructor' || in_array($idGet, array_map(fn($f) => (int)$f['id'], $todasFichas))) {
+                $idFichaDefault = $idGet;
+            }
+        }
+
+        // Explorar carpeta public/uploads/Aprendices/
+        $dirAprendices = __DIR__ . '/../public/uploads/Aprendices/';
+        if (!is_dir($dirAprendices)) {
+            @mkdir($dirAprendices, 0777, true);
+        }
+
+        $archivosDetectados = [];
+        if (is_dir($dirAprendices)) {
+            $archivos = scandir($dirAprendices);
+            foreach ($archivos as $archivo) {
+                if ($archivo !== '.' && $archivo !== '..' && preg_match('/\.(xlsx|xls|csv)$/i', $archivo)) {
+                    $rutaCompleta = $dirAprendices . $archivo;
+                    $archivosDetectados[] = [
+                        'nombre' => $archivo,
+                        'ruta_relativa' => 'public/uploads/Aprendices/' . rawurlencode($archivo),
+                        'tamano_kb' => round(filesize($rutaCompleta) / 1024, 1),
+                        'fecha' => date('d/m/Y H:i', filemtime($rutaCompleta))
+                    ];
+                }
+            }
+        }
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $esAjax = !empty($_POST['ajax']) || (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest');
+            
+            // 1. Verificar si viene JSON por body
+            $inputJSON = file_get_contents('php://input');
+            $dataJson = json_decode($inputJSON, true);
+
+            $idFicha = 0;
+            $aprendices = [];
+
+            if (!empty($dataJson['aprendices']) && !empty($dataJson['ficha_id'])) {
+                $idFicha = (int)$dataJson['ficha_id'];
+                $aprendices = $dataJson['aprendices'];
+            } elseif (!empty($_POST['aprendices_json'])) {
+                $idFicha = (int)($_POST['ficha_id'] ?? $idFichaDefault);
+                $aprendices = json_decode($_POST['aprendices_json'], true) ?: [];
+            } elseif (isset($_FILES['archivo_excel']) && $_FILES['archivo_excel']['error'] === UPLOAD_ERR_OK) {
+                // Guardar archivo nuevo subido en la carpeta public/uploads/Aprendices/
+                $nombreOrig = basename($_FILES['archivo_excel']['name']);
+                $ext = strtolower(pathinfo($nombreOrig, PATHINFO_EXTENSION));
+                if (!in_array($ext, ['xlsx', 'xls', 'csv'])) {
+                    $errorMsg = 'Solo se permiten archivos en formato Excel (.xlsx, .xls) o CSV.';
+                    if ($esAjax) {
+                        header('Content-Type: application/json; charset=utf-8');
+                        echo json_encode(['exito' => false, 'mensaje' => $errorMsg]);
+                        exit();
+                    }
+                    $error = $errorMsg;
+                    require __DIR__ . '/../views/fichas/importar_aprendices.php';
+                    return;
+                }
+                $nombreDestino = 'Aprendices_' . time() . '_' . $nombreOrig;
+                move_uploaded_file($_FILES['archivo_excel']['tmp_name'], $dirAprendices . $nombreDestino);
+
+                if ($esAjax) {
+                    header('Content-Type: application/json; charset=utf-8');
+                    echo json_encode([
+                        'exito' => true,
+                        'archivo_guardado' => $nombreDestino,
+                        'ruta_relativa' => 'public/uploads/Aprendices/' . rawurlencode($nombreDestino),
+                        'mensaje' => 'Archivo guardado correctamente en la carpeta de Aprendices.'
+                    ]);
+                    exit();
+                }
+            }
+
+            if (empty($aprendices)) {
+                $errorMsg = 'No se recibieron filas válidas de aprendices para procesar.';
+                if ($esAjax) {
+                    header('Content-Type: application/json; charset=utf-8');
+                    echo json_encode(['exito' => false, 'mensaje' => $errorMsg]);
+                    exit();
+                }
+                $error = $errorMsg;
+                require __DIR__ . '/../views/fichas/importar_aprendices.php';
+                return;
+            }
+
+            // Validar ficha seleccionada para Instructores
+            if ($rolSesion === 'Instructor') {
+                $idsPermitidos = array_map(fn($f) => (int)$f['id'], $todasFichas);
+                if (!in_array($idFicha, $idsPermitidos)) {
+                    $errorMsg = 'Acceso denegado: No tienes permisos para importar aprendices en esta ficha.';
+                    if ($esAjax) {
+                        header('Content-Type: application/json; charset=utf-8');
+                        echo json_encode(['exito' => false, 'mensaje' => $errorMsg]);
+                        exit();
+                    }
+                    $error = $errorMsg;
+                    require __DIR__ . '/../views/fichas/importar_aprendices.php';
+                    return;
+                }
+            }
+
+            $resultado = AprendizModel::importarAprendices($aprendices, $idFicha);
+
+            if ($esAjax) {
+                header('Content-Type: application/json; charset=utf-8');
+                echo json_encode($resultado);
+                exit();
+            }
+
+            require __DIR__ . '/../views/fichas/importar_aprendices.php';
+            return;
+        }
+
+        require __DIR__ . '/../views/fichas/importar_aprendices.php';
     }
 }
