@@ -230,11 +230,10 @@ class FichaController {
             $todasFichas = HorarioModel::obtenerTodasFichas(['estado' => 'Activo']);
         }
 
-        $idFichaDefault = !empty($todasFichas[0]['id']) ? (int)$todasFichas[0]['id'] : 3234082;
-        if (!empty($_GET['ficha_id'])) {
-            $idGet = (int)$_GET['ficha_id'];
-            if ($rolSesion !== 'Instructor' || in_array($idGet, array_map(fn($f) => (int)$f['id'], $todasFichas))) {
-                $idFichaDefault = $idGet;
+        $idFichaDefault = !empty($_GET['ficha_id']) ? (int)$_GET['ficha_id'] : (!empty($_GET['id']) ? (int)$_GET['id'] : 0);
+        if ($idFichaDefault > 0 && $rolSesion === 'Instructor') {
+            if (!in_array($idFichaDefault, array_map(fn($f) => (int)$f['id'], $todasFichas))) {
+                $idFichaDefault = 0;
             }
         }
 
@@ -242,6 +241,18 @@ class FichaController {
             $idFicha = (int)($_POST['ficha_id'] ?? $idFichaDefault);
             $esEjemplo = !empty($_POST['usar_ejemplo']);
             $esAjax = !empty($_POST['ajax']) || (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest');
+
+            if ($idFicha <= 0) {
+                $errorMsg = 'Por favor selecciona una ficha de formación válida antes de subir el horario.';
+                if ($esAjax) {
+                    header('Content-Type: application/json; charset=utf-8');
+                    echo json_encode(['exito' => false, 'mensaje' => $errorMsg]);
+                    exit();
+                }
+                $error = $errorMsg;
+                require __DIR__ . '/../views/fichas/importar_horario.php';
+                return;
+            }
 
             // 1. Validar permisos: solo Administrador o el Instructor Encargado (titular) de esta ficha
             $fichaDestino = HorarioModel::obtenerFichaPorId($idFicha);
@@ -475,15 +486,14 @@ class FichaController {
             $todasFichas = HorarioModel::obtenerTodasFichas(['estado' => 'Activo']);
         }
 
-        $idFichaDefault = !empty($todasFichas[0]['id']) ? (int)$todasFichas[0]['id'] : 3234082;
-        if (!empty($_GET['ficha_id'])) {
-            $idGet = (int)$_GET['ficha_id'];
-            if ($rolSesion !== 'Instructor' || in_array($idGet, array_map(fn($f) => (int)$f['id'], $todasFichas))) {
-                $idFichaDefault = $idGet;
+        $idFichaDefault = !empty($_GET['ficha_id']) ? (int)$_GET['ficha_id'] : (!empty($_GET['id']) ? (int)$_GET['id'] : 0);
+        if ($idFichaDefault > 0 && $rolSesion === 'Instructor') {
+            if (!in_array($idFichaDefault, array_map(fn($f) => (int)$f['id'], $todasFichas))) {
+                $idFichaDefault = 0;
             }
         }
 
-        // Explorar carpeta public/uploads/Aprendices/
+        // Directorio de subidas para aprendices
         $dirAprendices = __DIR__ . '/../public/uploads/Aprendices/';
         if (!is_dir($dirAprendices)) {
             @mkdir($dirAprendices, 0777, true);

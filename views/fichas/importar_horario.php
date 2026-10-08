@@ -2,25 +2,23 @@
 $pageTitle = 'Escáner de Horarios Excel — Control de Ingresos SENA';
 require __DIR__ . '/../../views/layouts/header.php';
 
-$idFichaDefault = (int)($_GET['ficha_id'] ?? 3234082);
+$idFichaDefault = isset($_GET['ficha_id']) ? (int)$_GET['ficha_id'] : (isset($_GET['id']) ? (int)$_GET['id'] : 0);
 $todasFichas = $todasFichas ?? [];
 $fichaActual = null;
-foreach ($todasFichas as $f) {
-    if ((int)$f['id'] === $idFichaDefault) {
-        $fichaActual = $f;
-        break;
+if ($idFichaDefault > 0) {
+    foreach ($todasFichas as $f) {
+        if ((int)$f['id'] === $idFichaDefault) {
+            $fichaActual = $f;
+            break;
+        }
     }
-}
-if (!$fichaActual && !empty($todasFichas)) {
-    $fichaActual = $todasFichas[0];
-    $idFichaDefault = (int)$fichaActual['id'];
 }
 
 $rolSesion = $_SESSION['rol'] ?? '';
 $usuarioIdSesion = (int)($_SESSION['usuario_id'] ?? 0);
 $esAdmin = ($rolSesion === 'Administrador');
 
-$bloquesFichaActual = HorarioModel::contarBloquesHorarioFicha($idFichaDefault);
+$bloquesFichaActual = ($idFichaDefault > 0) ? HorarioModel::contarBloquesHorarioFicha($idFichaDefault) : 0;
 ?>
 
 <?php if (isset($_SESSION['mensaje'])): 
@@ -63,11 +61,13 @@ $bloquesFichaActual = HorarioModel::contarBloquesHorarioFicha($idFichaDefault);
             Carga o escanea el archivo Excel de la ficha para insertar los bloques y registrar automáticamente los instructores nuevos.
         </div>
     </div>
+    <?php if ($idFichaDefault > 0): ?>
     <div style="display:flex; gap:0.5rem;">
         <a href="index.php?action=ficha-horario&id=<?= $idFichaDefault ?>" class="btn-shadcn btn-shadcn-outline">
             <i class="bi bi-calendar3 me-1"></i>Ver Horario Actual
         </a>
     </div>
+    <?php endif; ?>
 </div>
 
 <!-- ── SELECCIÓN DE FICHA & CONFIGURACIÓN ────────────────────────────── -->
@@ -78,17 +78,24 @@ $bloquesFichaActual = HorarioModel::contarBloquesHorarioFicha($idFichaDefault);
                 <i class="bi bi-journal-bookmark me-1" style="color:#059669;"></i>Ficha de Formación Destino:
             </label>
             <select id="selectFichaDestino" class="shadcn-select" style="max-width:480px; font-weight:500;" onchange="actualizarFichaDestino(this.value)">
+                <option value="" <?= ($idFichaDefault <= 0) ? 'selected' : '' ?> disabled>--- Selecciona una ficha ---</option>
                 <?php foreach ($todasFichas as $f): 
-                    $selected = ((int)$f['id'] === $idFichaDefault) ? 'selected' : '';
+                    $selected = ($idFichaDefault > 0 && (int)$f['id'] === $idFichaDefault) ? 'selected' : '';
                 ?>
                     <option value="<?= $f['id'] ?>" <?= $selected ?>>
                         Ficha <?= htmlspecialchars($f['numero_ficha']) ?> — <?= htmlspecialchars($f['programa']) ?> [<?= htmlspecialchars($f['jornada']) ?>]
                     </option>
                 <?php endforeach; ?>
             </select>
+            <?php if ($idFichaDefault > 0): ?>
             <div style="font-size:0.75rem; color:var(--muted-foreground); margin-top:0.375rem;">
-                <i class="bi bi-info-circle me-1"></i>Ficha seleccionada por defecto: <strong><?= $idFichaDefault ?></strong>. Todos los bloques se asociarán a este programa.
+                <i class="bi bi-info-circle me-1"></i>Ficha seleccionada: <strong><?= $idFichaDefault ?></strong>. Todos los bloques se asociarán a este programa.
             </div>
+            <?php else: ?>
+            <div style="font-size:0.75rem; color:#d97706; margin-top:0.375rem;">
+                <i class="bi bi-exclamation-circle me-1"></i>Por favor selecciona la ficha de formación para continuar.
+            </div>
+            <?php endif; ?>
         </div>
 
         <div style="display:flex; gap:1.5rem; align-items:center; background:var(--muted); padding:0.75rem 1.25rem; border-radius:var(--radius-md);">
@@ -368,6 +375,7 @@ $bloquesFichaActual = HorarioModel::contarBloquesHorarioFicha($idFichaDefault);
 let archivoSeleccionado = null;
 
 function actualizarFichaDestino(idFicha) {
+    if (!idFicha) return;
     window.location.href = 'index.php?action=ficha-horario-importar&ficha_id=' + idFicha;
 }
 

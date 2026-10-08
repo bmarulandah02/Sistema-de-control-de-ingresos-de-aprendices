@@ -2,23 +2,20 @@
 $pageTitle = 'Escáner & Importador de Aprendices Excel — Control de Ingresos SENA';
 require __DIR__ . '/../../views/layouts/header.php';
 
-$idFichaDefault = (int)($_GET['ficha_id'] ?? 3234082);
+$idFichaDefault = isset($_GET['ficha_id']) ? (int)$_GET['ficha_id'] : (isset($_GET['id']) ? (int)$_GET['id'] : 0);
 $todasFichas = $todasFichas ?? [];
 $fichaActual = null;
-foreach ($todasFichas as $f) {
-    if ((int)$f['id'] === $idFichaDefault) {
-        $fichaActual = $f;
-        break;
+if ($idFichaDefault > 0) {
+    foreach ($todasFichas as $f) {
+        if ((int)$f['id'] === $idFichaDefault) {
+            $fichaActual = $f;
+            break;
+        }
     }
-}
-if (!$fichaActual && !empty($todasFichas)) {
-    $fichaActual = $todasFichas[0];
-    $idFichaDefault = (int)$fichaActual['id'];
 }
 
 $rolSesion = $_SESSION['rol'] ?? '';
 $esAdmin = ($rolSesion === 'Administrador');
-$archivosDetectados = $archivosDetectados ?? [];
 ?>
 
 <script src="public/js/xlsx.full.min.js"></script>
@@ -52,21 +49,6 @@ $archivosDetectados = $archivosDetectados ?? [];
     font-size: 0.725rem;
     font-weight: 600;
 }
-.archivo-card {
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-md, 0.5rem);
-    padding: 1rem 1.25rem;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 1rem;
-    transition: all 0.2s ease;
-}
-.archivo-card:hover {
-    border-color: #059669;
-    box-shadow: 0 4px 12px rgba(5, 150, 105, 0.08);
-}
 @keyframes spin {
     from { transform: rotate(0deg); }
     to { transform: rotate(360deg); }
@@ -93,11 +75,13 @@ $archivosDetectados = $archivosDetectados ?? [];
             Escanea listados de aprendices en formato Excel (.xls / .xlsx), crea sus perfiles automáticos con contraseña <code>sena2025</code> y deja el código RFID en <code>NULL</code> para asignación administrativa.
         </div>
     </div>
+    <?php if ($idFichaDefault > 0): ?>
     <div style="display:flex; gap:0.5rem;">
         <a href="index.php?action=usuarios&ficha_id=<?= $idFichaDefault ?>" class="btn-shadcn btn-shadcn-outline">
             <i class="bi bi-people me-1"></i>Ver Aprendices de la Ficha
         </a>
     </div>
+    <?php endif; ?>
 </div>
 
 <!-- ── SELECCIÓN DE FICHA & CONFIGURACIÓN DE REGLAS ────────────────── -->
@@ -108,17 +92,24 @@ $archivosDetectados = $archivosDetectados ?? [];
                 <i class="bi bi-journal-bookmark me-1" style="color:#059669;"></i>Ficha de Formación Destino:
             </label>
             <select id="selectFichaDestino" class="shadcn-select" style="max-width:520px; font-weight:600;" onchange="actualizarFichaDestino(this.value)">
+                <option value="" <?= ($idFichaDefault <= 0) ? 'selected' : '' ?> disabled>--- Selecciona la ficha ---</option>
                 <?php foreach ($todasFichas as $f): 
-                    $selected = ((int)$f['id'] === $idFichaDefault) ? 'selected' : '';
+                    $selected = ($idFichaDefault > 0 && (int)$f['id'] === $idFichaDefault) ? 'selected' : '';
                 ?>
                     <option value="<?= $f['id'] ?>" <?= $selected ?>>
                         Ficha <?= htmlspecialchars($f['numero_ficha']) ?> — <?= htmlspecialchars($f['programa']) ?> [<?= htmlspecialchars($f['jornada'] ?? 'Diurna') ?>]
                     </option>
                 <?php endforeach; ?>
             </select>
+            <?php if ($idFichaDefault > 0): ?>
             <div style="font-size:0.75rem; color:var(--muted-foreground); margin-top:0.375rem;">
-                <i class="bi bi-info-circle me-1"></i>Los aprendices importados se registrarán y vincularán automáticamente a esta ficha seleccionada.
+                <i class="bi bi-info-circle me-1"></i>Los aprendices importados se registrarán y vincularán automáticamente a la ficha <strong><?= $idFichaDefault ?></strong>.
             </div>
+            <?php else: ?>
+            <div style="font-size:0.75rem; color:#d97706; margin-top:0.375rem;">
+                <i class="bi bi-exclamation-circle me-1"></i>Por favor selecciona la ficha de formación de destino.
+            </div>
+            <?php endif; ?>
         </div>
 
         <div style="display:flex; gap:1.25rem; align-items:center; background:var(--muted); padding:0.875rem 1.25rem; border-radius:var(--radius-md); flex-wrap:wrap;">
@@ -144,50 +135,6 @@ $archivosDetectados = $archivosDetectados ?? [];
             </div>
         </div>
     </div>
-</div>
-
-<!-- ── SECCIÓN 1: ARCHIVOS DETECTADOS EN LA CARPETA (public/uploads/Aprendices/) ─ -->
-<div class="shadcn-card" style="padding:1.5rem; margin-bottom:1.5rem;">
-    <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:0.5rem; margin-bottom:1rem;">
-        <div style="display:flex; align-items:center; gap:0.625rem;">
-            <div style="width:2.5rem; height:2.5rem; border-radius:0.5rem; background:rgba(37,99,235,0.12); color:#2563eb; display:flex; align-items:center; justify-content:center; font-size:1.25rem;">
-                <i class="bi bi-folder2-open"></i>
-            </div>
-            <div>
-                <h3 style="font-size:1rem; font-weight:700; margin:0; color:var(--foreground);">Archivos en Carpeta del Servidor</h3>
-                <div style="font-size:0.75rem; color:var(--muted-foreground); font-family:monospace;">public/uploads/Aprendices/</div>
-            </div>
-        </div>
-        <span class="shadcn-badge badge-secondary"><?= count($archivosDetectados) ?> archivo(s) disponible(s)</span>
-    </div>
-
-    <?php if (empty($archivosDetectados)): ?>
-        <div style="padding:1.25rem; background:var(--muted); border-radius:var(--radius-md); text-align:center; color:var(--muted-foreground); font-size:0.875rem;">
-            <i class="bi bi-inbox me-1"></i>No hay archivos en la carpeta <code>public/uploads/Aprendices/</code> aún. Puedes arrastrar uno abajo.
-        </div>
-    <?php else: ?>
-        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(320px, 1fr)); gap:1rem;">
-            <?php foreach ($archivosDetectados as $arch): ?>
-                <div class="archivo-card">
-                    <div style="display:flex; align-items:center; gap:0.75rem; overflow:hidden;">
-                        <i class="bi bi-file-earmark-excel-fill" style="font-size:2rem; color:#059669; flex-shrink:0;"></i>
-                        <div style="overflow:hidden;">
-                            <div style="font-weight:700; font-size:0.875rem; color:var(--foreground); text-overflow:ellipsis; overflow:hidden; white-space:nowrap;" title="<?= htmlspecialchars($arch['nombre']) ?>">
-                                <?= htmlspecialchars($arch['nombre']) ?>
-                            </div>
-                            <div style="font-size:0.75rem; color:var(--muted-foreground);">
-                                <span><?= $arch['tamano_kb'] ?> KB</span> • <span><?= $arch['fecha'] ?></span>
-                            </div>
-                        </div>
-                    </div>
-                    <button type="button" class="btn-shadcn btn-shadcn-primary" style="padding:0.4rem 0.875rem; font-size:0.8125rem; white-space:nowrap;"
-                            onclick="cargarArchivoServidor('<?= htmlspecialchars($arch['ruta_relativa']) ?>', '<?= htmlspecialchars(addslashes($arch['nombre'])) ?>')">
-                        <i class="bi bi-lightning-charge me-1"></i>Escanear
-                    </button>
-                </div>
-            <?php endforeach; ?>
-        </div>
-    <?php endif; ?>
 </div>
 
 <!-- ── SECCIÓN 2: DROPZONE PARA CARGAR ARCHIVO NUEVO ──────────────── -->
@@ -496,33 +443,6 @@ function cancelarPrevisualizacion() {
     document.getElementById('fileInfoCard').style.display = 'none';
 }
 
-// ── CARGAR ARCHIVO DESDE LA CARPETA DEL SERVIDOR ─────────────────────
-async function cargarArchivoServidor(rutaRelativa, nombreArchivo) {
-    Swal.fire({
-        title: 'Cargando archivo del servidor...',
-        text: nombreArchivo,
-        allowOutsideClick: false,
-        didOpen: () => { Swal.showLoading(); }
-    });
-
-    try {
-        const response = await fetch(rutaRelativa);
-        if (!response.ok) {
-            throw new Error('No se pudo acceder al archivo en el servidor (' + response.status + ')');
-        }
-        const arrayBuffer = await response.arrayBuffer();
-        Swal.close();
-        procesarBufferExcel(arrayBuffer, nombreArchivo);
-    } catch (err) {
-        console.error(err);
-        Swal.fire({
-            icon: 'error',
-            title: 'Error al abrir archivo',
-            text: err.message || 'No se pudo leer el archivo desde el servidor.'
-        });
-    }
-}
-
 // ── PROCESAR ARCHIVO LOCAL SELECCIONADO POR EL USUARIO ────────────────
 function procesarArchivoLocal(file) {
     const ext = file.name.split('.').pop().toLowerCase();
@@ -783,6 +703,17 @@ function completarPaso(numero) {
 }
 
 async function ejecutarImportacion() {
+    const selectFicha = document.getElementById('selectFichaDestino');
+    const idFicha = selectFicha ? parseInt(selectFicha.value) : 0;
+    if (!idFicha || isNaN(idFicha)) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Ficha no seleccionada',
+            text: 'Por favor selecciona la ficha de formación en el menú desplegable antes de continuar.'
+        });
+        return;
+    }
+
     if (!aprendicesDetectados || aprendicesDetectados.length === 0) {
         Swal.fire({
             icon: 'warning',
@@ -791,8 +722,6 @@ async function ejecutarImportacion() {
         });
         return;
     }
-
-    const idFicha = parseInt(document.getElementById('selectFichaDestino').value) || <?= $idFichaDefault ?>;
 
     // Ocultar previsualización y mostrar simulación en tiempo real
     document.getElementById('panelPrevisualizacion').style.display = 'none';
