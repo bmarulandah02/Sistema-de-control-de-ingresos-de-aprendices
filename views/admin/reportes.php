@@ -200,66 +200,7 @@ $mesesEspanol = [
         </div>
     </div>
 
-    <!-- COLA DE APROBACIÓN DE EXCUSAS MÉDICAS -->
-    <div class="shadcn-card">
-        <div class="card-header-shadcn">
-            <h3><i class="bi bi-file-medical me-2"></i>Excusas Médicas Pendientes de Revisión</h3>
-            <span class="shadcn-badge badge-pendiente"><?= count($excusas ?? []) ?> pendientes</span>
-        </div>
-
-        <div class="shadcn-table-wrapper">
-            <table class="shadcn-table">
-                <thead>
-                    <tr>
-                        <th>Aprendiz</th>
-                        <th>Documento</th>
-                        <th>Ficha</th>
-                        <th>Motivo</th>
-                        <th>Período</th>
-                        <th>Adjunto</th>
-                        <th>Acciones</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php if (empty($excusas)): ?>
-                    <tr>
-                        <td colspan="7" style="text-align:center; padding: 2.5rem; color:var(--muted-foreground);">
-                            <i class="bi bi-check-circle fs-3 d-block mb-1" style="color:#16a34a;"></i>
-                            No hay excusas médicas pendientes de aprobación.
-                        </td>
-                    </tr>
-                    <?php else: ?>
-                    <?php foreach ($excusas as $e): ?>
-                    <tr>
-                        <td style="font-weight:600;"><?= htmlspecialchars($e['aprendiz']) ?></td>
-                        <td><?= htmlspecialchars($e['documento']) ?></td>
-                        <td><span class="shadcn-badge badge-secondary"><?= htmlspecialchars($e['numero_ficha'] ?? '—') ?></span></td>
-                        <td><?= htmlspecialchars($e['motivo']) ?></td>
-                        <td><?= htmlspecialchars($e['fecha_inicio']) ?> → <?= htmlspecialchars($e['fecha_fin']) ?></td>
-                        <td>
-                            <?php if ($e['archivo']): ?>
-                            <a href="public/uploads/excusas/<?= htmlspecialchars($e['archivo']) ?>" target="_blank" class="btn-shadcn btn-shadcn-outline" style="padding:0.2rem 0.5rem; font-size:0.75rem;">
-                                <i class="bi bi-paperclip"></i> Ver Documento
-                            </a>
-                            <?php else: ?>—<?php endif; ?>
-                        </td>
-                        <td>
-                            <div style="display:flex; gap:0.375rem;">
-                                <a href="index.php?action=excusa-aprobar&id=<?= $e['id'] ?>" class="btn-shadcn btn-shadcn-primary" style="padding:0.25rem 0.5rem; font-size:0.75rem;" title="Aprobar" onclick="return confirm('¿Aprobar esta excusa médica?')">
-                                    <i class="bi bi-check-lg"></i> Aprobar
-                                </a>
-                                <a href="index.php?action=excusa-rechazar&id=<?= $e['id'] ?>" class="btn-shadcn btn-shadcn-danger" style="padding:0.25rem 0.5rem; font-size:0.75rem;" title="Rechazar" onclick="return confirm('¿Rechazar esta excusa?')">
-                                    <i class="bi bi-x-lg"></i> Rechazar
-                                </a>
-                            </div>
-                        </td>
-                    </tr>
-                    <?php endforeach; ?>
-                    <?php endif; ?>
-                </tbody>
-            </table>
-        </div>
-    </div>
+   
 
 </div>
 
