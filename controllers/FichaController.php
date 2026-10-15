@@ -299,6 +299,7 @@ class FichaController {
             }
 
             $rutaArchivo = '';
+            $anioArchivo = null; // año tomado del nombre ORIGINAL del archivo (p. ej. ..._OCTUBRE_2026_...)
 
             if ($esEjemplo) {
                 $rutaArchivo = __DIR__ . '/../public/uploads/horario/horario-ejemplo.xlsx';
@@ -320,6 +321,9 @@ class FichaController {
                 if (!is_dir($dirUploads)) {
                     mkdir($dirUploads, 0777, true);
                 }
+                if (preg_match('/(?<!\d)(20[2-9][0-9])(?!\d)/', $_FILES['archivo_excel']['name'], $mAnio)) {
+                    $anioArchivo = (int)$mAnio[1];
+                }
                 $nombreArchivo = 'horario_' . $idFicha . '_' . time() . '.xlsx';
                 $rutaArchivo = $dirUploads . $nombreArchivo;
                 move_uploaded_file($_FILES['archivo_excel']['tmp_name'], $rutaArchivo);
@@ -335,7 +339,7 @@ class FichaController {
                 return;
             }
 
-            $resultado = HorarioModel::importarHorarioExcel($rutaArchivo, $idFicha);
+            $resultado = HorarioModel::importarHorarioExcel($rutaArchivo, $idFicha, $anioArchivo);
 
             if ($esAjax) {
                 header('Content-Type: application/json; charset=utf-8');

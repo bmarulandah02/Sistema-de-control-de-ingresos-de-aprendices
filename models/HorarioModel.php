@@ -988,7 +988,7 @@ public function obtenerHorarioFicha($identificadorFicha, $fechaActual)
     /**
      * Parsea un archivo Excel de horarios (.xlsx) utilizando ZipArchive y SimpleXML nativos
      */
-    public static function parsearExcelHorario(string $filePath): array {
+    public static function parsearExcelHorario(string $filePath, ?int $anioForzado = null): array {
         if (!file_exists($filePath)) {
             return ['exito' => false, 'mensaje' => 'El archivo Excel no existe en la ruta especificada.'];
         }
@@ -1086,20 +1086,48 @@ public function obtenerHorarioFicha($identificadorFicha, $fechaActual)
         $instructores = [];
         $maxRow = max(array_keys($sheetRows));
 
-        // Detección dinámica del año (del nombre del archivo o del contenido de la hoja)
-        $detectedYear = (int)date('Y');
-        if (preg_match('/20[2-9][0-9]/', basename($filePath), $mY)) {
-            $detectedYear = (int)$mY[0];
-        } else {
-            for ($yr = 1; $yr <= min(15, $maxRow); $yr++) {
+        // Detección del año del horario.
+        // Prioridad: 1) año indicado por el controlador (nombre ORIGINAL del archivo subido),
+        //            2) nombre del archivo (solo si no es un nombre generado con timestamp),
+        //            3) contenido de la hoja (texto o fechas seriales de Excel),
+        //            4) año actual.
+        // IMPORTANTE: el archivo se guarda como horario_{ficha}_{time()}.xlsx; el timestamp
+        // (p. ej. 1792065871) contiene "2065" y antes se leía como si fuera el año.
+        $anioMin = (int)date('Y') - 2;
+        $anioMax = (int)date('Y') + 2;
+        $anioValido = function ($y) use ($anioMin, $anioMax) {
+            $y = (int)$y;
+            return ($y >= $anioMin && $y <= $anioMax) ? $y : null;
+        };
+
+        $detectedYear = null;
+        if ($anioForzado !== null) {
+            $detectedYear = $anioValido($anioForzado);
+        }
+
+        $nombreArchivo = basename($filePath);
+        $esNombreConTimestamp = (bool)preg_match('/^horario_\d+_\d{9,}\.xlsx$/i', $nombreArchivo);
+        if ($detectedYear === null && !$esNombreConTimestamp
+            && preg_match('/(?<!\d)(20[2-9][0-9])(?!\d)/', $nombreArchivo, $mY)) {
+            $detectedYear = $anioValido($mY[1]);
+        }
+
+        if ($detectedYear === null) {
+            for ($yr = 1; $yr <= min(15, $maxRow) && $detectedYear === null; $yr++) {
                 if (!isset($sheetRows[$yr])) continue;
                 foreach ($sheetRows[$yr] as $cVal) {
-                    if (preg_match('/20[2-9][0-9]/', $cVal, $mY)) {
-                        $detectedYear = (int)$mY[0];
-                        break 2;
+                    if (is_numeric($cVal) && (float)$cVal > 35000) {
+                        $detectedYear = $anioValido(date('Y', (int)(((float)$cVal - 25569) * 86400)));
+                    } elseif (preg_match('/(?<!\d)(20[2-9][0-9])(?!\d)/', (string)$cVal, $mY)) {
+                        $detectedYear = $anioValido($mY[1]);
                     }
+                    if ($detectedYear !== null) break;
                 }
             }
+        }
+
+        if ($detectedYear === null) {
+            $detectedYear = (int)date('Y');
         }
 
         for ($r = 1; $r <= $maxRow; $r++) {
@@ -1193,7 +1221,7 @@ public function obtenerHorarioFicha($identificadorFicha, $fechaActual)
     /**
      * Importa completamente el horario desde un archivo Excel para la ficha especificada
      */
-    public static function importarHorarioExcel(string $filePath, int $idFicha): array {
+    public static function importarHorarioExcel(string $filePath, int $idFicha, ?int $anioForzado = null): array {
         $resultado = [
             'exito' => false,
             'mensaje' => '',
@@ -1227,7 +1255,7 @@ public function obtenerHorarioFicha($identificadorFicha, $fechaActual)
             }
             $resultado['ficha'] = $fichaData;
 
-            $parseResult = self::parsearExcelHorario($filePath);
+            $parseResult = self::parsearExcelHorario($filePath, $anioForzado);
             if (!$parseResult['exito']) {
                 $resultado['mensaje'] = $parseResult['mensaje'];
                 return $resultado;
