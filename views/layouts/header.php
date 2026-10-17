@@ -11,6 +11,9 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <!-- SweetAlert2 -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <!-- Centro de alertas del sistema (switchAlert) -->
+    <?php $alertasVersion = file_exists(__DIR__ . '/../../public/js/alertas.js') ? filemtime(__DIR__ . '/../../public/js/alertas.js') : time(); ?>
+    <script src="public/js/alertas.js?v=<?= $alertasVersion ?>"></script>
     <!-- CSS Shadcn Admin -->
     <?php $stylesVersion = file_exists(__DIR__ . '/../../public/css/styles.css') ? filemtime(__DIR__ . '/../../public/css/styles.css') : time(); ?>
     <link href="public/css/styles.css?v=<?= $stylesVersion ?>" rel="stylesheet">

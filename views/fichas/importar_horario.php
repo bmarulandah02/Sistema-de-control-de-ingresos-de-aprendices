@@ -206,15 +206,20 @@ $bloquesFichaActual = ($idFichaDefault > 0) ? HorarioModel::contarBloquesHorario
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.25rem;">
         <div>
             <h3 style="font-size:1.25rem; font-weight:700; margin:0; display:flex; align-items:center; gap:0.5rem; color:var(--foreground);">
-                <span class="spinner-border spinner-border-sm text-success" role="status" style="width:1.25rem; height:1.25rem; border-width:2px; display:inline-block; border-radius:50%; border-top-color:#059669; animation:spin 0.8s linear infinite;"></span>
-                Simulación del Escáner en Tiempo Real
+                <span id="simulacionSpinner" class="spinner-border spinner-border-sm text-success" role="status" style="width:1.25rem; height:1.25rem; border-width:2px; display:inline-block; border-radius:50%; border-top-color:#059669; animation:spin 0.8s linear infinite;"></span>
+                <span id="simulacionTitulo">Simulación del Escáner en Tiempo Real</span>
             </h3>
-            <div style="font-size:0.875rem; color:var(--muted-foreground); margin-top:0.25rem;">
+            <div id="simulacionSubtitulo" style="font-size:0.875rem; color:var(--muted-foreground); margin-top:0.25rem;">
                 Procesando el archivo Excel e interactuando con la base de datos MySQL en vivo...
             </div>
         </div>
-        <div id="simulacionPorcentaje" style="font-size:1.5rem; font-weight:800; color:#059669; font-family:monospace;">
-            0%
+        <div style="display:flex; align-items:center; gap:0.75rem;">
+            <button type="button" id="btnCerrarSimulacion" class="btn-shadcn btn-shadcn-outline" style="display:none;" onclick="cerrarSimulacion()">
+                <i class="bi bi-x-lg me-1"></i>Cerrar
+            </button>
+            <div id="simulacionPorcentaje" style="font-size:1.5rem; font-weight:800; color:#059669; font-family:monospace;">
+                0%
+            </div>
         </div>
     </div>
 
@@ -411,11 +416,7 @@ function handleFileSelect(input) {
 
 function setArchivo(file) {
     if (!file.name.toLowerCase().endsWith('.xlsx')) {
-        Swal.fire({
-            icon: 'error',
-            title: 'Formato no válido',
-            text: 'Solo se admiten archivos en formato Excel (.xlsx).'
-        });
+        switchAlert('formato_invalido_xlsx');
         return;
     }
     archivoSeleccionado = file;
@@ -436,20 +437,51 @@ function removerArchivoSeleccionado(e) {
     document.getElementById('btnSubirPersonalizado').classList.remove('btn-shadcn-primary');
 }
 
+// Elementos del panel de progreso (los usa alertas.js para pintar todo en rojo)
+function elementosProgreso() {
+    return {
+        panel: document.getElementById('panelSimulacion'),
+        barra: document.getElementById('progressBar'),
+        porcentaje: document.getElementById('simulacionPorcentaje'),
+        pasos: Array.from(document.querySelectorAll('#contenedorPasos .paso-item')),
+        spinner: document.getElementById('simulacionSpinner'),
+        titulo: document.getElementById('simulacionTitulo'),
+        subtitulo: document.getElementById('simulacionSubtitulo'),
+        botonCerrar: document.getElementById('btnCerrarSimulacion'),
+        textoTituloOriginal: 'Simulación del Escáner en Tiempo Real',
+        textoSubtituloOriginal: 'Procesando el archivo Excel e interactuando con la base de datos MySQL en vivo...'
+    };
+}
+
+function cerrarSimulacion() {
+    document.getElementById('panelSimulacion').style.display = 'none';
+}
+
+const pausa = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+function rehabilitarBotones() {
+    const btnEj = document.getElementById('btnEscanearEjemplo');
+    if (btnEj) btnEj.disabled = false;
+    document.getElementById('btnSubirPersonalizado').disabled = !archivoSeleccionado;
+}
+
 async function iniciarEscaneo(esEjemplo) {
+    // ── 1. Validaciones previas ──────────────────────────────────────
     const idFicha = document.getElementById('selectFichaDestino').value;
     if (!idFicha) {
-        Swal.fire('Atención', 'Selecciona una ficha de formación válida.', 'warning');
+        switchAlert('ficha_no_seleccionada');
         return;
     }
 
     if (!esEjemplo && !archivoSeleccionado) {
-        Swal.fire('Atención', 'Selecciona un archivo Excel (.xlsx) para cargar.', 'warning');
+        switchAlert('archivo_no_seleccionado');
         return;
     }
 
+    // ── 2. Preparar el panel (siempre arranca en verde y en 0%) ──────
     document.getElementById('panelResultados').style.display = 'none';
     const panelSim = document.getElementById('panelSimulacion');
+    reiniciarProgreso(elementosProgreso());
     panelSim.style.display = 'block';
     panelSim.scrollIntoView({ behavior: 'smooth' });
 
@@ -459,14 +491,6 @@ async function iniciarEscaneo(esEjemplo) {
 
     const progressBar = document.getElementById('progressBar');
     const porcentajeText = document.getElementById('simulacionPorcentaje');
-    progressBar.style.width = '0%';
-    porcentajeText.textContent = '0%';
-
-    for (let i = 1; i <= 6; i++) {
-        const p = document.getElementById('paso-' + i);
-        p.className = 'paso-item';
-        p.querySelector('i').className = 'bi bi-circle text-muted';
-    }
 
     const activarPaso = (num, pct) => {
         return new Promise(resolve => {
@@ -488,6 +512,7 @@ async function iniciarEscaneo(esEjemplo) {
         p.querySelector('i').className = 'bi bi-check-circle-fill text-success';
     };
 
+    // ── 3. Pasos iniciales (animación) ───────────────────────────────
     await activarPaso(1, 15);
     completarPaso(1);
 
@@ -496,6 +521,7 @@ async function iniciarEscaneo(esEjemplo) {
 
     await activarPaso(3, 55);
 
+    // ── 4. Enviar el archivo al servidor y ESPERAR su respuesta real ─
     const formData = new FormData();
     formData.append('ficha_id', idFicha);
     formData.append('ajax', '1');
@@ -506,87 +532,66 @@ async function iniciarEscaneo(esEjemplo) {
         formData.append('archivo_excel', archivoSeleccionado);
     }
 
+    let data;
     try {
         const response = await fetch('index.php?action=ficha-horario-importar', {
             method: 'POST',
             body: formData,
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest'
-            }
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
         });
-
-        const data = await response.json();
-
-        completarPaso(3);
-        await activarPaso(4, 75);
-        completarPaso(4);
-
-        await activarPaso(5, 90);
-        completarPaso(5);
-
-        await activarPaso(6, 100);
-        completarPaso(6);
-
-        setTimeout(() => {
-            if (data.exito) {
-                mostrarResultados(data, idFicha);
-            } else {
-                panelSim.style.display = 'none';
-                if (data.horario_existente) {
-                    if (data.es_admin) {
-                        Swal.fire({
-                            icon: 'warning',
-                            title: 'Horario Ya Registrado',
-                            html: `<div style="text-align:left; font-size:0.9rem; line-height:1.5;">
-                                <p>La <strong>Ficha ${data.ficha_id}</strong> ya tiene un horario vinculado con <strong>${data.bloques_existentes || 0}</strong> bloques de clase.</p>
-                                <p style="color:#dc2626; font-weight:600;">Para evitar duplicidades o sobreescritura accidental, no es posible subir otro horario encima.</p>
-                                <p>Como <strong>Administrador</strong>, si subiste el archivo por equivocación a la ficha equivocada o necesitas actualizarlo, puedes eliminar el horario actual para permitir la nueva subida.</p>
-                            </div>`,
-                            showCancelButton: true,
-                            confirmButtonText: '<i class="bi bi-trash3 me-1"></i>Eliminar Horario Anterior',
-                            cancelButtonText: 'Cancelar',
-                            confirmButtonColor: '#dc2626',
-                            cancelButtonColor: '#64748b'
-                        }).then((result) => {
-                            if (result.isConfirmed) {
-                                ejecutarEliminacionHorario(data.ficha_id);
-                            }
-                        });
-                    } else {
-                        Swal.fire({
-                            icon: 'error',
-                            title: 'Horario Ya Vinculado',
-                            html: `<div style="text-align:left; font-size:0.9rem; line-height:1.5;">
-                                <p>La <strong>Ficha ${data.ficha_id}</strong> ya cuenta con un horario registrado con <strong>${data.bloques_existentes || 0}</strong> bloques de clase.</p>
-                                <p style="color:#d97706; font-weight:600;">Para evitar molestias o sobreescrituras, el sistema no permite subir otro horario sobre esta ficha.</p>
-                                <p>En caso de haberse subido un horario a la ficha equivocada, únicamente el <strong>Administrador</strong> tiene la potestad de eliminarlo.</p>
-                            </div>`
-                        });
-                    }
-                } else {
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Error en el Escáner',
-                        text: data.mensaje || 'Ocurrió un error al procesar el archivo.'
-                    });
-                }
-            }
-            const btnEj = document.getElementById('btnEscanearEjemplo');
-            if (btnEj) btnEj.disabled = false;
-            document.getElementById('btnSubirPersonalizado').disabled = !archivoSeleccionado;
-        }, 500);
-
+        data = await response.json();
     } catch (err) {
+        // Falló la red o el servidor no devolvió JSON -> todo en rojo
         console.error(err);
-        Swal.fire({
-            icon: 'error',
-            title: 'Error de Comunicación',
-            text: 'No se pudo conectar con el servidor para procesar el horario.'
-        });
-        const btnEj = document.getElementById('btnEscanearEjemplo');
-        if (btnEj) btnEj.disabled = false;
-        document.getElementById('btnSubirPersonalizado').disabled = !archivoSeleccionado;
+        marcarProgresoRechazado(Object.assign(elementosProgreso(), {
+            textoTitulo: 'No se pudo completar el proceso',
+            textoSubtitulo: 'Error de comunicación con el servidor. No se insertó ningún dato.'
+        }));
+        rehabilitarBotones();
+        await pausa(700);
+        switchAlert('error_comunicacion', { mensaje: 'No se pudo conectar con el servidor para procesar el horario.' });
+        return;
     }
+
+    // ── 5. Horario RECHAZADO por el servidor -> todo en rojo ─────────
+    if (!data.exito) {
+        marcarProgresoRechazado(Object.assign(elementosProgreso(), {
+            textoTitulo: data.horario_existente ? 'Horario rechazado' : 'El escáner rechazó el archivo',
+            textoSubtitulo: data.horario_existente
+                ? 'Esta ficha ya tiene un horario vinculado. No se insertó ningún dato.'
+                : (data.mensaje || 'No se insertó ningún dato.')
+        }));
+        rehabilitarBotones();
+        await pausa(700); // deja ver la barra roja antes de la alerta
+
+        if (data.horario_existente) {
+            const res = await switchAlert(
+                data.es_admin ? 'horario_existente_admin' : 'horario_existente_instructor',
+                { ficha: data.ficha_id, bloques: data.bloques_existentes }
+            );
+            if (data.es_admin && res.isConfirmed) {
+                ejecutarEliminacionHorario(data.ficha_id);
+            }
+        } else {
+            switchAlert('error_escaner', { mensaje: data.mensaje });
+        }
+        return;
+    }
+
+    // ── 6. Horario ACEPTADO -> se completan los pasos restantes ──────
+    completarPaso(3);
+    await activarPaso(4, 75);
+    completarPaso(4);
+
+    await activarPaso(5, 90);
+    completarPaso(5);
+
+    await activarPaso(6, 100);
+    completarPaso(6);
+
+    await pausa(500);
+    mostrarResultados(data, idFicha);
+    rehabilitarBotones();
 }
 
 function mostrarResultados(data, idFicha) {
@@ -678,12 +683,10 @@ function mostrarResultados(data, idFicha) {
         listaMaterias.appendChild(badge);
     });
 
-    Swal.fire({
-        icon: 'success',
-        title: '¡Horario Importado!',
-        html: `Se registraron <strong>${data.total_bloques_insertados}</strong> bloques y <strong>${cantNuevos}</strong> instructores nuevos con clave <code>12345</code> en la ficha <strong>${idFicha}</strong>.`,
-        confirmButtonColor: '#059669',
-        confirmButtonText: 'Ver Horario en Vivo'
+    switchAlert('horario_importado', {
+        bloques: data.total_bloques_insertados,
+        nuevos: cantNuevos,
+        ficha: idFicha
     }).then(res => {
         if (res.isConfirmed) {
             window.location.href = 'index.php?action=ficha-horario&id=' + idFicha;
@@ -694,14 +697,7 @@ function mostrarResultados(data, idFicha) {
 function copiarCredenciales(correo, clave) {
     const texto = `Usuario: ${correo}\nContraseña: ${clave}`;
     navigator.clipboard.writeText(texto).then(() => {
-        Swal.fire({
-            toast: true,
-            position: 'top-end',
-            icon: 'success',
-            title: 'Credenciales copiadas al portapapeles',
-            showConfirmButton: false,
-            timer: 2000
-        });
+        switchAlert('credenciales_copiadas');
     });
 }
 
@@ -711,16 +707,7 @@ function reiniciarEscaneo() {
 }
 
 function confirmarEliminarHorario(idFicha, numFicha) {
-    Swal.fire({
-        title: '¿Eliminar horario completo?',
-        html: `Esta acción eliminará todos los bloques de horario registrados para la <strong>Ficha ${numFicha || idFicha}</strong>.<br><br>Permitirá cargar un horario nuevo en caso de haber subido el archivo a la ficha equivocada.<br><br><span style="color:#dc2626; font-weight:600;">Acción exclusiva para el Administrador.</span>`,
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonColor: '#dc2626',
-        cancelButtonColor: '#64748b',
-        confirmButtonText: '<i class="bi bi-trash3 me-1"></i>Sí, eliminar horario',
-        cancelButtonText: 'Cancelar'
-    }).then((result) => {
+    switchAlert('eliminar_horario', { ficha: numFicha || idFicha }).then((result) => {
         if (result.isConfirmed) {
             ejecutarEliminacionHorario(idFicha);
         }
@@ -728,12 +715,7 @@ function confirmarEliminarHorario(idFicha, numFicha) {
 }
 
 function ejecutarEliminacionHorario(idFicha) {
-    Swal.fire({
-        title: 'Eliminando horario...',
-        text: 'Por favor espera mientras se limpian los bloques.',
-        allowOutsideClick: false,
-        didOpen: () => { Swal.showLoading(); }
-    });
+    switchAlert('eliminando_horario');
 
     const formData = new FormData();
     formData.append('ficha_id', idFicha);
@@ -747,29 +729,16 @@ function ejecutarEliminacionHorario(idFicha) {
     .then(r => r.json())
     .then(data => {
         if (data.exito) {
-            Swal.fire({
-                icon: 'success',
-                title: 'Horario Eliminado',
-                text: data.mensaje || 'Se eliminó el horario de la ficha correctamente.',
-                confirmButtonColor: '#059669'
-            }).then(() => {
+            switchAlert('horario_eliminado', { mensaje: data.mensaje }).then(() => {
                 window.location.href = 'index.php?action=ficha-horario-importar&ficha_id=' + idFicha;
             });
         } else {
-            Swal.fire({
-                icon: 'error',
-                title: 'No se pudo eliminar',
-                text: data.mensaje || 'Error al intentar eliminar el horario.'
-            });
+            switchAlert('error_eliminar_horario', { mensaje: data.mensaje });
         }
     })
     .catch(err => {
         console.error(err);
-        Swal.fire({
-            icon: 'error',
-            title: 'Error de Comunicación',
-            text: 'Ocurrió un error al comunicarse con el servidor.'
-        });
+        switchAlert('error_comunicacion', { mensaje: 'Ocurrió un error al comunicarse con el servidor.' });
     });
 }
 </script>

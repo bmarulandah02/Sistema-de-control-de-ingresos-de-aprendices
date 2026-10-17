@@ -575,3 +575,28 @@ body {
         display: flex;
     }
 }
+
+/* ═══════════════════════════════════════════════════════════
+   Barra de progreso en estado RECHAZADO (todo en rojo)
+   Se activa desde alertas.js -> marcarProgresoRechazado()
+   ═══════════════════════════════════════════════════════════ */
+.panel-simulacion-error {
+    border-color: #ef4444 !important;
+    box-shadow: 0 10px 30px rgba(239, 68, 68, 0.15) !important;
+}
+.progreso-error-fill {
+    background: linear-gradient(90deg, #f87171, #dc2626) !important;
+}
+.paso-error {
+    background: rgba(239, 68, 68, 0.10) !important;
+    border: 1px solid rgba(239, 68, 68, 0.35) !important;
+    border-left: 3px solid #ef4444 !important;
+    color: #dc2626 !important;
+}
+.paso-error i {
+    color: #dc2626 !important;
+    animation: none !important;
+}
+.texto-error {
+    color: #dc2626 !important;
+}

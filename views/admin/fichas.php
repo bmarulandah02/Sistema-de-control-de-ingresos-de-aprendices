@@ -207,27 +207,13 @@ $fichas = $fichas ?? [];
 
 <script>
 function confirmarOcultarFicha(id, numero, totalAprendices) {
+    // Validación: no se puede ocultar si todavía tiene aprendices
     if (totalAprendices > 0) {
-        Swal.fire({
-            icon: 'warning',
-            title: 'No se puede ocultar la ficha',
-            html: `La ficha N° <strong>${numero}</strong> aún tiene <strong>${totalAprendices}</strong> aprendices registrados en el sistema.<br><br>Para mantener un registro seguro, las fichas con aprendices activos no pueden ser ocultadas.`,
-            confirmButtonColor: '#059669',
-            confirmButtonText: 'Entendido'
-        });
+        switchAlert('ficha_con_aprendices', { numero: numero, cantidad: totalAprendices });
         return;
     }
 
-    Swal.fire({
-        title: '¿Finalizar y Ocultar Ficha?',
-        text: `La ficha N° ${numero} pasará al apartado de "Fichas Finalizadas / Ocultas". Podrás consultar o reactivar su registro en cualquier momento.`,
-        icon: 'question',
-        showCancelButton: true,
-        confirmButtonColor: '#dc2626',
-        cancelButtonColor: '#64748b',
-        confirmButtonText: 'Sí, finalizar y ocultar',
-        cancelButtonText: 'Cancelar'
-    }).then((result) => {
+    switchAlert('ocultar_ficha', { numero: numero }).then((result) => {
         if (result.isConfirmed) {
             window.location.href = `index.php?action=ficha-eliminar&id=${id}`;
         }
@@ -235,64 +221,30 @@ function confirmarOcultarFicha(id, numero, totalAprendices) {
 }
 
 function confirmarReactivarFicha(id, numero) {
-    Swal.fire({
-        title: '¿Reactivar Ficha?',
-        text: `La ficha N° ${numero} volverá a estar activa en el sistema.`,
-        icon: 'info',
-        showCancelButton: true,
-        confirmButtonColor: '#059669',
-        cancelButtonColor: '#64748b',
-        confirmButtonText: 'Sí, reactivar',
-        cancelButtonText: 'Cancelar'
-    }).then((result) => {
+    switchAlert('reactivar_ficha', { numero: numero }).then((result) => {
         if (result.isConfirmed) {
             window.location.href = `index.php?action=ficha-reactivar&id=${id}`;
         }
     });
 }
 
+// Mensajes que llegan por la URL después de guardar / ocultar / reactivar
 document.addEventListener('DOMContentLoaded', () => {
     const urlParams = new URLSearchParams(window.location.search);
     const errorParam = urlParams.get('error');
     const okParam = urlParams.get('ok');
-    const cantParam = urlParams.get('cant');
-    const numParam = urlParams.get('num');
 
     if (errorParam === 'ficha_con_aprendices') {
-        Swal.fire({
-            icon: 'warning',
-            title: 'No se puede ocultar la ficha',
-            html: `La ficha N° <strong>${numParam || ''}</strong> aún tiene <strong>${cantParam || 'varios'}</strong> aprendices registrados.<br><br>Para mantener la trazabilidad e historial, no se puede ocultar mientras tenga aprendices vinculados.`,
-            confirmButtonColor: '#059669',
-            confirmButtonText: 'Entendido'
+        switchAlert('ficha_con_aprendices', {
+            numero: urlParams.get('num') || '',
+            cantidad: urlParams.get('cant')
         });
     } else if (okParam === 'finalizada') {
-        Swal.fire({
-            icon: 'success',
-            title: '¡Ficha Finalizada y Oculta!',
-            text: 'La ficha ha sido trasladada al apartado de Fichas Finalizadas.',
-            timer: 3000,
-            showConfirmButton: false,
-            timerProgressBar: true
-        });
+        switchAlert('ficha_finalizada');
     } else if (okParam === 'reactivada') {
-        Swal.fire({
-            icon: 'success',
-            title: '¡Ficha Reactivada!',
-            text: 'La ficha vuelve a estar disponible entre las fichas activas.',
-            timer: 3000,
-            showConfirmButton: false,
-            timerProgressBar: true
-        });
+        switchAlert('ficha_reactivada');
     } else if (okParam === '1') {
-        Swal.fire({
-            icon: 'success',
-            title: '¡Ficha Guardada!',
-            text: 'La información de la ficha de formación ha sido guardada con éxito.',
-            timer: 3000,
-            showConfirmButton: false,
-            timerProgressBar: true
-        });
+        switchAlert('ficha_guardada');
     }
 });
 </script>

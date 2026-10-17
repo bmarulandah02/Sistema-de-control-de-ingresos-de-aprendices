@@ -207,16 +207,7 @@ require __DIR__ . '/../../views/layouts/header.php';
 
 <script>
 function confirmarEliminarUsuario(id, nombre) {
-    Swal.fire({
-        title: '¿Eliminar usuario?',
-        text: `¿Estás seguro de eliminar a "${nombre}"? Esta acción no se puede deshacer.`,
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonColor: '#dc2626',
-        cancelButtonColor: '#64748b',
-        confirmButtonText: 'Sí, eliminar',
-        cancelButtonText: 'Cancelar'
-    }).then((result) => {
+    switchAlert('eliminar_usuario', { nombre: nombre }).then((result) => {
         if (result.isConfirmed) {
             window.location.href = `index.php?action=usuario-eliminar&id=${id}`;
         }
@@ -225,27 +216,13 @@ function confirmarEliminarUsuario(id, nombre) {
 
 <?php if (isset($_GET['success'])): ?>
 document.addEventListener('DOMContentLoaded', () => {
-    let msg = 'Operación realizada con éxito.';
-    let title = '¡Éxito!';
-    <?php if ($_GET['success'] === 'registrado'): ?>
-    msg = 'El usuario ha sido registrado correctamente en el sistema.';
-    title = '¡Usuario Creado!';
-    <?php elseif ($_GET['success'] === 'actualizado'): ?>
-    msg = 'Los datos del usuario han sido actualizados con éxito.';
-    title = '¡Usuario Actualizado!';
-    <?php elseif ($_GET['success'] === 'eliminado'): ?>
-    msg = 'El usuario ha sido eliminado correctamente.';
-    title = '¡Usuario Eliminado!';
-    <?php endif; ?>
-
-    Swal.fire({
-        icon: 'success',
-        title: title,
-        text: msg,
-        timer: 3000,
-        showConfirmButton: false,
-        timerProgressBar: true
-    });
+    // Traduce el parámetro ?success=... al caso del switchAlert
+    const casos = {
+        registrado: 'usuario_registrado',
+        actualizado: 'usuario_actualizado',
+        eliminado: 'usuario_eliminado'
+    };
+    switchAlert(casos[<?= json_encode($_GET['success']) ?>] || 'operacion_exitosa');
 });
 <?php endif; ?>
 </script>

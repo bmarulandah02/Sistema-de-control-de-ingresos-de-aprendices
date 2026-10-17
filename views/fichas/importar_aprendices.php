@@ -258,15 +258,20 @@ $esAdmin = ($rolSesion === 'Administrador');
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.25rem;">
         <div>
             <h3 style="font-size:1.25rem; font-weight:700; margin:0; display:flex; align-items:center; gap:0.5rem; color:var(--foreground);">
-                <span class="spinner-border spinner-border-sm text-success" role="status" style="width:1.25rem; height:1.25rem; border-width:2px; display:inline-block; border-radius:50%; border-top-color:#059669; animation:spin 0.8s linear infinite;"></span>
-                Procesando Importación de Aprendices
+                <span id="simulacionSpinner" class="spinner-border spinner-border-sm text-success" role="status" style="width:1.25rem; height:1.25rem; border-width:2px; display:inline-block; border-radius:50%; border-top-color:#059669; animation:spin 0.8s linear infinite;"></span>
+                <span id="simulacionTitulo">Procesando Importación de Aprendices</span>
             </h3>
-            <div style="font-size:0.875rem; color:var(--muted-foreground); margin-top:0.25rem;">
+            <div id="simulacionSubtitulo" style="font-size:0.875rem; color:var(--muted-foreground); margin-top:0.25rem;">
                 Registrando perfiles de usuario, generando credenciales y actualizando la ficha en MySQL...
             </div>
         </div>
-        <div id="simulacionPorcentaje" style="font-size:1.5rem; font-weight:800; color:#059669; font-family:monospace;">
-            0%
+        <div style="display:flex; align-items:center; gap:0.75rem;">
+            <button type="button" id="btnCerrarSimulacion" class="btn-shadcn btn-shadcn-outline" style="display:none;" onclick="cerrarSimulacion()">
+                <i class="bi bi-x-lg me-1"></i>Cerrar
+            </button>
+            <div id="simulacionPorcentaje" style="font-size:1.5rem; font-weight:800; color:#059669; font-family:monospace;">
+                0%
+            </div>
         </div>
     </div>
 
@@ -447,11 +452,7 @@ function cancelarPrevisualizacion() {
 function procesarArchivoLocal(file) {
     const ext = file.name.split('.').pop().toLowerCase();
     if (!['xls', 'xlsx', 'csv'].includes(ext)) {
-        Swal.fire({
-            icon: 'error',
-            title: 'Formato no soportado',
-            text: 'Por favor selecciona un archivo con extensión .xls, .xlsx o .csv'
-        });
+        switchAlert('formato_invalido_aprendices');
         return;
     }
 
@@ -476,11 +477,7 @@ function procesarBufferExcel(buffer, nombreArchivo) {
         // Convertir hoja a JSON crudo (array de arrays) para ubicar fila de cabeceras
         const rawRows = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
         if (!rawRows || rawRows.length === 0) {
-            Swal.fire({
-                icon: 'warning',
-                title: 'Archivo Vacío',
-                text: 'El archivo Excel no contiene filas o datos legibles.'
-            });
+            switchAlert('archivo_vacio');
             return;
         }
 
@@ -610,11 +607,7 @@ function procesarBufferExcel(buffer, nombreArchivo) {
 
     } catch (err) {
         console.error(err);
-        Swal.fire({
-            icon: 'error',
-            title: 'Error al procesar Excel',
-            text: 'No se pudo leer la estructura del archivo. ' + err.message
-        });
+        switchAlert('error_leer_excel', { detalle: err.message });
     }
 }
 
@@ -702,30 +695,61 @@ function completarPaso(numero) {
     }
 }
 
+// Elementos del panel de progreso (los usa alertas.js para pintar todo en rojo)
+function elementosProgreso() {
+    return {
+        panel: document.getElementById('panelSimulacion'),
+        barra: document.getElementById('progressBar'),
+        porcentaje: document.getElementById('simulacionPorcentaje'),
+        pasos: Array.from(document.querySelectorAll('#contenedorPasos .paso-item')),
+        spinner: document.getElementById('simulacionSpinner'),
+        titulo: document.getElementById('simulacionTitulo'),
+        subtitulo: document.getElementById('simulacionSubtitulo'),
+        botonCerrar: document.getElementById('btnCerrarSimulacion'),
+        textoTituloOriginal: 'Procesando Importación de Aprendices',
+        textoSubtituloOriginal: 'Registrando perfiles de usuario, generando credenciales y actualizando la ficha en MySQL...'
+    };
+}
+
+// Quita los estilos en línea que dejó un intento anterior en los pasos
+function limpiarEstiloPasos() {
+    document.querySelectorAll('#contenedorPasos .paso-item').forEach(paso => {
+        paso.style.background = 'var(--muted)';
+        paso.style.borderLeft = '';
+        const icon = paso.querySelector('i');
+        if (icon) {
+            icon.style.color = '';
+            icon.style.animation = '';
+        }
+    });
+}
+
+// Cierra el panel rojo y vuelve a la previsualización para reintentar
+function cerrarSimulacion() {
+    document.getElementById('panelSimulacion').style.display = 'none';
+    document.getElementById('panelPrevisualizacion').style.display = 'block';
+}
+
+const pausa = ms => new Promise(resolve => setTimeout(resolve, ms));
+
 async function ejecutarImportacion() {
     const selectFicha = document.getElementById('selectFichaDestino');
     const idFicha = selectFicha ? parseInt(selectFicha.value) : 0;
     if (!idFicha || isNaN(idFicha)) {
-        Swal.fire({
-            icon: 'warning',
-            title: 'Ficha no seleccionada',
-            text: 'Por favor selecciona la ficha de formación en el menú desplegable antes de continuar.'
-        });
+        switchAlert('ficha_no_seleccionada');
         return;
     }
 
     if (!aprendicesDetectados || aprendicesDetectados.length === 0) {
-        Swal.fire({
-            icon: 'warning',
-            title: 'Sin datos',
-            text: 'No hay aprendices válidos para importar.'
-        });
+        switchAlert('sin_datos_importar');
         return;
     }
 
     // Ocultar previsualización y mostrar simulación en tiempo real
     document.getElementById('panelPrevisualizacion').style.display = 'none';
     const panelSim = document.getElementById('panelSimulacion');
+    limpiarEstiloPasos();
+    reiniciarProgreso(elementosProgreso());
     panelSim.style.display = 'block';
     panelSim.scrollIntoView({ behavior: 'smooth' });
 
@@ -738,6 +762,8 @@ async function ejecutarImportacion() {
 
     await activarPaso(3, 50);
 
+    // Enviar al servidor y ESPERAR su respuesta real
+    let data;
     try {
         const response = await fetch('index.php?action=ficha-aprendices-importar', {
             method: 'POST',
@@ -750,41 +776,43 @@ async function ejecutarImportacion() {
                 aprendices: aprendicesDetectados
             })
         });
-
-        const data = await response.json();
-
-        completarPaso(3);
-        await activarPaso(4, 70);
-        completarPaso(4);
-
-        await activarPaso(5, 88);
-        completarPaso(5);
-
-        await activarPaso(6, 100);
-        completarPaso(6);
-
-        setTimeout(() => {
-            if (data.exito) {
-                mostrarResultados(data, idFicha);
-            } else {
-                panelSim.style.display = 'none';
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Error al importar',
-                    text: data.mensaje || 'Ocurrió un error al procesar los aprendices.'
-                });
-            }
-        }, 500);
-
+        data = await response.json();
     } catch (err) {
+        // Falló la red o la respuesta no fue JSON -> todo en rojo
         console.error(err);
-        panelSim.style.display = 'none';
-        Swal.fire({
-            icon: 'error',
-            title: 'Error de Red / Comunicación',
-            text: 'No se pudo comunicar con el servidor para registrar los aprendices.'
-        });
+        marcarProgresoRechazado(Object.assign(elementosProgreso(), {
+            textoTitulo: 'No se pudo completar la importación',
+            textoSubtitulo: 'Error de comunicación con el servidor. No se registró ningún aprendiz.'
+        }));
+        await pausa(700);
+        switchAlert('error_comunicacion', { mensaje: 'No se pudo comunicar con el servidor para registrar los aprendices.' });
+        return;
     }
+
+    // Importación RECHAZADA por el servidor -> todo en rojo
+    if (!data.exito) {
+        marcarProgresoRechazado(Object.assign(elementosProgreso(), {
+            textoTitulo: 'Importación rechazada',
+            textoSubtitulo: data.mensaje || 'No se registró ningún aprendiz.'
+        }));
+        await pausa(700);
+        switchAlert('error_importar_aprendices', { mensaje: data.mensaje });
+        return;
+    }
+
+    // Importación ACEPTADA -> se completan los pasos restantes
+    completarPaso(3);
+    await activarPaso(4, 70);
+    completarPaso(4);
+
+    await activarPaso(5, 88);
+    completarPaso(5);
+
+    await activarPaso(6, 100);
+    completarPaso(6);
+
+    await pausa(500);
+    mostrarResultados(data, idFicha);
 }
 
 // ── MOSTRAR RESULTADOS TRAS EL REGISTRO ────────────────────────────────
@@ -843,20 +871,12 @@ function mostrarResultados(data, idFicha) {
         tbody.appendChild(tr);
     });
 
-    Swal.fire({
-        icon: 'success',
-        title: '¡Aprendices Registrados con Éxito!',
-        html: `<div style="text-align:left; font-size:0.9rem; line-height:1.5;">
-            <p>Se procesaron <strong>${data.total_procesados}</strong> registros en la <strong>Ficha ${idFicha}</strong>.</p>
-            <ul style="margin:0; padding-left:1.25rem;">
-                <li><strong>${data.nuevos_creados}</strong> perfiles nuevos creados con contraseña predeterminada <code>sena2025</code>.</li>
-                <li><strong>${data.existentes_omitidos}</strong> aprendices ya estaban vinculados (omitidos para evitar duplicados).</li>
-                <li><strong>${data.con_datos_null}</strong> registros tenían campos opcionales vacíos y se guardaron como <code>NULL</code>.</li>
-                <li>Tarjetas RFID configuradas en <code>NULL</code> para que el Administrador las asigne manualmente.</li>
-            </ul>
-        </div>`,
-        confirmButtonColor: '#059669',
-        confirmButtonText: '<i class="bi bi-people-fill me-1"></i>Ver Aprendices en la Ficha'
+    switchAlert('aprendices_importados', {
+        total: data.total_procesados,
+        ficha: idFicha,
+        nuevos: data.nuevos_creados,
+        existentes: data.existentes_omitidos,
+        nulls: data.con_datos_null
     }).then(res => {
         if (res.isConfirmed) {
             window.location.href = 'index.php?action=usuarios&ficha_id=' + idFicha;

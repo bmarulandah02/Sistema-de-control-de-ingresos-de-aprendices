@@ -466,12 +466,9 @@ document.addEventListener('keydown', (e) => {
 <?php if (!empty($mensaje)): ?>
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-    Swal.fire({
-        icon: <?= json_encode($mensaje['tipo'] ?? 'success') ?>,
-        title: <?= json_encode(($mensaje['tipo'] ?? '') === 'error' ? 'Error' : 'Operación Exitosa') ?>,
-        text: <?= json_encode($mensaje['texto'] ?? '') ?>,
-        timer: 4000,
-        timerProgressBar: true
+    switchAlert('mensaje_servidor', {
+        tipo: <?= json_encode($mensaje['tipo'] ?? 'success') ?>,
+        texto: <?= json_encode($mensaje['texto'] ?? '') ?>
     });
 });
 </script>

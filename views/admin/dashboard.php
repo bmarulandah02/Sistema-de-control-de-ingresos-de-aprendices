@@ -32,7 +32,7 @@ require __DIR__ . '/../layouts/header.php';
         </a>
         <!-- Botón para cerrar jornada: solo limpia los registros del instructor en sesión si es Instructor -->
          <a href="index.php?action=cerrar-jornada" class="btn-shadcn btn-shadcn-outline"
-           onclick="return confirm('¿Cerrar la jornada de hoy? Se limpiarán los registros de aprendices correspondientes a hoy.');">
+           onclick="return switchAlertLink(event, 'cerrar_jornada');">
             <i class="bi bi-moon-stars"></i>
             <span>Cerrar Jornada</span>
         </a>

@@ -70,8 +70,16 @@ document.addEventListener('DOMContentLoaded', () => {
     // ── Confirmación de eliminación ──────────────────────────────
     document.querySelectorAll('[data-confirm]').forEach(el => {
         el.addEventListener('click', e => {
-            const msg = el.dataset.confirm || '¿Estás seguro?';
-            if (!confirm(msg)) e.preventDefault();
+            // Se frena la acción y se pregunta con el switchAlert (alertas.js)
+            e.preventDefault();
+            switchAlert('confirmar_generico', { mensaje: el.dataset.confirm }).then(res => {
+                if (!res.isConfirmed) return;
+                if (el.tagName === 'A') {
+                    window.location.href = el.href;
+                } else if (el.form) {
+                    el.form.submit();
+                }
+            });
         });
     });
 

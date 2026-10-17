@@ -926,23 +926,9 @@ function escaparHtml(texto) {
 }
 
 function confirmarEliminarHorario(idFicha, numFicha) {
-    Swal.fire({
-        title: '¿Eliminar horario completo?',
-        html: `Esta acción eliminará todos los bloques de horario registrados para la <strong>Ficha ${numFicha || idFicha}</strong>.<br><br>Permitirá cargar un horario nuevo en caso de haber subido el archivo equivocado.<br><br><span style="color:#dc2626; font-weight:600;">Acción exclusiva para el Administrador.</span>`,
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonColor: '#dc2626',
-        cancelButtonColor: '#64748b',
-        confirmButtonText: '<i class="bi bi-trash3 me-1"></i>Sí, eliminar horario',
-        cancelButtonText: 'Cancelar'
-    }).then((result) => {
+    switchAlert('eliminar_horario', { ficha: numFicha || idFicha }).then((result) => {
         if (result.isConfirmed) {
-            Swal.fire({
-                title: 'Eliminando horario...',
-                text: 'Borrando bloques y asignaciones...',
-                allowOutsideClick: false,
-                didOpen: () => { Swal.showLoading(); }
-            });
+            switchAlert('eliminando_horario', { texto: 'Borrando bloques y asignaciones...' });
             window.location.href = 'index.php?action=ficha-horario-eliminar&ficha_id=' + idFicha;
         }
     });
