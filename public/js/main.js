@@ -31,6 +31,7 @@ document.addEventListener('DOMContentLoaded', () => {
             actualizarIconoTema(newTheme);
         });
     }
+    
 
     // ── 🔴 MENU SIDEBAR MOBILE TOGGLE ──────────────────────────────
     const sidebarToggle  = document.getElementById('sidebarToggle');

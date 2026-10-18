@@ -134,27 +134,26 @@
                 </div>
             </div>
 
-            <div class="topbar-right">
-                <!-- Botón de Modo Oscuro / Claro -->
-                <button type="button" class="btn-shadcn btn-shadcn-outline" id="themeToggleBtn" style="padding:0.4rem 0.6rem;" title="Cambiar tema">
-                    <i class="bi bi-moon-stars" id="themeIcon"></i>
-                </button>
+           <div class="topbar-right">
+    
+   
 
-                <!--  Muestra el nombre y rol del usuario conectado -->
-                <div class="d-flex align-items-center gap-2">
-                    <div class="user-avatar-badge">
-                        <?= strtoupper(substr($_SESSION['nombre'] ?? 'U', 0, 1)) ?>
-                    </div>
-                    <div class="d-none d-sm-block text-start">
-                        <div style="font-size:0.875rem; font-weight:600; line-height:1.2;">
-                            <?= htmlspecialchars($_SESSION['nombre'] ?? 'Usuario') ?>
-                        </div>
-                        <div style="font-size:0.75rem; color:var(--muted-foreground);">
-                            <?= htmlspecialchars($_SESSION['rol'] ?? 'Rol') ?>
-                        </div>
-                    </div>
-                </div>
-            </div>
+    <!-- Modo oscuro / claro -->
+    <button type="button" class="btn-shadcn btn-shadcn-outline topbar-icon-btn" id="themeToggleBtn" title="Cambiar tema">
+        <i class="bi bi-moon-stars" id="themeIcon"></i>
+    </button>
+
+    <!-- Usuario -->
+    <div class="user-pill">
+        <div class="user-avatar-badge">
+            <?= strtoupper(substr($_SESSION['nombre'] ?? 'U', 0, 1)) ?>
+        </div>
+        <div class="user-info">
+            <div class="user-name"><?= htmlspecialchars($_SESSION['nombre'] ?? 'Usuario') ?></div>
+            <div class="user-role"><?= htmlspecialchars($_SESSION['rol'] ?? 'Rol') ?></div>
+        </div>
+    </div>
+</div>
         </header>
 
         <!-- Main Content Area -->

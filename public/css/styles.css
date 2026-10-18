@@ -257,12 +257,50 @@ body {
 .topbar-right {
     display: flex;
     align-items: center;
-    gap: 1rem;
+    gap: 0.75rem;
 }
 
+/* A- A+ */
+.font-size-group {
+    display: flex;
+    gap: 0.25rem;
+}
+.font-size-btn {
+    min-width: 36px;
+    height: 36px;
+    padding: 0 0.5rem;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    background: var(--card);
+    color: var(--foreground);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+.font-size-btn:hover { background: var(--accent); }
+
+/* Botón de tema */
+.topbar-icon-btn {
+    width: 36px;
+    height: 36px;
+    padding: 0;
+}
+
+/* Píldora de usuario */
+.user-pill {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    padding: 0.25rem 0.875rem 0.25rem 0.25rem;
+    border: 1px solid var(--border);
+    border-radius: 9999px;
+    background: var(--card);
+}
 .user-avatar-badge {
     width: 32px;
     height: 32px;
+    flex-shrink: 0;
     border-radius: 9999px;
     background: var(--sena-brand-subtle);
     color: var(--sena-brand);
@@ -272,7 +310,18 @@ body {
     font-weight: 600;
     font-size: 0.875rem;
 }
+.user-info { text-align: left; line-height: 1.2; }
+.user-name { font-size: 0.875rem; font-weight: 600; white-space: nowrap; }
+.user-role { font-size: 0.75rem; color: var(--muted-foreground); }
 
+/* En celular, ocultar el texto y dejar solo el avatar */
+@media (max-width: 576px) {
+    .user-info { display: none; }
+    .user-pill { padding: 0.25rem; }
+    .topbar-right { gap: 0.5rem; }
+
+
+}
 /* Page Body */
 .page-container {
     padding: 1.75rem 1.5rem;
