@@ -59,23 +59,69 @@ class ReporteModel {
                 $stmtAprendices->execute($paramsAprendiz);
                 $aprendices = $stmtAprendices->fetchAll(PDO::FETCH_ASSOC);
 
-                // 2. Generar lista de días en el rango (excluyendo domingos)
-                $periodoFechas = [];
-                $cursor = new DateTime($fechaInicio);
-                $fin    = new DateTime($fechaFin);
-                while ($cursor <= $fin) {
-                    if ($cursor->format('N') != 7) {
-                        $periodoFechas[] = $cursor->format('Y-m-d');
-                    }
-                    $cursor->modify('+1 day');
+                // 2. Pre-cargar horario_bloque para las fichas evaluadas en el rango de fechas
+                $whereHb = ["hb.fecha BETWEEN :fInicio AND :fFin"];
+                $paramsHb = [
+                    ':fInicio' => $fechaInicio,
+                    ':fFin'    => $fechaFin
+                ];
+                if ($fichaId) {
+                    $whereHb[] = "hb.fk_ficha = :hb_ficha";
+                    $paramsHb[':hb_ficha'] = $fichaId;
                 }
+                if ($instructorId) {
+                    $whereHb[] = "hb.fk_usuario_instructor = :hb_instructor";
+                    $paramsHb[':hb_instructor'] = $instructorId;
+                }
+                $whereHbSql = implode(" AND ", $whereHb);
+
+                $sqlHb = "SELECT hb.fk_ficha, hb.fecha, hb.bloque, hb.materia, hb.hora_inicio, hb.hora_fin,
+                                 hb.fk_usuario_instructor,
+                                 CONCAT(u.nombre, ' ', u.apellido) AS nombre_instructor
+                          FROM horario_bloque hb
+                          LEFT JOIN usuario u ON hb.fk_usuario_instructor = u.id_usuario
+                          WHERE {$whereHbSql}
+                          ORDER BY hb.fecha ASC, hb.hora_inicio ASC, hb.bloque ASC";
+                $stmtHb = $conexion->prepare($sqlHb);
+                $stmtHb->execute($paramsHb);
+                $horarioPorFicha = [];
+                while ($b = $stmtHb->fetch(PDO::FETCH_ASSOC)) {
+                    $fId = (int)$b['fk_ficha'];
+                    $horarioPorFicha[$fId][$b['fecha']][] = $b;
+                }
+
+                $hoy = date('Y-m-d');
 
                 // 3. Para cada aprendiz, calcular ingresos, retardos e inasistencias
                 foreach ($aprendices as $app) {
                     $idAprendiz = (int)$app['id_aprendiz'];
+                    $idFichaApp = (int)($app['fk_ficha'] ?? 0);
+                    $bloquesFicha = $horarioPorFicha[$idFichaApp] ?? [];
+
+                    // Días evaluables para esta ficha/aprendiz
+                    $diasEvaluables = [];
+                    if (!empty($bloquesFicha)) {
+                        // Si la ficha tiene programación en horario_bloque, se evalúan exclusivamente los días con clase
+                        foreach (array_keys($bloquesFicha) as $fDia) {
+                            if ($fDia <= $hoy) {
+                                $diasEvaluables[] = $fDia;
+                            }
+                        }
+                        sort($diasEvaluables);
+                    } else {
+                        // Fallback para fichas sin horario cargado: días hábiles (lunes a sábado)
+                        $cursor = new DateTime($fechaInicio);
+                        $fin    = new DateTime(min($fechaFin, $hoy));
+                        while ($cursor <= $fin) {
+                            if ($cursor->format('N') != 7) {
+                                $diasEvaluables[] = $cursor->format('Y-m-d');
+                            }
+                            $cursor->modify('+1 day');
+                        }
+                    }
 
                     // Obtener todos los ingresos en el rango para este aprendiz
-                    $sqlIngresos = "SELECT i.fecha_registro, i.entrada, i.salida, i.estado_asistencia
+                    $sqlIngresos = "SELECT i.fecha_registro, i.entrada, i.salida, i.estado_asistencia, i.fk_usuario_instructor, i.bloque_horario
                                     FROM ingresos i
                                     WHERE i.fk_aprendiz = :idAprendiz 
                                       AND i.fecha_registro BETWEEN :fInicio AND :fFin";
@@ -91,6 +137,7 @@ class ReporteModel {
                     $stmtIng = $conexion->prepare($sqlIngresos);
                     $stmtIng->execute($paramsIng);
                     $ingresosMap = [];
+                    $ingresosPorFecha = [];
                     $minutosRetardoTotal = 0;
                     $conteoPuntuales = 0;
                     $conteoRetardos = 0;
@@ -98,6 +145,7 @@ class ReporteModel {
                     while ($ing = $stmtIng->fetch(PDO::FETCH_ASSOC)) {
                         $fechaReg = $ing['fecha_registro'];
                         $ingresosMap[$fechaReg] = $ing;
+                        $ingresosPorFecha[$fechaReg][] = $ing;
 
                         $estadoStr = $ing['estado_asistencia'] ?? '';
 
@@ -130,18 +178,7 @@ class ReporteModel {
 
                     // Identificar inasistencias en los días transcurridos
                     $diasFaltados = [];
-                    foreach ($periodoFechas as $fDia) {
-                        if ($fDia > date('Y-m-d')) {
-                            continue;
-                        }
-
-                        $filaDelDia = $ingresosMap[$fDia] ?? null;
-                        $asistio = ($filaDelDia !== null && ($filaDelDia['estado_asistencia'] === 'Puntual' || str_contains($filaDelDia['estado_asistencia'], 'Retardo')));
-
-                        if ($asistio) {
-                            continue;
-                        }
-
+                    foreach ($diasEvaluables as $fDia) {
                         // Verificar si existe una excusa APROBADA para este día
                         $diaExcusado = false;
                         foreach ($excusasAprobadas as $excA) {
@@ -152,11 +189,42 @@ class ReporteModel {
                         }
 
                         // Si la excusa fue aprobada, la inasistencia desaparece del listado de faltas
-                        if (!$diaExcusado) {
-                            $diasFaltados[] = [
-                                'fecha'      => $fDia,
-                                'instructor' => !empty(trim($app['instructor_encargado'])) ? $app['instructor_encargado'] : 'Sin asignar'
-                            ];
+                        if ($diaExcusado) {
+                            continue;
+                        }
+
+                        $bloquesDelDia = $bloquesFicha[$fDia] ?? [];
+                        $ingresosDelDia = $ingresosPorFecha[$fDia] ?? [];
+
+                        if (!empty($bloquesDelDia)) {
+                            $bloquesFaltados = [];
+                            foreach ($bloquesDelDia as $blq) {
+                                if (!self::verificoAsistenciaBloque($blq, $ingresosDelDia)) {
+                                    $bloquesFaltados[] = $blq;
+                                }
+                            }
+
+                            if (!empty($bloquesFaltados)) {
+                                $instructorTexto = self::resolverInstructorFaltas(
+                                    $bloquesFaltados,
+                                    $bloquesDelDia,
+                                    $app['instructor_encargado'] ?? ''
+                                );
+                                $diasFaltados[] = [
+                                    'fecha'      => $fDia,
+                                    'instructor' => $instructorTexto
+                                ];
+                            }
+                        } else {
+                            $filaDelDia = $ingresosMap[$fDia] ?? null;
+                            $asistio = ($filaDelDia !== null && ($filaDelDia['estado_asistencia'] === 'Puntual' || str_contains($filaDelDia['estado_asistencia'], 'Retardo')));
+
+                            if (!$asistio) {
+                                $diasFaltados[] = [
+                                    'fecha'      => $fDia,
+                                    'instructor' => !empty(trim($app['instructor_encargado'] ?? '')) ? $app['instructor_encargado'] : 'Sin asignar'
+                                ];
+                            }
                         }
                     }
 
@@ -244,20 +312,51 @@ class ReporteModel {
                     'estado'        => $app['estado_aprendiz'] ?? 'Activo'
                 ];
 
-                // 2. Generar días hábiles (Lunes a Sábado) en el rango evaluado
-                $diasHabiles = [];
-                $cursor = new DateTime($fechaInicio);
-                $fin = new DateTime($fechaFin);
-                while ($cursor <= $fin) {
-                    if ($cursor->format('N') != 7) { // Excluir Domingos
-                        $diasHabiles[] = $cursor->format('Y-m-d');
-                    }
-                    $cursor->modify('+1 day');
+                $idFichaApp = (int)($app['fk_ficha'] ?? 0);
+
+                // 2. Cargar horario de bloques para esta ficha en el mes
+                $stmtHbMes = $conexion->prepare("SELECT hb.fecha, hb.bloque, hb.materia, hb.hora_inicio, hb.hora_fin,
+                                                        hb.fk_usuario_instructor,
+                                                        CONCAT(u.nombre, ' ', u.apellido) AS nombre_instructor
+                                                 FROM horario_bloque hb
+                                                 LEFT JOIN usuario u ON hb.fk_usuario_instructor = u.id_usuario
+                                                 WHERE hb.fk_ficha = :ficha 
+                                                   AND hb.fecha BETWEEN :fInicio AND :fFinMes
+                                                 ORDER BY hb.fecha ASC, hb.hora_inicio ASC, hb.bloque ASC");
+                $stmtHbMes->execute([
+                    ':ficha'   => $idFichaApp,
+                    ':fInicio' => $fechaInicio,
+                    ':fFinMes' => $fechaFinMes
+                ]);
+                $bloquesMes = $stmtHbMes->fetchAll(PDO::FETCH_ASSOC) ?: [];
+                $horarioMesPorFecha = [];
+                foreach ($bloquesMes as $bm) {
+                    $horarioMesPorFecha[$bm['fecha']][] = $bm;
                 }
-                $resultado['total_dias_evaluados'] = count($diasHabiles);
+
+                // Generar días evaluados (de horario_bloque si existe, o días hábiles)
+                $diasEvaluados = [];
+                if (!empty($horarioMesPorFecha)) {
+                    foreach (array_keys($horarioMesPorFecha) as $fDia) {
+                        if ($fDia <= $fechaFin) {
+                            $diasEvaluados[] = $fDia;
+                        }
+                    }
+                    sort($diasEvaluados);
+                } else {
+                    $cursor = new DateTime($fechaInicio);
+                    $fin = new DateTime($fechaFin);
+                    while ($cursor <= $fin) {
+                        if ($cursor->format('N') != 7) {
+                            $diasEvaluados[] = $cursor->format('Y-m-d');
+                        }
+                        $cursor->modify('+1 day');
+                    }
+                }
+                $resultado['total_dias_evaluados'] = count($diasEvaluados);
 
                 // 3. Obtener asistencias registradas para este aprendiz en el mes
-                $sqlIngresos = "SELECT fecha_registro, estado_asistencia, entrada, salida
+                $sqlIngresos = "SELECT fecha_registro, estado_asistencia, entrada, salida, fk_usuario_instructor, bloque_horario
                                 FROM ingresos
                                 WHERE fk_aprendiz = :idAprendiz
                                   AND fecha_registro BETWEEN :fInicio AND :fFin";
@@ -268,8 +367,11 @@ class ReporteModel {
                     ':fFin'       => $fechaFin
                 ]);
                 $ingresosMap = [];
+                $ingresosPorFecha = [];
                 while ($ing = $stmtIng->fetch(PDO::FETCH_ASSOC)) {
-                    $ingresosMap[$ing['fecha_registro']] = $ing;
+                    $fReg = $ing['fecha_registro'];
+                    $ingresosMap[$fReg] = $ing;
+                    $ingresosPorFecha[$fReg][] = $ing;
                 }
 
                 // 4. Obtener excusas del aprendiz que cubran fechas de este mes (Aprobadas y Pendientes)
@@ -297,11 +399,37 @@ class ReporteModel {
                     'Sunday'    => 'Domingo'
                 ];
 
-                foreach ($diasHabiles as $dia) {
-                    $ingreso = $ingresosMap[$dia] ?? null;
-                    $asistio = ($ingreso !== null && ($ingreso['estado_asistencia'] === 'Puntual' || str_contains($ingreso['estado_asistencia'], 'Retardo')));
+                foreach ($diasEvaluados as $dia) {
+                    $bloquesDelDia = $horarioMesPorFecha[$dia] ?? [];
+                    $ingresosDelDia = $ingresosPorFecha[$dia] ?? [];
 
-                    if ($asistio) {
+                    $faltoDia = false;
+                    $instructorTexto = $resultado['aprendiz']['instructor'] ?? 'Sin asignar';
+
+                    if (!empty($bloquesDelDia)) {
+                        $bloquesFaltados = [];
+                        foreach ($bloquesDelDia as $blq) {
+                            if (!self::verificoAsistenciaBloque($blq, $ingresosDelDia)) {
+                                $bloquesFaltados[] = $blq;
+                            }
+                        }
+                        if (!empty($bloquesFaltados)) {
+                            $faltoDia = true;
+                            $instructorTexto = self::resolverInstructorFaltas(
+                                $bloquesFaltados,
+                                $bloquesDelDia,
+                                $resultado['aprendiz']['instructor'] ?? ''
+                            );
+                        }
+                    } else {
+                        $ingreso = $ingresosMap[$dia] ?? null;
+                        $asistio = ($ingreso !== null && ($ingreso['estado_asistencia'] === 'Puntual' || str_contains($ingreso['estado_asistencia'], 'Retardo')));
+                        if (!$asistio) {
+                            $faltoDia = true;
+                        }
+                    }
+
+                    if (!$faltoDia) {
                         continue;
                     }
 
@@ -334,7 +462,7 @@ class ReporteModel {
                         'tiene_excusa'  => ($excusaPendiente !== null),
                         'excusa_id'     => $excusaPendiente['id_excusa'] ?? null,
                         'motivo_excusa' => $excusaPendiente['observacion'] ?? null,
-                        'instructor'    => $resultado['aprendiz']['instructor']
+                        'instructor'    => $instructorTexto
                     ];
                 }
 
@@ -346,6 +474,69 @@ class ReporteModel {
         }
 
         return $resultado;
+    }
+
+    /**
+     * Resuelve el nombre del instructor o instructores asociados a los bloques faltados en una fecha
+     */
+    private static function resolverInstructorFaltas(array $bloquesFaltados, array $bloquesDelDia, string $instructorFallback): string {
+        if (empty($bloquesFaltados)) {
+            return $instructorFallback ?: 'Sin asignar';
+        }
+
+        $instFaltadosMap = [];
+        foreach ($bloquesFaltados as $fb) {
+            $nom = trim($fb['nombre_instructor'] ?? '');
+            if (!$nom) {
+                $nom = $instructorFallback ?: 'Sin asignar';
+            }
+            $nomBlqFormato = ucfirst($fb['bloque'] ?? '');
+            $nomBlqFormato = preg_replace('/bloque(\d+)/i', 'Bloque $1', $nomBlqFormato);
+            $instFaltadosMap[$nom][] = $nomBlqFormato ?: 'Bloque';
+        }
+
+        if (count($instFaltadosMap) === 1) {
+            $nombreSolo = array_key_first($instFaltadosMap);
+            // Si faltó a todos los bloques programados del día y es el mismo instructor, nombre directo
+            if (count($bloquesFaltados) === count($bloquesDelDia)) {
+                return $nombreSolo;
+            }
+            $bloquesStr = implode(', ', $instFaltadosMap[$nombreSolo]);
+            return $nombreSolo . " ({$bloquesStr})";
+        }
+
+        $partes = [];
+        foreach ($instFaltadosMap as $nom => $blqs) {
+            $partes[] = $nom . ' (' . implode(', ', $blqs) . ')';
+        }
+        return implode(' | Inst. ', $partes);
+    }
+
+    /**
+     * Determina si un aprendiz asistió a un bloque de horario específico basándose en los ingresos registrados
+     */
+    private static function verificoAsistenciaBloque(array $bloque, array $ingresosDelDia): bool {
+        $idInstBlq = (int)($bloque['fk_usuario_instructor'] ?? 0);
+        $nomBloque = strtolower(trim($bloque['bloque'] ?? ''));
+
+        foreach ($ingresosDelDia as $ing) {
+            $estado = $ing['estado_asistencia'] ?? '';
+            if ($estado === 'Puntual' || str_contains($estado, 'Retardo')) {
+                $ingInst = (int)($ing['fk_usuario_instructor'] ?? 0);
+                $ingBlq  = strtolower(trim($ing['bloque_horario'] ?? ''));
+
+                if ($ingInst > 0 && $idInstBlq > 0 && $ingInst === $idInstBlq) {
+                    return true;
+                }
+                if (!empty($ingBlq) && !empty($nomBloque) && (str_contains($ingBlq, $nomBloque) || $ingBlq === $nomBloque)) {
+                    return true;
+                }
+                if ($ingInst === 0 && empty($ingBlq)) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 }
 ?>

@@ -185,7 +185,7 @@ $mesesEspanol = [
                                 <?php foreach ($r['dias_faltados'] as $df): ?>
                                 <div style="margin-bottom:0.25rem;">
                                     <i class="bi bi-calendar-x text-danger me-1"></i>
-                                    <strong><?= htmlspecialchars($df['fecha']) ?></strong> — Inst. <?= htmlspecialchars($df['instructor']) ?>
+                                    <strong><?= htmlspecialchars($df['fecha']) ?></strong> — <?= (str_starts_with($df['instructor'], 'Inst.') ? '' : 'Inst. ') . htmlspecialchars($df['instructor']) ?>
                                 </div>
                                 <?php endforeach; ?>
                             <?php else: ?>
