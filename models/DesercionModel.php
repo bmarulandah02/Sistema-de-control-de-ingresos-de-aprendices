@@ -159,16 +159,31 @@ class DesercionModel {
                 }
 
                 // 4. Obtener excusas APROBADAS del aprendiz
-                $stmtExc = $conexion->prepare("SELECT fecha_inicio, fecha_fin, estado
-                                               FROM excusa
-                                               WHERE fk_aprendiz = :idAprendiz
-                                                 AND estado = 'Aprobada'
-                                                 AND (fecha_inicio <= :fFin AND fecha_fin >= :fIni)");
-                $stmtExc->execute([
-                    ':idAprendiz' => $idAprendiz,
-                    ':fIni'       => $fechaInicio,
-                    ':fFin'       => $fechaFin
-                ]);
+                if ($soloInstructorId && $soloInstructorId > 0) {
+                    $stmtExc = $conexion->prepare("SELECT e.fecha_inicio, e.fecha_fin, e.estado
+                                                   FROM excusa e
+                                                   LEFT JOIN excusa_instructor ei ON e.id_excusa = ei.fk_excusa
+                                                   WHERE e.fk_aprendiz = :idAprendiz
+                                                     AND ((ei.estado = 'Aprobada' AND ei.fk_usuario_instructor = :instId) OR e.estado = 'Aprobada')
+                                                     AND (e.fecha_inicio <= :fFin AND e.fecha_fin >= :fIni)");
+                    $stmtExc->execute([
+                        ':idAprendiz' => $idAprendiz,
+                        ':fIni'       => $fechaInicio,
+                        ':fFin'       => $fechaFin,
+                        ':instId'     => $soloInstructorId
+                    ]);
+                } else {
+                    $stmtExc = $conexion->prepare("SELECT fecha_inicio, fecha_fin, estado
+                                                   FROM excusa
+                                                   WHERE fk_aprendiz = :idAprendiz
+                                                     AND estado = 'Aprobada'
+                                                     AND (fecha_inicio <= :fFin AND fecha_fin >= :fIni)");
+                    $stmtExc->execute([
+                        ':idAprendiz' => $idAprendiz,
+                        ':fIni'       => $fechaInicio,
+                        ':fFin'       => $fechaFin
+                    ]);
+                }
                 $excusasAprobadas = $stmtExc->fetchAll(PDO::FETCH_ASSOC) ?: [];
 
                 // 5. Evaluar día a día las faltas injustificadas

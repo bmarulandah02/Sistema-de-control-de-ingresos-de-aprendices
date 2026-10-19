@@ -116,13 +116,32 @@
 
             case 'aprobar_excusa':
                 return confirmar('question', '¿Aprobar esta excusa médica?',
-                    'La excusa quedará registrada como aprobada.',
+                    'La excusa quedará registrada como aprobada para las clases a tu cargo.',
                     'Sí, aprobar', COLOR.primario);
 
             case 'rechazar_excusa':
-                return confirmar('warning', '¿Rechazar esta excusa?',
-                    'La excusa quedará registrada como rechazada.',
-                    'Sí, rechazar');
+                return Swal.fire({
+                    icon: 'warning',
+                    title: '¿Rechazar esta excusa médica?',
+                    html: '<p style="margin-bottom:0.75rem; font-size:0.875rem; color:#64748b;">Indica el motivo por el cual rechazas esta excusa para que el aprendiz pueda conocer la razón:</p>',
+                    input: 'textarea',
+                    inputPlaceholder: 'Escribe aquí la razón o motivo del rechazo...',
+                    inputAttributes: {
+                        'aria-label': 'Motivo del rechazo',
+                        'rows': 3,
+                        'style': 'font-size:0.875rem;'
+                    },
+                    inputValidator: function (value) {
+                        if (!value || !value.trim()) {
+                            return 'Debes ingresar un motivo para poder rechazar la excusa.';
+                        }
+                    },
+                    showCancelButton: true,
+                    confirmButtonColor: COLOR.peligro,
+                    cancelButtonColor: COLOR.neutro,
+                    confirmButtonText: '<i class="bi bi-x-circle me-1"></i>Rechazar Excusa',
+                    cancelButtonText: 'Cancelar'
+                });
 
             case 'confirmar_generico': // usado por los botones con data-confirm
                 return confirmar('question', '¿Estás seguro?', esc(d.mensaje || '¿Deseas continuar?'), 'Sí, continuar', COLOR.primario);
@@ -320,7 +339,13 @@
         const destino = evento.currentTarget.href;
         switchAlert(caso, datos).then(function (res) {
             if (res.isConfirmed) {
-                window.location.href = destino;
+                let url = destino;
+                if (res.value && typeof res.value === 'string' && res.value.trim() !== '') {
+                    url += (url.includes('?') ? '&' : '?') + 'motivo=' + encodeURIComponent(res.value.trim());
+                } else if (res.value && typeof res.value === 'object' && res.value.motivo) {
+                    url += (url.includes('?') ? '&' : '?') + 'motivo=' + encodeURIComponent(res.value.motivo.trim());
+                }
+                window.location.href = url;
             }
         });
         return false; // bloquea la navegación hasta que el usuario confirme

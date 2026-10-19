@@ -29,6 +29,11 @@ require __DIR__ . '/../layouts/header.php';
 </div>
 <?php endif; ?>
 
+<?php
+$idUsuarioSesion = (int)($_SESSION['usuario_id'] ?? 0);
+$instructoresFicha = ExcusaModel::obtenerInstructoresPorUsuarioAprendiz($idUsuarioSesion);
+?>
+
 <div class="shadcn-card" style="margin-bottom: 1.75rem;">
     <div class="card-header-shadcn">
         <h3><i class="bi bi-cloud-upload me-2"></i>Radicar Nueva Excusa Médica</h3>
@@ -47,6 +52,26 @@ require __DIR__ . '/../layouts/header.php';
                 <div>
                     <label style="display:block; font-size:0.875rem; font-weight:500; margin-bottom:0.375rem;">Fecha Fin *</label>
                     <input type="date" name="fecha_fin" class="shadcn-input" value="<?= htmlspecialchars($_GET['fecha'] ?? '') ?>" required>
+                </div>
+                <div>
+                    <label style="display:block; font-size:0.875rem; font-weight:500; margin-bottom:0.375rem;">
+                        <i class="bi bi-person-badge me-1" style="color:var(--primary);"></i>Instructor Destinatario *
+                    </label>
+                    <select name="instructor_id" class="shadcn-select" required>
+                        <option value="" disabled selected>-- Selecciona a qué instructor dirigir la excusa --</option>
+                        <option value="todos">👥 Todos los instructores de mi ficha</option>
+                        <option value="auto">⚡ Detectar automáticamente según horario de clases</option>
+                        <optgroup label="Enviar a un instructor específico:">
+                            <?php foreach ($instructoresFicha as $inst): ?>
+                            <option value="<?= $inst['id_usuario'] ?>">
+                                Inst. <?= htmlspecialchars($inst['nombre'] . ' ' . $inst['apellido']) ?>
+                            </option>
+                            <?php endforeach; ?>
+                        </optgroup>
+                    </select>
+                    <small style="display:block; margin-top:0.35rem; color:var(--muted-foreground); font-size:0.75rem;">
+                        <i class="bi bi-info-circle me-1"></i>Puedes elegir un instructor específico (ej. Bladimir Silva), todos los instructores de la ficha, o detección automática.
+                    </small>
                 </div>
                 <div>
                     <label style="display:block; font-size:0.875rem; font-weight:500; margin-bottom:0.375rem;">Adjunto (PDF, JPG, PNG) *</label>
@@ -73,9 +98,9 @@ require __DIR__ . '/../layouts/header.php';
                     <th>Motivo</th>
                     <th>Período</th>
                     <th>Adjunto</th>
-                    <th>Estado</th>
-                    <th>Enviada el</th>
-                    <th>Aprobada/Revisada por</th>
+                    <th>Estado General</th>
+                    <th>Revisión por Instructor(es)</th>
+                    <th>Radicada el</th>
                     <th>Acciones</th>
                 </tr>
             </thead>
@@ -102,12 +127,58 @@ require __DIR__ . '/../layouts/header.php';
                         <?php
                         $bClass = 'badge-pendiente';
                         if ($e['estado'] === 'Aprobada') $bClass = 'badge-aprobada';
-                        if ($e['estado'] === 'Rechazada') $bClass = 'badge-rechazada';
+                        elseif ($e['estado'] === 'Rechazada') $bClass = 'badge-rechazada';
+                        elseif ($e['estado'] === 'Revisión Mixta') $bClass = 'badge-secondary';
                         ?>
                         <span class="shadcn-badge <?= $bClass ?>"><i class="bi bi-dot"></i><?= htmlspecialchars($e['estado']) ?></span>
                     </td>
+                    <td style="min-width: 260px;">
+                        <?php if (!empty($e['revisiones'])): ?>
+                            <div style="display:flex; flex-direction:column; gap:0.5rem;">
+                                <?php foreach ($e['revisiones'] as $rev): ?>
+                                    <?php
+                                    $revBadge = 'badge-pendiente';
+                                    $revIcon = 'bi-hourglass-split';
+                                    if ($rev['estado'] === 'Aprobada') {
+                                        $revBadge = 'badge-aprobada';
+                                        $revIcon = 'bi-check-circle-fill';
+                                    } elseif ($rev['estado'] === 'Rechazada') {
+                                        $revBadge = 'badge-rechazada';
+                                        $revIcon = 'bi-x-circle-fill';
+                                    }
+                                    ?>
+                                    <div style="background:rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:var(--radius-sm); padding:0.4rem 0.6rem;">
+                                        <div style="display:flex; align-items:center; justify-content:space-between; gap:0.5rem;">
+                                            <span style="font-size:0.8rem; font-weight:600;">
+                                                <i class="bi bi-person-badge me-1" style="color:var(--primary);"></i><?= htmlspecialchars($rev['nombre_instructor'] ?? 'Instructor') ?>
+                                            </span>
+                                            <span class="shadcn-badge <?= $revBadge ?>" style="font-size:0.7rem; padding:0.1rem 0.4rem;">
+                                                <i class="bi <?= $revIcon ?> me-1"></i><?= htmlspecialchars($rev['estado']) ?>
+                                            </span>
+                                        </div>
+                                        <?php if (!empty($rev['detalle_clases'])): ?>
+                                        <div style="font-size:0.75rem; color:var(--muted-foreground); margin-top:2px;">
+                                            <i class="bi bi-clock me-1"></i><?= htmlspecialchars($rev['detalle_clases']) ?>
+                                        </div>
+                                        <?php endif; ?>
+                                        <?php if ($rev['estado'] === 'Rechazada' && !empty($rev['motivo_rechazo'])): ?>
+                                        <div style="margin-top:0.35rem; font-size:0.75rem; color:#dc2626; background:rgba(239,68,68,0.1); padding:0.35rem 0.5rem; border-radius:4px; border-left:3px solid #dc2626;">
+                                            <strong>Motivo de rechazo:</strong> <?= htmlspecialchars($rev['motivo_rechazo']) ?>
+                                        </div>
+                                        <?php endif; ?>
+                                    </div>
+                                <?php endforeach; ?>
+                            </div>
+                        <?php else: ?>
+                            <span style="color:var(--muted-foreground); font-size:0.8rem;">En espera de revisión</span>
+                            <?php if ($e['estado'] === 'Rechazada' && !empty($e['motivo_rechazo'])): ?>
+                            <div style="margin-top:0.25rem; font-size:0.75rem; color:#dc2626;">
+                                <strong>Motivo:</strong> <?= htmlspecialchars($e['motivo_rechazo']) ?>
+                            </div>
+                            <?php endif; ?>
+                        <?php endif; ?>
+                    </td>
                     <td><?= htmlspecialchars(substr($e['created_at'], 0, 10)) ?></td>
-                    <td><?= htmlspecialchars($e['aprobado_por'] ?? '—') ?></td>
                     <td>
                         <?php if ($e['estado'] === 'Pendiente'): ?>
                         <button type="button" class="btn-shadcn btn-shadcn-outline" style="padding:0.25rem 0.5rem; font-size:0.75rem;"

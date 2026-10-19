@@ -51,7 +51,7 @@ class ReporteController {
         if ($rolSesion === 'Instructor') {
             $excusas = ExcusaModel::obtenerPorInstructor($usuarioIdSesion, 'Pendiente');
         } else {
-            $excusas = ExcusaModel::obtenerTodas();
+            $excusas = [];
         }
 
         // Parámetros y datos para el reporte de Horarios
@@ -120,12 +120,8 @@ class ReporteController {
         foreach ($reporte as $r) {
             $fechasFaltadasStr = '';
             if (!empty($r['dias_faltados'])) {
-                $detalles = [];
-                foreach ($r['dias_faltados'] as $df) {
-                    $inst = str_starts_with($df['instructor'], 'Inst.') ? $df['instructor'] : 'Inst. ' . $df['instructor'];
-                    $detalles[] = $df['fecha'] . ' (' . $inst . ')';
-                }
-                $fechasFaltadasStr = implode('; ', $detalles);
+                $fechas = array_column($r['dias_faltados'], 'fecha');
+                $fechasFaltadasStr = implode(', ', $fechas);
             } else {
                 $fechasFaltadasStr = 'Ninguna';
             }

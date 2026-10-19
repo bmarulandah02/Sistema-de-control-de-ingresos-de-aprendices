@@ -51,7 +51,7 @@ $mesesEspanol = [
                 class="btn-shadcn <?= $tabActiva === 'asistencia' ? 'btn-shadcn-primary' : 'btn-shadcn-ghost' ?>" 
                 style="padding:0.5rem 1rem; font-size:0.875rem; font-weight:600;" 
                 onclick="switchTab('asistencia')">
-            <i class="bi bi-clock-history me-1"></i>Asistencias & Excusas
+            <i class="bi bi-clock-history me-1"></i><?= (($_SESSION['rol'] ?? '') === 'Instructor') ? 'Asistencias & Excusas' : 'Reportes de Asistencia' ?>
         </button>
         <button type="button" id="tabBtnHorarios" 
                 class="btn-shadcn <?= $tabActiva === 'horarios' ? 'btn-shadcn-primary' : 'btn-shadcn-ghost' ?>" 
@@ -185,7 +185,7 @@ $mesesEspanol = [
                                 <?php foreach ($r['dias_faltados'] as $df): ?>
                                 <div style="margin-bottom:0.25rem;">
                                     <i class="bi bi-calendar-x text-danger me-1"></i>
-                                    <strong><?= htmlspecialchars($df['fecha']) ?></strong> — <?= (str_starts_with($df['instructor'], 'Inst.') ? '' : 'Inst. ') . htmlspecialchars($df['instructor']) ?>
+                                    <strong><?= htmlspecialchars($df['fecha']) ?></strong> — Inst. <?= htmlspecialchars($df['instructor']) ?>
                                 </div>
                                 <?php endforeach; ?>
                             <?php else: ?>
@@ -200,11 +200,9 @@ $mesesEspanol = [
         </div>
     </div>
 
-   
-
-</div>
- <!-- COLA DE APROBACIÓN DE EXCUSAS MÉDICAS -->
-    <div class="shadcn-card">
+    <?php if (($_SESSION['rol'] ?? '') === 'Instructor'): ?>
+    <!-- COLA DE APROBACIÓN DE EXCUSAS MÉDICAS (Solo visible para el instructor a cargo) -->
+    <div class="shadcn-card" style="margin-top: 1.5rem;">
         <div class="card-header-shadcn">
             <h3><i class="bi bi-file-medical me-2"></i>Excusas Médicas Pendientes de Revisión</h3>
             <span class="shadcn-badge badge-pendiente"><?= count($excusas ?? []) ?> pendientes</span>
@@ -219,6 +217,7 @@ $mesesEspanol = [
                         <th>Ficha</th>
                         <th>Motivo</th>
                         <th>Período</th>
+                        <th>Clases Asignadas</th>
                         <th>Adjunto</th>
                         <th>Acciones</th>
                     </tr>
@@ -226,9 +225,9 @@ $mesesEspanol = [
                 <tbody>
                     <?php if (empty($excusas)): ?>
                     <tr>
-                        <td colspan="7" style="text-align:center; padding: 2.5rem; color:var(--muted-foreground);">
+                        <td colspan="8" style="text-align:center; padding: 2.5rem; color:var(--muted-foreground);">
                             <i class="bi bi-check-circle fs-3 d-block mb-1" style="color:#16a34a;"></i>
-                            No hay excusas médicas pendientes de aprobación.
+                            No tienes excusas médicas pendientes de aprobación para tus clases asignadas.
                         </td>
                     </tr>
                     <?php else: ?>
@@ -240,6 +239,11 @@ $mesesEspanol = [
                         <td><?= htmlspecialchars($e['motivo']) ?></td>
                         <td><?= htmlspecialchars($e['fecha_inicio']) ?> → <?= htmlspecialchars($e['fecha_fin']) ?></td>
                         <td>
+                            <span style="font-size:0.8rem; color:var(--foreground);">
+                                <i class="bi bi-clock-history me-1" style="color:var(--primary);"></i><?= htmlspecialchars($e['detalle_clases'] ?? 'Clases del período') ?>
+                            </span>
+                        </td>
+                        <td>
                             <?php if ($e['archivo']): ?>
                             <a href="public/uploads/excusas/<?= htmlspecialchars($e['archivo']) ?>" target="_blank" class="btn-shadcn btn-shadcn-outline" style="padding:0.2rem 0.5rem; font-size:0.75rem;">
                                 <i class="bi bi-paperclip"></i> Ver Documento
@@ -248,10 +252,10 @@ $mesesEspanol = [
                         </td>
                         <td>
                             <div style="display:flex; gap:0.375rem;">
-                                <a href="index.php?action=excusa-aprobar&id=<?= $e['id'] ?>" class="btn-shadcn btn-shadcn-primary" style="padding:0.25rem 0.5rem; font-size:0.75rem;" title="Aprobar" onclick="return switchAlertLink(event, 'aprobar_excusa')">
+                                <a href="index.php?action=excusa-aprobar&id=<?= $e['id'] ?>" class="btn-shadcn btn-shadcn-primary" style="padding:0.25rem 0.5rem; font-size:0.75rem;" title="Aprobar para mis clases" onclick="return switchAlertLink(event, 'aprobar_excusa')">
                                     <i class="bi bi-check-lg"></i> Aprobar
                                 </a>
-                                <a href="index.php?action=excusa-rechazar&id=<?= $e['id'] ?>" class="btn-shadcn btn-shadcn-danger" style="padding:0.25rem 0.5rem; font-size:0.75rem;" title="Rechazar" onclick="return switchAlertLink(event, 'rechazar_excusa')">
+                                <a href="index.php?action=excusa-rechazar&id=<?= $e['id'] ?>" class="btn-shadcn btn-shadcn-danger" style="padding:0.25rem 0.5rem; font-size:0.75rem;" title="Rechazar para mis clases" onclick="return switchAlertLink(event, 'rechazar_excusa')">
                                     <i class="bi bi-x-lg"></i> Rechazar
                                 </a>
                             </div>
@@ -263,7 +267,7 @@ $mesesEspanol = [
             </table>
         </div>
     </div>
-   
+    <?php endif; ?>
 
 </div>
 
@@ -1304,4 +1308,3 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 </script>
 
-<?php require __DIR__ . '/../layouts/footer.php'; ?>

@@ -77,7 +77,7 @@
                 <td style="font-size: 11px;">
                     <?php if (!empty($r['dias_faltados'])): ?>
                         <?php foreach ($r['dias_faltados'] as $df): ?>
-                        <div>• <strong><?= htmlspecialchars($df['fecha']) ?></strong> (<?= (str_starts_with($df['instructor'], 'Inst.') ? '' : 'Inst. ') . htmlspecialchars($df['instructor']) ?>)</div>
+                        <div>• <strong><?= htmlspecialchars($df['fecha']) ?></strong> (Inst. <?= htmlspecialchars($df['instructor']) ?>)</div>
                         <?php endforeach; ?>
                     <?php else: ?>
                         <span style="color:#16a34a;">Asistencia Completa</span>

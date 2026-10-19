@@ -44,13 +44,13 @@ class ExcusaController{
             header('Location: index.php?action=mis-excusas&error=' . urlencode('Debes adjuntar un documento de soporte.'));
             exit();
             }
-            $ok=ExcusaModel::crearExcusa((int)$datosAprendiz['id_aprendiz'],$motivo,$fechaInicio,$fechaFin,$nombreArchivo);
-            if($ok){
-                header('Location: index.php?action=mis-excusas&ok=1');
-
-            }else{
-                header('Location: index.php?action=mis-excusas&error='.urlencode('No fue posible guardar la excusa. INTENTELO DE NUEVO!!!'));
-            }
+        $instructorDestino = trim($_POST['instructor_id'] ?? 'auto');
+        $ok = ExcusaModel::crearExcusa((int)$datosAprendiz['id_aprendiz'], $motivo, $fechaInicio, $fechaFin, $nombreArchivo, $instructorDestino);
+        if ($ok) {
+            header('Location: index.php?action=mis-excusas&ok=1');
+        } else {
+            header('Location: index.php?action=mis-excusas&error=' . urlencode('No fue posible guardar la excusa. INTÉNTELO DE NUEVO.'));
+        }
             exit();
     }
     public function editar(): void {
@@ -105,38 +105,41 @@ class ExcusaController{
     exit();
 
     }
-    //estas funciones son diminutas toda la accion vive en $_get['id']
-    public function aprobar():void{
+    // Funciones de decisión de excusa médica para instructores
+    public function aprobar(): void {
         $this->cambiarEstado('Aprobada');
     }
-    public function rechazar(): void{
+
+    public function rechazar(): void {
         $this->cambiarEstado('Rechazada');
     }
+
     private function cambiarEstado(string $estadoNuevo): void {
-    $rol = $_SESSION['rol'] ?? '';
-    if (!in_array($rol, ['Instructor', 'Administrador'], true)) {
-        header('Location: index.php?action=403');
+        $rol = $_SESSION['rol'] ?? '';
+        if ($rol !== 'Instructor') {
+            header('Location: index.php?action=403');
+            exit();
+        }
+
+        $idExcusa     = (int)($_GET['id'] ?? 0);
+        $idInstructor = (int)($_SESSION['usuario_id'] ?? 0);
+        $motivo       = trim($_GET['motivo'] ?? ($_POST['motivo'] ?? ''));
+
+        $excusa = ExcusaModel::obtenerPorId($idExcusa);
+
+        if (!$excusa) {
+            header('Location: index.php?action=reportes&tab=asistencia&error=' . urlencode('La excusa no existe.'));
+            exit();
+        }
+
+        $ok = ExcusaModel::actualizarEstado($idExcusa, $estadoNuevo, $idInstructor, $motivo);
+
+        $msg = ($estadoNuevo === 'Aprobada')
+            ? 'Excusa médica aprobada correctamente para tus clases asignadas.'
+            : 'Excusa médica rechazada. Se ha notificado el motivo al aprendiz.';
+
+        header('Location: index.php?action=reportes&tab=asistencia&msg=' . urlencode($msg));
         exit();
-    }
-
-    $idExcusa     = (int) ($_GET['id'] ?? 0);
-    $idInstructor = (int) ($_SESSION['usuario_id'] ?? 0);
-
-    $excusa = ExcusaModel::obtenerPorId($idExcusa);
-
-    if (!$excusa) {
-        header('Location: index.php?action=excusas-admin&error=' . urlencode('La excusa no existe.'));
-        exit();
-    }
-
-    if ($rol === 'Instructor' && (int) $excusa['id_instructor_ficha'] !== $idInstructor) {
-        header('Location: index.php?action=403');
-        exit();
-    }
-
-    ExcusaModel::actualizarEstado($idExcusa, $estadoNuevo, $idInstructor);
-    header('Location: index.php?action=excusas-admin');
-    exit();
     }
     
     

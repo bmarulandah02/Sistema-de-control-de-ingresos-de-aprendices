@@ -24,6 +24,13 @@ class ReporteModel {
                 $fichaId     = !empty($filtros['ficha_id']) ? (int)$filtros['ficha_id'] : null;
                 $instructorId = !empty($filtros['instructor_id']) ? (int)$filtros['instructor_id'] : null;
 
+                $nombreInstructorFiltro = '';
+                if ($instructorId && $instructorId > 0) {
+                    $stmtNomInst = $conexion->prepare("SELECT CONCAT(nombre, ' ', apellido) FROM usuario WHERE id_usuario = :id");
+                    $stmtNomInst->execute([':id' => $instructorId]);
+                    $nombreInstructorFiltro = $stmtNomInst->fetchColumn() ?: '';
+                }
+
                 // 1. Obtener la lista de aprendices según filtros
                 $whereAprendiz = [];
                 $paramsAprendiz = [];
@@ -46,7 +53,7 @@ class ReporteModel {
 
                 $sqlAprendices = "SELECT a.id_aprendiz, a.codigo_rfid, a.fk_ficha,
                                          u.nombre, u.apellido, u.identificacion AS documento, u.nombre_usuario AS correo,
-                                         f.id_ficha AS numero_ficha, f.nombre_programa AS programa, f.jornada,
+                                         f.id_ficha AS numero_ficha, f.nombre_programa AS programa, f.jornada, f.fk_usuario AS titular_instructor_id,
                                          CONCAT(inst.nombre, ' ', inst.apellido) AS instructor_encargado
                                   FROM aprendiz a
                                   JOIN usuario u ON a.fk_usuario = u.id_usuario
@@ -59,69 +66,63 @@ class ReporteModel {
                 $stmtAprendices->execute($paramsAprendiz);
                 $aprendices = $stmtAprendices->fetchAll(PDO::FETCH_ASSOC);
 
-                // 2. Pre-cargar horario_bloque para las fichas evaluadas en el rango de fechas
-                $whereHb = ["hb.fecha BETWEEN :fInicio AND :fFin"];
-                $paramsHb = [
-                    ':fInicio' => $fechaInicio,
-                    ':fFin'    => $fechaFin
-                ];
-                if ($fichaId) {
-                    $whereHb[] = "hb.fk_ficha = :hb_ficha";
-                    $paramsHb[':hb_ficha'] = $fichaId;
-                }
-                if ($instructorId) {
-                    $whereHb[] = "hb.fk_usuario_instructor = :hb_instructor";
-                    $paramsHb[':hb_instructor'] = $instructorId;
-                }
-                $whereHbSql = implode(" AND ", $whereHb);
-
-                $sqlHb = "SELECT hb.fk_ficha, hb.fecha, hb.bloque, hb.materia, hb.hora_inicio, hb.hora_fin,
-                                 hb.fk_usuario_instructor,
-                                 CONCAT(u.nombre, ' ', u.apellido) AS nombre_instructor
-                          FROM horario_bloque hb
-                          LEFT JOIN usuario u ON hb.fk_usuario_instructor = u.id_usuario
-                          WHERE {$whereHbSql}
-                          ORDER BY hb.fecha ASC, hb.hora_inicio ASC, hb.bloque ASC";
-                $stmtHb = $conexion->prepare($sqlHb);
-                $stmtHb->execute($paramsHb);
-                $horarioPorFicha = [];
-                while ($b = $stmtHb->fetch(PDO::FETCH_ASSOC)) {
-                    $fId = (int)$b['fk_ficha'];
-                    $horarioPorFicha[$fId][$b['fecha']][] = $b;
+                // 2. Generar lista de días en el rango (excluyendo domingos)
+                $periodoFechas = [];
+                $cursor = new DateTime($fechaInicio);
+                $fin    = new DateTime($fechaFin);
+                while ($cursor <= $fin) {
+                    if ($cursor->format('N') != 7) {
+                        $periodoFechas[] = $cursor->format('Y-m-d');
+                    }
+                    $cursor->modify('+1 day');
                 }
 
-                $hoy = date('Y-m-d');
+                // Cargar mapa de instructores reales programados por ficha y fecha desde horario_bloque
+                $horarioMap = [];
+                $fichasConHorario = [];
+                try {
+                    $stmtHb = $conexion->prepare("SELECT hb.fk_ficha, hb.fecha, hb.bloque, hb.fk_usuario_instructor,
+                                                         CONCAT(u.nombre, ' ', u.apellido) AS nombre_instructor
+                                                  FROM horario_bloque hb
+                                                  JOIN usuario u ON hb.fk_usuario_instructor = u.id_usuario
+                                                  WHERE hb.fecha BETWEEN :fInicio AND :fFin
+                                                  ORDER BY hb.fecha ASC, hb.bloque ASC");
+                    $stmtHb->execute([':fInicio' => $fechaInicio, ':fFin' => $fechaFin]);
+                    while ($hb = $stmtHb->fetch(PDO::FETCH_ASSOC)) {
+                        $fId  = (int)$hb['fk_ficha'];
+                        $fFec = $hb['fecha'];
+                        $uId  = (int)$hb['fk_usuario_instructor'];
+                        $fichasConHorario[$fId] = true;
+
+                        if (!isset($horarioMap[$fId][$fFec])) {
+                            $horarioMap[$fId][$fFec] = [
+                                'nombres' => [],
+                                'ids'     => [],
+                                'bloques' => []
+                            ];
+                        }
+                        if (!in_array($hb['nombre_instructor'], $horarioMap[$fId][$fFec]['nombres'], true)) {
+                            $horarioMap[$fId][$fFec]['nombres'][] = $hb['nombre_instructor'];
+                        }
+                        if (!in_array($uId, $horarioMap[$fId][$fFec]['ids'], true)) {
+                            $horarioMap[$fId][$fFec]['ids'][] = $uId;
+                        }
+                        $horarioMap[$fId][$fFec]['bloques'][] = [
+                            'bloque'         => $hb['bloque'],
+                            'id_instructor'  => $uId,
+                            'nom_instructor' => $hb['nombre_instructor']
+                        ];
+                    }
+                } catch (Exception $e) {}
 
                 // 3. Para cada aprendiz, calcular ingresos, retardos e inasistencias
                 foreach ($aprendices as $app) {
                     $idAprendiz = (int)$app['id_aprendiz'];
-                    $idFichaApp = (int)($app['fk_ficha'] ?? 0);
-                    $bloquesFicha = $horarioPorFicha[$idFichaApp] ?? [];
-
-                    // Días evaluables para esta ficha/aprendiz
-                    $diasEvaluables = [];
-                    if (!empty($bloquesFicha)) {
-                        // Si la ficha tiene programación en horario_bloque, se evalúan exclusivamente los días con clase
-                        foreach (array_keys($bloquesFicha) as $fDia) {
-                            if ($fDia <= $hoy) {
-                                $diasEvaluables[] = $fDia;
-                            }
-                        }
-                        sort($diasEvaluables);
-                    } else {
-                        // Fallback para fichas sin horario cargado: días hábiles (lunes a sábado)
-                        $cursor = new DateTime($fechaInicio);
-                        $fin    = new DateTime(min($fechaFin, $hoy));
-                        while ($cursor <= $fin) {
-                            if ($cursor->format('N') != 7) {
-                                $diasEvaluables[] = $cursor->format('Y-m-d');
-                            }
-                            $cursor->modify('+1 day');
-                        }
-                    }
+                    $fIdApp = (int)($app['fk_ficha'] ?? 0);
+                    $tieneHorario = !empty($fichasConHorario[$fIdApp]);
 
                     // Obtener todos los ingresos en el rango para este aprendiz
-                    $sqlIngresos = "SELECT i.fecha_registro, i.entrada, i.salida, i.estado_asistencia, i.fk_usuario_instructor, i.bloque_horario
+                    $sqlIngresos = "SELECT i.fecha_registro, i.entrada, i.salida, i.estado_asistencia, i.fk_usuario_instructor
                                     FROM ingresos i
                                     WHERE i.fk_aprendiz = :idAprendiz 
                                       AND i.fecha_registro BETWEEN :fInicio AND :fFin";
@@ -131,13 +132,12 @@ class ReporteModel {
                         ':fFin'       => $fechaFin
                     ];
                     if ($instructorId && $instructorId > 0) {
-                        $sqlIngresos .= " AND i.fk_usuario_instructor = :instructorId";
+                        $sqlIngresos .= " AND (i.fk_usuario_instructor = :instructorId OR i.fk_usuario_instructor IS NULL OR i.fk_usuario_instructor = 0)";
                         $paramsIng[':instructorId'] = $instructorId;
                     }
                     $stmtIng = $conexion->prepare($sqlIngresos);
                     $stmtIng->execute($paramsIng);
                     $ingresosMap = [];
-                    $ingresosPorFecha = [];
                     $minutosRetardoTotal = 0;
                     $conteoPuntuales = 0;
                     $conteoRetardos = 0;
@@ -145,7 +145,6 @@ class ReporteModel {
                     while ($ing = $stmtIng->fetch(PDO::FETCH_ASSOC)) {
                         $fechaReg = $ing['fecha_registro'];
                         $ingresosMap[$fechaReg] = $ing;
-                        $ingresosPorFecha[$fechaReg][] = $ing;
 
                         $estadoStr = $ing['estado_asistencia'] ?? '';
 
@@ -164,21 +163,89 @@ class ReporteModel {
                     }
 
                     // Obtener excusas APROBADAS del aprendiz en este rango de fechas
-                    $stmtExcAprob = $conexion->prepare("SELECT fecha_inicio, fecha_fin 
-                                                       FROM excusa 
-                                                       WHERE fk_aprendiz = :idAprendiz 
-                                                         AND estado = 'Aprobada' 
-                                                         AND (fecha_inicio <= :fFin AND fecha_fin >= :fInicio)");
-                    $stmtExcAprob->execute([
-                        ':idAprendiz' => $idAprendiz,
-                        ':fInicio'    => $fechaInicio,
-                        ':fFin'       => $fechaFin
-                    ]);
+                    $instFiltro = !empty($filtros['instructor_id']) ? (int)$filtros['instructor_id'] : null;
+                    if ($instFiltro) {
+                        $stmtExcAprob = $conexion->prepare("SELECT e.fecha_inicio, e.fecha_fin 
+                                                           FROM excusa e
+                                                           LEFT JOIN excusa_instructor ei ON e.id_excusa = ei.fk_excusa
+                                                           WHERE e.fk_aprendiz = :idAprendiz 
+                                                             AND ((ei.estado = 'Aprobada' AND ei.fk_usuario_instructor = :instId) OR e.estado = 'Aprobada')
+                                                             AND (e.fecha_inicio <= :fFin AND e.fecha_fin >= :fInicio)");
+                        $stmtExcAprob->execute([
+                            ':idAprendiz' => $idAprendiz,
+                            ':fInicio'    => $fechaInicio,
+                            ':fFin'       => $fechaFin,
+                            ':instId'     => $instFiltro
+                        ]);
+                    } else {
+                        $stmtExcAprob = $conexion->prepare("SELECT fecha_inicio, fecha_fin 
+                                                           FROM excusa 
+                                                           WHERE fk_aprendiz = :idAprendiz 
+                                                             AND estado = 'Aprobada' 
+                                                             AND (fecha_inicio <= :fFin AND fecha_fin >= :fInicio)");
+                        $stmtExcAprob->execute([
+                            ':idAprendiz' => $idAprendiz,
+                            ':fInicio'    => $fechaInicio,
+                            ':fFin'       => $fechaFin
+                        ]);
+                    }
                     $excusasAprobadas = $stmtExcAprob->fetchAll(PDO::FETCH_ASSOC) ?: [];
 
                     // Identificar inasistencias en los días transcurridos
                     $diasFaltados = [];
-                    foreach ($diasEvaluables as $fDia) {
+                    foreach ($periodoFechas as $fDia) {
+                        if ($fDia > date('Y-m-d')) {
+                            continue;
+                        }
+
+                        if ($tieneHorario) {
+                            // Si la ficha tiene programación en horario_bloque, solo se evalúan los días con clase programada
+                            if (empty($horarioMap[$fIdApp][$fDia])) {
+                                continue;
+                            }
+
+                            // Si se filtra por un instructor específico, solo se evalúan los días en que dicho instructor dio clase
+                            if ($instructorId && !in_array($instructorId, $horarioMap[$fIdApp][$fDia]['ids'], true)) {
+                                continue;
+                            }
+
+                            if ($instructorId) {
+                                $blqsInst = [];
+                                $nomInst = $nombreInstructorFiltro;
+                                foreach ($horarioMap[$fIdApp][$fDia]['bloques'] as $b) {
+                                    if ($b['id_instructor'] === $instructorId) {
+                                        $nomBlq = ucfirst($b['bloque']);
+                                        $nomBlq = preg_replace('/bloque(\d+)/i', 'Bloque $1', $nomBlq);
+                                        $blqsInst[] = $nomBlq;
+                                        if (!$nomInst) {
+                                            $nomInst = $b['nom_instructor'];
+                                        }
+                                    }
+                                }
+                                $instructorTexto = $nomInst . (!empty($blqsInst) ? ' (' . implode(', ', $blqsInst) . ')' : '');
+                            } else {
+                                $instructorTexto = implode(' / ', $horarioMap[$fIdApp][$fDia]['nombres']);
+                            }
+                        } else {
+                            // Ficha sin horario_bloque cargado
+                            if ($instructorId) {
+                                $esTitular = ((int)($app['titular_instructor_id'] ?? 0) === $instructorId);
+                                if (!$esTitular && !empty($app['instructor_encargado']) && $nombreInstructorFiltro && $app['instructor_encargado'] !== $nombreInstructorFiltro) {
+                                    continue;
+                                }
+                                $instructorTexto = $nombreInstructorFiltro ?: $app['instructor_encargado'];
+                            } else {
+                                $instructorTexto = !empty(trim($app['instructor_encargado'])) ? $app['instructor_encargado'] : 'Sin asignar';
+                            }
+                        }
+
+                        $filaDelDia = $ingresosMap[$fDia] ?? null;
+                        $asistio = ($filaDelDia !== null && ($filaDelDia['estado_asistencia'] === 'Puntual' || str_contains($filaDelDia['estado_asistencia'], 'Retardo')));
+
+                        if ($asistio) {
+                            continue;
+                        }
+
                         // Verificar si existe una excusa APROBADA para este día
                         $diaExcusado = false;
                         foreach ($excusasAprobadas as $excA) {
@@ -189,42 +256,11 @@ class ReporteModel {
                         }
 
                         // Si la excusa fue aprobada, la inasistencia desaparece del listado de faltas
-                        if ($diaExcusado) {
-                            continue;
-                        }
-
-                        $bloquesDelDia = $bloquesFicha[$fDia] ?? [];
-                        $ingresosDelDia = $ingresosPorFecha[$fDia] ?? [];
-
-                        if (!empty($bloquesDelDia)) {
-                            $bloquesFaltados = [];
-                            foreach ($bloquesDelDia as $blq) {
-                                if (!self::verificoAsistenciaBloque($blq, $ingresosDelDia)) {
-                                    $bloquesFaltados[] = $blq;
-                                }
-                            }
-
-                            if (!empty($bloquesFaltados)) {
-                                $instructorTexto = self::resolverInstructorFaltas(
-                                    $bloquesFaltados,
-                                    $bloquesDelDia,
-                                    $app['instructor_encargado'] ?? ''
-                                );
-                                $diasFaltados[] = [
-                                    'fecha'      => $fDia,
-                                    'instructor' => $instructorTexto
-                                ];
-                            }
-                        } else {
-                            $filaDelDia = $ingresosMap[$fDia] ?? null;
-                            $asistio = ($filaDelDia !== null && ($filaDelDia['estado_asistencia'] === 'Puntual' || str_contains($filaDelDia['estado_asistencia'], 'Retardo')));
-
-                            if (!$asistio) {
-                                $diasFaltados[] = [
-                                    'fecha'      => $fDia,
-                                    'instructor' => !empty(trim($app['instructor_encargado'] ?? '')) ? $app['instructor_encargado'] : 'Sin asignar'
-                                ];
-                            }
+                        if (!$diaExcusado) {
+                            $diasFaltados[] = [
+                                'fecha'      => $fDia,
+                                'instructor' => $instructorTexto
+                            ];
                         }
                     }
 
@@ -234,7 +270,7 @@ class ReporteModel {
                         'documento'           => $app['documento'],
                         'numero_ficha'        => $app['numero_ficha'] ?? 'N/A',
                         'programa'            => $app['programa'] ?? 'Sin programa',
-                        'instructor'          => !empty(trim($app['instructor_encargado'])) ? $app['instructor_encargado'] : 'Por asignar',
+                        'instructor'          => $instructorId ? ($nombreInstructorFiltro ?: $app['instructor_encargado']) : (!empty(trim($app['instructor_encargado'])) ? $app['instructor_encargado'] : 'Por asignar'),
                         'total_asistencias'   => count($ingresosMap),
                         'puntuales'           => $conteoPuntuales,
                         'retardos'            => $conteoRetardos,
@@ -312,51 +348,20 @@ class ReporteModel {
                     'estado'        => $app['estado_aprendiz'] ?? 'Activo'
                 ];
 
-                $idFichaApp = (int)($app['fk_ficha'] ?? 0);
-
-                // 2. Cargar horario de bloques para esta ficha en el mes
-                $stmtHbMes = $conexion->prepare("SELECT hb.fecha, hb.bloque, hb.materia, hb.hora_inicio, hb.hora_fin,
-                                                        hb.fk_usuario_instructor,
-                                                        CONCAT(u.nombre, ' ', u.apellido) AS nombre_instructor
-                                                 FROM horario_bloque hb
-                                                 LEFT JOIN usuario u ON hb.fk_usuario_instructor = u.id_usuario
-                                                 WHERE hb.fk_ficha = :ficha 
-                                                   AND hb.fecha BETWEEN :fInicio AND :fFinMes
-                                                 ORDER BY hb.fecha ASC, hb.hora_inicio ASC, hb.bloque ASC");
-                $stmtHbMes->execute([
-                    ':ficha'   => $idFichaApp,
-                    ':fInicio' => $fechaInicio,
-                    ':fFinMes' => $fechaFinMes
-                ]);
-                $bloquesMes = $stmtHbMes->fetchAll(PDO::FETCH_ASSOC) ?: [];
-                $horarioMesPorFecha = [];
-                foreach ($bloquesMes as $bm) {
-                    $horarioMesPorFecha[$bm['fecha']][] = $bm;
-                }
-
-                // Generar días evaluados (de horario_bloque si existe, o días hábiles)
-                $diasEvaluados = [];
-                if (!empty($horarioMesPorFecha)) {
-                    foreach (array_keys($horarioMesPorFecha) as $fDia) {
-                        if ($fDia <= $fechaFin) {
-                            $diasEvaluados[] = $fDia;
-                        }
+                // 2. Generar días hábiles (Lunes a Sábado) en el rango evaluado
+                $diasHabiles = [];
+                $cursor = new DateTime($fechaInicio);
+                $fin = new DateTime($fechaFin);
+                while ($cursor <= $fin) {
+                    if ($cursor->format('N') != 7) { // Excluir Domingos
+                        $diasHabiles[] = $cursor->format('Y-m-d');
                     }
-                    sort($diasEvaluados);
-                } else {
-                    $cursor = new DateTime($fechaInicio);
-                    $fin = new DateTime($fechaFin);
-                    while ($cursor <= $fin) {
-                        if ($cursor->format('N') != 7) {
-                            $diasEvaluados[] = $cursor->format('Y-m-d');
-                        }
-                        $cursor->modify('+1 day');
-                    }
+                    $cursor->modify('+1 day');
                 }
-                $resultado['total_dias_evaluados'] = count($diasEvaluados);
+                $resultado['total_dias_evaluados'] = count($diasHabiles);
 
                 // 3. Obtener asistencias registradas para este aprendiz en el mes
-                $sqlIngresos = "SELECT fecha_registro, estado_asistencia, entrada, salida, fk_usuario_instructor, bloque_horario
+                $sqlIngresos = "SELECT fecha_registro, estado_asistencia, entrada, salida
                                 FROM ingresos
                                 WHERE fk_aprendiz = :idAprendiz
                                   AND fecha_registro BETWEEN :fInicio AND :fFin";
@@ -367,11 +372,8 @@ class ReporteModel {
                     ':fFin'       => $fechaFin
                 ]);
                 $ingresosMap = [];
-                $ingresosPorFecha = [];
                 while ($ing = $stmtIng->fetch(PDO::FETCH_ASSOC)) {
-                    $fReg = $ing['fecha_registro'];
-                    $ingresosMap[$fReg] = $ing;
-                    $ingresosPorFecha[$fReg][] = $ing;
+                    $ingresosMap[$ing['fecha_registro']] = $ing;
                 }
 
                 // 4. Obtener excusas del aprendiz que cubran fechas de este mes (Aprobadas y Pendientes)
@@ -388,6 +390,24 @@ class ReporteModel {
                 ]);
                 $excusas = $stmtExc->fetchAll(PDO::FETCH_ASSOC) ?: [];
 
+                // Cargar mapa de horarios de la ficha para el mes
+                $horarioMesMap = [];
+                try {
+                    $stmtHbMes = $conexion->prepare("SELECT hb.fecha, CONCAT(u.nombre, ' ', u.apellido) AS nombre_instructor
+                                                     FROM horario_bloque hb
+                                                     JOIN usuario u ON hb.fk_usuario_instructor = u.id_usuario
+                                                     WHERE hb.fk_ficha = :ficha AND hb.fecha BETWEEN :fInicio AND :fFin
+                                                     ORDER BY hb.fecha ASC, hb.bloque ASC");
+                    $stmtHbMes->execute([
+                        ':ficha'   => $app['fk_ficha'],
+                        ':fInicio' => $fechaInicio,
+                        ':fFin'    => $fechaFin
+                    ]);
+                    while ($hbm = $stmtHbMes->fetch(PDO::FETCH_ASSOC)) {
+                        $horarioMesMap[$hbm['fecha']][] = $hbm['nombre_instructor'];
+                    }
+                } catch (Exception $e) {}
+
                 $diasFaltados = [];
                 $nombresDias = [
                     'Monday'    => 'Lunes',
@@ -399,37 +419,11 @@ class ReporteModel {
                     'Sunday'    => 'Domingo'
                 ];
 
-                foreach ($diasEvaluados as $dia) {
-                    $bloquesDelDia = $horarioMesPorFecha[$dia] ?? [];
-                    $ingresosDelDia = $ingresosPorFecha[$dia] ?? [];
+                foreach ($diasHabiles as $dia) {
+                    $ingreso = $ingresosMap[$dia] ?? null;
+                    $asistio = ($ingreso !== null && ($ingreso['estado_asistencia'] === 'Puntual' || str_contains($ingreso['estado_asistencia'], 'Retardo')));
 
-                    $faltoDia = false;
-                    $instructorTexto = $resultado['aprendiz']['instructor'] ?? 'Sin asignar';
-
-                    if (!empty($bloquesDelDia)) {
-                        $bloquesFaltados = [];
-                        foreach ($bloquesDelDia as $blq) {
-                            if (!self::verificoAsistenciaBloque($blq, $ingresosDelDia)) {
-                                $bloquesFaltados[] = $blq;
-                            }
-                        }
-                        if (!empty($bloquesFaltados)) {
-                            $faltoDia = true;
-                            $instructorTexto = self::resolverInstructorFaltas(
-                                $bloquesFaltados,
-                                $bloquesDelDia,
-                                $resultado['aprendiz']['instructor'] ?? ''
-                            );
-                        }
-                    } else {
-                        $ingreso = $ingresosMap[$dia] ?? null;
-                        $asistio = ($ingreso !== null && ($ingreso['estado_asistencia'] === 'Puntual' || str_contains($ingreso['estado_asistencia'], 'Retardo')));
-                        if (!$asistio) {
-                            $faltoDia = true;
-                        }
-                    }
-
-                    if (!$faltoDia) {
+                    if ($asistio) {
                         continue;
                     }
 
@@ -454,6 +448,9 @@ class ReporteModel {
 
                     $diaSemanaIngles = date('l', strtotime($dia));
                     $diaSemanaEspanol = $nombresDias[$diaSemanaIngles] ?? $diaSemanaIngles;
+                    $instructorFalta = !empty($horarioMesMap[$dia]) 
+                        ? implode(' / ', array_unique($horarioMesMap[$dia])) 
+                        : $resultado['aprendiz']['instructor'];
 
                     $diasFaltados[] = [
                         'fecha'         => $dia,
@@ -462,7 +459,7 @@ class ReporteModel {
                         'tiene_excusa'  => ($excusaPendiente !== null),
                         'excusa_id'     => $excusaPendiente['id_excusa'] ?? null,
                         'motivo_excusa' => $excusaPendiente['observacion'] ?? null,
-                        'instructor'    => $instructorTexto
+                        'instructor'    => $instructorFalta
                     ];
                 }
 
@@ -474,69 +471,6 @@ class ReporteModel {
         }
 
         return $resultado;
-    }
-
-    /**
-     * Resuelve el nombre del instructor o instructores asociados a los bloques faltados en una fecha
-     */
-    private static function resolverInstructorFaltas(array $bloquesFaltados, array $bloquesDelDia, string $instructorFallback): string {
-        if (empty($bloquesFaltados)) {
-            return $instructorFallback ?: 'Sin asignar';
-        }
-
-        $instFaltadosMap = [];
-        foreach ($bloquesFaltados as $fb) {
-            $nom = trim($fb['nombre_instructor'] ?? '');
-            if (!$nom) {
-                $nom = $instructorFallback ?: 'Sin asignar';
-            }
-            $nomBlqFormato = ucfirst($fb['bloque'] ?? '');
-            $nomBlqFormato = preg_replace('/bloque(\d+)/i', 'Bloque $1', $nomBlqFormato);
-            $instFaltadosMap[$nom][] = $nomBlqFormato ?: 'Bloque';
-        }
-
-        if (count($instFaltadosMap) === 1) {
-            $nombreSolo = array_key_first($instFaltadosMap);
-            // Si faltó a todos los bloques programados del día y es el mismo instructor, nombre directo
-            if (count($bloquesFaltados) === count($bloquesDelDia)) {
-                return $nombreSolo;
-            }
-            $bloquesStr = implode(', ', $instFaltadosMap[$nombreSolo]);
-            return $nombreSolo . " ({$bloquesStr})";
-        }
-
-        $partes = [];
-        foreach ($instFaltadosMap as $nom => $blqs) {
-            $partes[] = $nom . ' (' . implode(', ', $blqs) . ')';
-        }
-        return implode(' | Inst. ', $partes);
-    }
-
-    /**
-     * Determina si un aprendiz asistió a un bloque de horario específico basándose en los ingresos registrados
-     */
-    private static function verificoAsistenciaBloque(array $bloque, array $ingresosDelDia): bool {
-        $idInstBlq = (int)($bloque['fk_usuario_instructor'] ?? 0);
-        $nomBloque = strtolower(trim($bloque['bloque'] ?? ''));
-
-        foreach ($ingresosDelDia as $ing) {
-            $estado = $ing['estado_asistencia'] ?? '';
-            if ($estado === 'Puntual' || str_contains($estado, 'Retardo')) {
-                $ingInst = (int)($ing['fk_usuario_instructor'] ?? 0);
-                $ingBlq  = strtolower(trim($ing['bloque_horario'] ?? ''));
-
-                if ($ingInst > 0 && $idInstBlq > 0 && $ingInst === $idInstBlq) {
-                    return true;
-                }
-                if (!empty($ingBlq) && !empty($nomBloque) && (str_contains($ingBlq, $nomBloque) || $ingBlq === $nomBloque)) {
-                    return true;
-                }
-                if ($ingInst === 0 && empty($ingBlq)) {
-                    return true;
-                }
-            }
-        }
-        return false;
     }
 }
 ?>
