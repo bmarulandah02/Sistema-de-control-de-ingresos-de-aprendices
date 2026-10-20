@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= $pageTitle ?? 'Sistema de Ingreso SENA — Shadcn Admin' ?></title>
     
+    <!-- Favicon Oficial SENA -->
+    <link rel="icon" type="image/svg+xml" href="public/img/sena-logo.svg">
     <!-- Bootstrap Icons -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
     <!-- Google Font (Inter) -->
@@ -33,14 +35,14 @@
 
     <!-- ──  NAVEGACIÓN Y SIDEBAR SHADCN ────────────────────────────── -->
     <aside class="shadcn-sidebar" id="shadcnSidebar">
-        <div class="sidebar-header">
-            <div class="sidebar-logo-icon">
-                <i class="bi bi-building-check"></i>
+        <div class="sidebar-header" style="display:flex; align-items:center; gap:0.75rem; padding:1.25rem 1rem; border-bottom:1px solid var(--border);">
+            <div class="sidebar-logo-icon" style="background:linear-gradient(135deg, #39A900 0%, #2e8b00 100%); padding:7px; display:flex; align-items:center; justify-content:center; border-radius:12px; width:42px; height:42px; box-shadow:0 4px 12px rgba(57,169,0,0.28); flex-shrink:0;">
+                <img src="public/img/sena-logo-white.svg" alt="SENA" style="width:100%; height:100%; object-fit:contain;">
             </div>
-            <div>
-                <!--   Título de tu sistema -->
-                <div class="sidebar-brand-name">Ingreso</div>
-                <div class="sidebar-brand-sub">SENA ADSO</div>
+            <div style="min-width:0; line-height:1.2;">
+                <!-- Título del sistema -->
+                <div class="sidebar-brand-name" style="font-weight:800; font-size:1.05rem; letter-spacing:-0.02em; color:var(--foreground);">SENA Ingreso</div>
+                <div class="sidebar-brand-sub" style="font-size:0.75rem; font-weight:600; color:#39A900;">CTA Cartago</div>
             </div>
         </div>
 
@@ -129,8 +131,8 @@
                     <i class="bi bi-list fs-5"></i>
                 </button>
                 <div class="d-none d-md-flex align-items-center gap-2 text-muted" style="font-size:0.875rem;">
-                    <i class="bi bi-shield-check text-success"></i>
-                    <span>Control de Ingresos SENA</span>
+                    <img src="public/img/sena-logo.svg" alt="SENA" style="width:20px; height:20px; object-fit:contain;">
+                    <span style="font-weight:600; color:var(--foreground);">Control de Ingresos — CTA Cartago</span>
                 </div>
             </div>
 

@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Iniciar Sesión — Control de Ingresos SENA CTA Cartago</title>
+    <link rel="icon" type="image/svg+xml" href="public/img/sena-logo.svg">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link href="public/css/styles.css" rel="stylesheet">
@@ -60,8 +61,8 @@
             background: rgba(255, 255, 255, 0.94);
             backdrop-filter: blur(20px);
             -webkit-backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.7);
-            border-radius: var(--radius-lg, 16px);
+            border: 1px solid rgba(255, 255, 255, 0.6);
+            border-radius: var(--radius-xl, 16px);
             padding: 2.5rem 2.25rem;
             box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(255, 255, 255, 0.35);
             animation: authFadeIn 0.35s cubic-bezier(0.16, 1, 0.3, 1);
@@ -79,17 +80,27 @@
         }
 
         .auth-logo-badge {
-            width: 56px;
-            height: 56px;
-            background: linear-gradient(135deg, #059669 0%, #047857 100%);
-            color: #fff;
-            border-radius: 14px;
+            width: 72px;
+            height: 72px;
+            background: linear-gradient(135deg, #39A900 0%, #2e8b00 100%);
+            border-radius: 18px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.75rem;
-            margin: 0 auto 1rem;
-            box-shadow: 0 8px 20px rgba(5, 150, 105, 0.35);
+            margin: 0 auto 1.25rem;
+            box-shadow: 0 10px 25px rgba(57, 169, 0, 0.35);
+            padding: 13px;
+            border: 2px solid rgba(255, 255, 255, 0.25);
+            transition: transform 0.3s ease;
+        }
+        .auth-logo-badge:hover {
+            transform: scale(1.05);
+        }
+        .auth-logo-badge img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
         }
 
         .auth-input-group {
@@ -124,9 +135,9 @@
 
 <!-- Tarjeta de Login Flotante -->
 <div class="auth-glass-card">
-    <div class="auth-header" style="text-align:center; margin-bottom:2rem;">
+    <div class="auth-header" style="text-align:center; margin-bottom:1.75rem;">
         <div class="auth-logo-badge">
-            <i class="bi bi-building-check"></i>
+            <img src="public/img/sena-logo-white.svg" alt="SENA">
         </div>
         <h1 class="auth-title" style="font-size:1.45rem; font-weight:800; color:#0f172a; margin:0; letter-spacing:-0.02em;">
             Sistema de Ingreso SENA

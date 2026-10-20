@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Reporte de Inasistencias — <?= htmlspecialchars($reporteFaltas['aprendiz']['nombre'] ?? 'Aprendiz') ?></title>
+    <link rel="icon" type="image/svg+xml" href="public/img/sena-logo.svg">
     <link rel="stylesheet" href="public/css/reporte_pdf.css">
     <style>
         .page-actions-bar {
@@ -82,9 +83,12 @@
 
     <!-- ── ENCABEZADO OFICIAL SENA ───────────────────────────────── -->
     <div class="header">
-        <div>
-            <h1>SERVICIO NACIONAL DE APRENDIZAJE — SENA</h1>
-            <p>Reporte de Inasistencias y Formato de Justificación Mensual</p>
+        <div style="display: flex; align-items: center; gap: 14px;">
+            <img src="public/img/sena-logo.svg" alt="SENA" style="width: 48px; height: 48px; object-fit: contain;">
+            <div>
+                <h1>SERVICIO NACIONAL DE APRENDIZAJE — SENA</h1>
+                <p>Reporte de Inasistencias y Formato de Justificación Mensual</p>
+            </div>
         </div>
         <div style="text-align: right;">
             <strong>Fecha de Emisión:</strong> <?= date('d/m/Y H:i') ?><br>

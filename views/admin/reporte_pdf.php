@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>Reporte de Asistencias e Inasistencias SENA</title>
+    <link rel="icon" type="image/svg+xml" href="public/img/sena-logo.svg">
     <link rel="stylesheet" href="public/css/reporte_pdf.css">
 </head>
 <body>
@@ -14,9 +15,12 @@
     </div>
 
     <div class="header">
-        <div>
-            <h1>SERVICIO NACIONAL DE APRENDIZAJE — SENA</h1>
-            <p>Reporte Consolidado de Asistencias, Retardos e Inasistencias</p>
+        <div style="display: flex; align-items: center; gap: 14px;">
+            <img src="public/img/sena-logo.svg" alt="SENA" style="width: 48px; height: 48px; object-fit: contain;">
+            <div>
+                <h1>SERVICIO NACIONAL DE APRENDIZAJE — SENA</h1>
+                <p>Reporte Consolidado de Asistencias, Retardos e Inasistencias</p>
+            </div>
         </div>
         <div style="text-align: right;">
             <strong>Fecha de emisión:</strong> <?= date('d/m/Y H:i') ?>

@@ -34,6 +34,7 @@ function fechaEspCitacion($f) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Comunicación de Inasistencias y Notificación de Deserción — <?= htmlspecialchars($nombreCompleto) ?> — SENA</title>
+    <link rel="icon" type="image/svg+xml" href="public/img/sena-logo.svg">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -142,14 +143,12 @@ function fechaEspCitacion($f) {
             width: 48px;
             height: 48px;
             background: #39A900;
-            color: #ffffff;
-            font-size: 22px;
-            font-weight: 900;
             border-radius: 8px;
             display: flex;
             align-items: center;
             justify-content: center;
-            letter-spacing: -1px;
+            padding: 6px;
+            flex-shrink: 0;
         }
         .sena-brand-text h1 {
             font-size: 16px;
@@ -365,7 +364,9 @@ function fechaEspCitacion($f) {
             <!-- Encabezado Institucional -->
             <div class="doc-header">
                 <div class="sena-brand">
-                    <div class="sena-logo-box">S</div>
+                    <div class="sena-logo-box">
+                        <img src="public/img/sena-logo-white.svg" alt="SENA" style="width: 34px; height: 34px; object-fit: contain;">
+                    </div>
                     <div class="sena-brand-text">
                         <h1>Servicio Nacional de Aprendizaje — SENA</h1>
                         <p>Centro de Formación Profesional Integral • Coordinación Académica</p>

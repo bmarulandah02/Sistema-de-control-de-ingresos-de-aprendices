@@ -87,7 +87,7 @@ function obtenerColorMateriaImprimir(string $materia): array {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Horario Mensual por Bloques — Ficha <?= htmlspecialchars($numFicha) ?> — SENA</title>
-    
+    <link rel="icon" type="image/svg+xml" href="public/img/sena-logo.svg">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     
     <style>
@@ -196,15 +196,13 @@ function obtenerColorMateriaImprimir(string $materia): array {
         .sena-badge-logo {
             width: 38px;
             height: 38px;
-            background: #059669;
-            color: #ffffff;
-            font-size: 20px;
-            font-weight: 900;
+            background: #39A900;
             border-radius: 8px;
             display: flex;
             align-items: center;
             justify-content: center;
-            letter-spacing: -1px;
+            padding: 5px;
+            flex-shrink: 0;
         }
         .sena-title {
             font-size: 15px;
@@ -534,7 +532,9 @@ function obtenerColorMateriaImprimir(string $materia): array {
         <!-- ENCABEZADO INSTITUCIONAL -->
         <div class="sena-header">
             <div class="sena-logo-box">
-                <div class="sena-badge-logo">S</div>
+                <div class="sena-badge-logo">
+                    <img src="public/img/sena-logo-white.svg" alt="SENA" style="width: 26px; height: 26px; object-fit: contain;">
+                </div>
                 <div>
                     <h1 class="sena-title">Servicio Nacional de Aprendizaje — SENA</h1>
                     <div class="sena-subtitle">Sistema de Control de Ingresos de Aprendices • Horario Oficial de Formación Profesional</div>
