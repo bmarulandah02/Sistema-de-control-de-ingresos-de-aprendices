@@ -184,13 +184,35 @@ require __DIR__ . '/../../views/layouts/header.php';
                                 <span>Editar</span>
                             </a>
                             <?php if ($u['id_usuario'] != $_SESSION['usuario_id']): ?>
-                            <button type="button" 
-                                    onclick="confirmarEliminarUsuario(<?= $u['id_usuario'] ?>, '<?= htmlspecialchars(addslashes($u['nombre'])) ?>')" 
-                                    class="btn-shadcn btn-shadcn-outline" 
-                                    style="padding:0.25rem 0.5rem; font-size:0.75rem; color:#dc2626; border-color:rgba(239,68,68,0.3);" 
-                                    title="Eliminar Usuario">
-                                <i class="bi bi-trash"></i>
-                            </button>
+                                <?php if ($u['rol'] === 'Aprendiz'): ?>
+                                    <?php if (($u['estado_aprendiz'] ?? '') === 'Retirado'): ?>
+                                    <button type="button" 
+                                            onclick="confirmarReactivarAprendiz(<?= $u['id_usuario'] ?>, '<?= htmlspecialchars(addslashes($u['nombre'])) ?>')" 
+                                            class="btn-shadcn btn-shadcn-outline" 
+                                            style="padding:0.25rem 0.5rem; font-size:0.75rem; color:#16a34a; border-color:rgba(22,163,74,0.3);" 
+                                            title="Reactivar Aprendiz">
+                                        <i class="bi bi-arrow-counterclockwise"></i>
+                                        <span>Reactivar</span>
+                                    </button>
+                                    <?php else: ?>
+                                    <button type="button" 
+                                            onclick="confirmarRetirarAprendiz(<?= $u['id_usuario'] ?>, '<?= htmlspecialchars(addslashes($u['nombre'])) ?>')" 
+                                            class="btn-shadcn btn-shadcn-outline" 
+                                            style="padding:0.25rem 0.5rem; font-size:0.75rem; color:#dc2626; border-color:rgba(239,68,68,0.3);" 
+                                            title="Retirar Aprendiz">
+                                        <i class="bi bi-person-x"></i>
+                                        <span>Retirar</span>
+                                    </button>
+                                    <?php endif; ?>
+                                <?php else: ?>
+                                <button type="button" 
+                                        onclick="confirmarEliminarUsuario(<?= $u['id_usuario'] ?>, '<?= htmlspecialchars(addslashes($u['nombre'])) ?>')" 
+                                        class="btn-shadcn btn-shadcn-outline" 
+                                        style="padding:0.25rem 0.5rem; font-size:0.75rem; color:#dc2626; border-color:rgba(239,68,68,0.3);" 
+                                        title="Eliminar Usuario">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                                <?php endif; ?>
                             <?php endif; ?>
                         </div>
                         <?php else: ?>
@@ -206,6 +228,22 @@ require __DIR__ . '/../../views/layouts/header.php';
 </div>
 
 <script>
+function confirmarRetirarAprendiz(id, nombre) {
+    switchAlert('retirar_aprendiz', { nombre: nombre }).then((result) => {
+        if (result.isConfirmed) {
+            window.location.href = `index.php?action=usuario-eliminar&id=${id}`;
+        }
+    });
+}
+
+function confirmarReactivarAprendiz(id, nombre) {
+    switchAlert('reactivar_aprendiz', { nombre: nombre }).then((result) => {
+        if (result.isConfirmed) {
+            window.location.href = `index.php?action=usuario-reactivar&id=${id}`;
+        }
+    });
+}
+
 function confirmarEliminarUsuario(id, nombre) {
     switchAlert('eliminar_usuario', { nombre: nombre }).then((result) => {
         if (result.isConfirmed) {
@@ -220,7 +258,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const casos = {
         registrado: 'usuario_registrado',
         actualizado: 'usuario_actualizado',
-        eliminado: 'usuario_eliminado'
+        eliminado: 'usuario_eliminado',
+        aprendiz_retirado: 'aprendiz_retirado',
+        aprendiz_reactivado: 'aprendiz_reactivado'
     };
     switchAlert(casos[<?= json_encode($_GET['success']) ?>] || 'operacion_exitosa');
 });

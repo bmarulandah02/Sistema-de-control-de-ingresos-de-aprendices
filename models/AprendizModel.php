@@ -18,7 +18,7 @@ class AprendizModel {
 
             if ($conexion) {
                 if ($idFicha && $idFicha > 0) {
-                    $stmt = $conexion->prepare("SELECT COUNT(*) FROM aprendiz WHERE fk_ficha = :ficha");
+                    $stmt = $conexion->prepare("SELECT COUNT(*) FROM aprendiz WHERE fk_ficha = :ficha AND (estado != 'Retirado' OR estado IS NULL)");
                     $stmt->execute([':ficha' => $idFicha]);
                     return (int) $stmt->fetchColumn();
                 } else if ($instructorId && $instructorId > 0) {
@@ -27,11 +27,11 @@ class AprendizModel {
                         OR f.id_ficha IN (SELECT fk_ficha FROM ficha_instructor WHERE fk_usuario = :instructor)
                         OR f.id_ficha IN (SELECT fk_ficha FROM ficha_asignatura WHERE fk_usuario_instructor = :instructor)
                         OR f.id_ficha IN (SELECT fk_ficha FROM horario_bloque WHERE fk_usuario_instructor = :instructor)
-                    )");
+                    ) AND (a.estado != 'Retirado' OR a.estado IS NULL)");
                     $stmt->execute([':instructor' => $instructorId]);
                     return (int) $stmt->fetchColumn();
                 }
-                return (int) $conexion->query("SELECT COUNT(*) FROM aprendiz")->fetchColumn();
+                return (int) $conexion->query("SELECT COUNT(*) FROM aprendiz WHERE (estado != 'Retirado' OR estado IS NULL)")->fetchColumn();
             }
         } catch (Exception $e) {
             // Devuelve 0 si falla la conexión
@@ -175,7 +175,7 @@ class AprendizModel {
             $conexion=$mysql->getConexion();
             if($conexion)
                 {
-                    $consulta="SELECT a.id_aprendiz, a.fk_ficha, u.nombre, u.apellido, f.nombre_programa 
+                    $consulta="SELECT a.id_aprendiz, a.fk_ficha, a.estado, u.nombre, u.apellido, f.nombre_programa 
                                FROM aprendiz a
                                LEFT JOIN usuario u ON a.fk_usuario = u.id_usuario
                                LEFT JOIN ficha f ON a.fk_ficha = f.id_ficha
@@ -203,7 +203,7 @@ class AprendizModel {
             $conexion = $mysql->getConexion();
             
             if ($conexion) {
-                $consulta = "SELECT a.id_aprendiz, a.fk_ficha, u.nombre, u.apellido, f.nombre_programa 
+                $consulta = "SELECT a.id_aprendiz, a.fk_ficha, a.estado, u.nombre, u.apellido, f.nombre_programa 
                              FROM aprendiz a
                              LEFT JOIN usuario u ON a.fk_usuario = u.id_usuario
                              LEFT JOIN ficha f ON a.fk_ficha = f.id_ficha

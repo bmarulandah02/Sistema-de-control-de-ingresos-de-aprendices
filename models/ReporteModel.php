@@ -35,6 +35,9 @@ class ReporteModel {
                 $whereAprendiz = [];
                 $paramsAprendiz = [];
 
+                // Excluir aprendices en estado Retirado (Deshabilitados) de las listas de asistencias
+                $whereAprendiz[] = "(a.estado != 'Retirado' OR a.estado IS NULL)";
+
                 if ($fichaId) {
                     $whereAprendiz[] = "a.fk_ficha = :ficha_id";
                     $paramsAprendiz[':ficha_id'] = $fichaId;

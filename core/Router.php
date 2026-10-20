@@ -88,7 +88,7 @@ class Router {
         // 5. Validación de Rutas Existentes (404)
         $rutasValidas = [
             'login', 'logout', 'dashboard', 'usuarios', 'usuario-crear', 'usuario-editar',
-            'usuario-actualizar', 'usuario-eliminar', 'asistencia', 'registrar-ingreso',
+            'usuario-actualizar', 'usuario-eliminar', 'usuario-reactivar', 'asistencia', 'registrar-ingreso',
             'abrir-sesion-asistencia', 'cerrar-jornada', 'historial', 'fichas', 'ficha-crear', 'ficha-editar',
             'ficha-guardar', 'ficha-eliminar', 'ficha-reactivar', 'ficha-horario', 'ficha-horario-importar', 'ficha-horario-imprimir', 'ficha-horario-eliminar',
             'ficha-aprendices-importar', 'aprendices-importar',
@@ -115,7 +115,7 @@ class Router {
                 return;
             }
         } elseif ($rolSesion === 'Instructor') {
-            $rutasSoloAdmin = ['usuario-crear', 'usuario-editar', 'usuario-actualizar', 'usuario-eliminar', 'ficha-crear', 'ficha-editar', 'ficha-guardar', 'ficha-eliminar', 'ficha-reactivar'];
+            $rutasSoloAdmin = ['usuario-crear', 'usuario-editar', 'usuario-actualizar', 'usuario-eliminar', 'usuario-reactivar', 'ficha-crear', 'ficha-editar', 'ficha-guardar', 'ficha-eliminar', 'ficha-reactivar'];
             if (in_array($action, $rutasSoloAdmin)) {
                 require __DIR__ . '/../views/errors/403.php';
                 return;
@@ -206,6 +206,9 @@ class Router {
                 break;
             case 'usuario-eliminar':
                 (new UsuarioController())->eliminar();
+                break;
+            case 'usuario-reactivar':
+                (new UsuarioController())->reactivar();
                 break;
             case 'mi-perfil-guardar':
                 (new UsuarioController())->guardarPerfilPersonal();

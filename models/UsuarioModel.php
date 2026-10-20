@@ -385,17 +385,54 @@ class UsuarioModel {
     }
 
     /**
-     * Elimina un usuario por su ID (y sus registros asociados)
+     * Elimina un usuario o lo retira si es aprendiz
      */
-    public static function eliminarUsuario(int $idUsuario): bool {
+    public static function eliminarUsuario(int $idUsuario): string {
         try {
             $mysql = new MySQL();
             $mysql->conectarBD();
             $conexion = $mysql->getConexion();
 
             if ($conexion) {
-                $conexion->exec("DELETE FROM aprendiz WHERE fk_usuario = " . (int)$idUsuario);
-                $stmt = $conexion->prepare("DELETE FROM usuario WHERE id_usuario = :id");
+                // Verificar si el usuario es un Aprendiz
+                $stmtCheck = $conexion->prepare("SELECT fk_rol FROM usuario WHERE id_usuario = :id LIMIT 1");
+                $stmtCheck->execute([':id' => $idUsuario]);
+                $rolId = (int)$stmtCheck->fetchColumn();
+
+                $stmtAprendiz = $conexion->prepare("SELECT id_aprendiz FROM aprendiz WHERE fk_usuario = :id LIMIT 1");
+                $stmtAprendiz->execute([':id' => $idUsuario]);
+                $esAprendiz = ($rolId === 3 || $stmtAprendiz->fetchColumn());
+
+                if ($esAprendiz) {
+                    // NO BORRAR: Marcar al aprendiz como Retirado (Deshabilitado)
+                    $stmtUpdate = $conexion->prepare("UPDATE aprendiz SET estado = 'Retirado' WHERE fk_usuario = :id");
+                    $stmtUpdate->execute([':id' => $idUsuario]);
+                    return 'retirado';
+                } else {
+                    // Si es otro rol (Instructor, etc.) se elimina
+                    $conexion->exec("DELETE FROM aprendiz WHERE fk_usuario = " . (int)$idUsuario);
+                    $stmt = $conexion->prepare("DELETE FROM usuario WHERE id_usuario = :id");
+                    $stmt->execute([':id' => $idUsuario]);
+                    return 'eliminado';
+                }
+            }
+        } catch (Exception $e) {
+            // Silencioso
+        }
+        return 'error';
+    }
+
+    /**
+     * Reactiva a un aprendiz retirado cambiándolo a estado Activo
+     */
+    public static function reactivarAprendiz(int $idUsuario): bool {
+        try {
+            $mysql = new MySQL();
+            $mysql->conectarBD();
+            $conexion = $mysql->getConexion();
+
+            if ($conexion) {
+                $stmt = $conexion->prepare("UPDATE aprendiz SET estado = 'Activo' WHERE fk_usuario = :id");
                 return $stmt->execute([':id' => $idUsuario]);
             }
         } catch (Exception $e) {

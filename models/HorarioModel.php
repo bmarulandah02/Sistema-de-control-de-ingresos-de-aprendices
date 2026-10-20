@@ -140,7 +140,7 @@ class HorarioModel {
                                CONCAT(u.nombre, ' ', u.apellido) AS instructor,
                                u.identificacion AS instructor_identificacion,
                                u.nombre_usuario AS instructor_correo,
-                               (SELECT COUNT(*) FROM aprendiz a WHERE a.fk_ficha = f.id_ficha) AS total_aprendices
+                               (SELECT COUNT(*) FROM aprendiz a WHERE a.fk_ficha = f.id_ficha AND (a.estado != 'Retirado' OR a.estado IS NULL)) AS total_aprendices
                         FROM ficha f
                         LEFT JOIN usuario u ON f.fk_usuario = u.id_usuario
                         {$whereSql}
@@ -211,7 +211,7 @@ class HorarioModel {
                                CONCAT(u.nombre, ' ', u.apellido) AS instructor,
                                u.identificacion AS instructor_identificacion,
                                u.nombre_usuario AS instructor_correo,
-                               (SELECT COUNT(*) FROM aprendiz a WHERE a.fk_ficha = f.id_ficha) AS total_aprendices
+                               (SELECT COUNT(*) FROM aprendiz a WHERE a.fk_ficha = f.id_ficha AND (a.estado != 'Retirado' OR a.estado IS NULL)) AS total_aprendices
                         FROM ficha f
                         LEFT JOIN usuario u ON f.fk_usuario = u.id_usuario
                         {$whereSql}
@@ -434,7 +434,7 @@ class HorarioModel {
             $mysql->conectarBD();
             $conexion = $mysql->getConexion();
             if ($conexion) {
-                $stmt = $conexion->prepare("SELECT COUNT(*) FROM aprendiz WHERE fk_ficha = :id");
+                $stmt = $conexion->prepare("SELECT COUNT(*) FROM aprendiz WHERE fk_ficha = :id AND (estado != 'Retirado' OR estado IS NULL)");
                 $stmt->execute([':id' => $idFicha]);
                 return (int) $stmt->fetchColumn();
             }

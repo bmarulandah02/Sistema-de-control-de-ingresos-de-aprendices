@@ -138,6 +138,19 @@ class AsistenciaController {
             }
 
             if ($datosAprendiz) {
+                // ── VALIDACIÓN DE ESTADO: Aprendices retirados no pueden registrar asistencia ──
+                $estadoApp = trim($datosAprendiz['estado'] ?? 'Activo');
+                if ($estadoApp === 'Retirado') {
+                    $nombreCompleto = trim(($datosAprendiz['nombre'] ?? '') . ' ' . ($datosAprendiz['apellido'] ?? ''));
+                    $nombreMostrar  = !empty($nombreCompleto) ? $nombreCompleto : "El aprendiz (ID: {$datosAprendiz['id_aprendiz']})";
+                    $_SESSION['mensaje'] = [
+                        'texto' => "Aprendiz Retirado: {$nombreMostrar} se encuentra en estado Retirado (Deshabilitado) y no puede registrar asistencia.",
+                        'tipo'  => "error"
+                    ];
+                    header("Location: index.php?action=asistencia");
+                    exit();
+                }
+
                 $identificadorAprendiz = intval($datosAprendiz['id_aprendiz']);
                 $identificadorFicha    = intval($datosAprendiz['fk_ficha']);
 

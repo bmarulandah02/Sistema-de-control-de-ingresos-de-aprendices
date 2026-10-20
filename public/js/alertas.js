@@ -92,6 +92,16 @@
                     '¿Estás seguro de eliminar a "<strong>' + esc(d.nombre) + '</strong>"? Esta acción no se puede deshacer.',
                     'Sí, eliminar');
 
+            case 'retirar_aprendiz':
+                return confirmar('warning', '¿Retirar aprendiz?',
+                    'El aprendiz "<strong>' + esc(d.nombre) + '</strong>" quedará en estado <strong>Retirado</strong> y no aparecerá en las listas de asistencia.',
+                    '<i class="bi bi-person-x me-1"></i>Sí, retirar aprendiz');
+
+            case 'reactivar_aprendiz':
+                return confirmar('info', '¿Reactivar aprendiz?',
+                    'El aprendiz "<strong>' + esc(d.nombre) + '</strong>" volverá a estar <strong>Activo</strong> en el sistema y en las listas de asistencia.',
+                    '<i class="bi bi-arrow-counterclockwise me-1"></i>Sí, reactivar aprendiz', COLOR.primario);
+
             case 'eliminar_horario':
                 return confirmar('warning', '¿Eliminar horario completo?',
                     'Esta acción eliminará todos los bloques de horario registrados para la <strong>Ficha ' + esc(d.ficha) + '</strong>.<br><br>' +
@@ -286,6 +296,12 @@
 
             case 'usuario_eliminado':
                 return autoCierre('success', '¡Usuario Eliminado!', 'El usuario ha sido eliminado correctamente.');
+
+            case 'aprendiz_retirado':
+                return autoCierre('success', '¡Aprendiz Retirado!', 'El aprendiz ha sido retirado correctamente y no saldrá en las listas de asistencia.');
+
+            case 'aprendiz_reactivado':
+                return autoCierre('success', '¡Aprendiz Reactivado!', 'El aprendiz ha sido reactivado con éxito.');
 
             case 'operacion_exitosa':
                 return autoCierre('success', '¡Éxito!', 'Operación realizada con éxito.');

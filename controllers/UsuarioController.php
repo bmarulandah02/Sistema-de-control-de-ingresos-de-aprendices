@@ -197,7 +197,7 @@ class UsuarioController {
     }
 
     /**
-     * Elimina un usuario verificando permisos (Solo Administrador)
+     * Elimina un usuario o lo retira si es aprendiz (Solo Administrador)
      */
     public function eliminar(): void {
         if (($_SESSION['rol'] ?? '') !== 'Administrador') {
@@ -207,9 +207,30 @@ class UsuarioController {
 
         $id = (int) ($_GET['id'] ?? 0);
         if ($id > 0) {
-            UsuarioModel::eliminarUsuario($id);
+            $resultado = UsuarioModel::eliminarUsuario($id);
+            if ($resultado === 'retirado') {
+                header('Location: index.php?action=usuarios&success=aprendiz_retirado');
+                exit();
+            }
         }
         header('Location: index.php?action=usuarios&success=eliminado');
+        exit();
+    }
+
+    /**
+     * Reactiva a un aprendiz retirado (Solo Administrador)
+     */
+    public function reactivar(): void {
+        if (($_SESSION['rol'] ?? '') !== 'Administrador') {
+            header('Location: index.php?action=usuarios&error=sin_permiso');
+            exit();
+        }
+
+        $id = (int) ($_GET['id'] ?? 0);
+        if ($id > 0) {
+            UsuarioModel::reactivarAprendiz($id);
+        }
+        header('Location: index.php?action=usuarios&success=aprendiz_reactivado');
         exit();
     }
 }
