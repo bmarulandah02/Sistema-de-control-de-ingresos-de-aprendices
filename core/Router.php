@@ -78,6 +78,32 @@ class Router {
             }
         }
 
+        // 3.1 Recuperación de Contraseña (Acceso Público)
+        if ($action === 'recuperar-password') {
+            $authController = new AuthController();
+            if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+                if (isset($_POST['tipo_accion']) && $_POST['tipo_accion'] === 'validar_codigo') {
+                    $authController->procesarCodigoRecuperacion();
+                } else {
+                    $authController->procesarRecuperar();
+                }
+            } else {
+                $authController->mostrarRecuperar();
+            }
+            return;
+        }
+
+        // 3.2 Restablecimiento de Contraseña (Acceso Público mediante Token)
+        if ($action === 'restablecer-password') {
+            $authController = new AuthController();
+            if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+                $authController->procesarRestablecer();
+            } else {
+                $authController->mostrarRestablecer();
+            }
+            return;
+        }
+
         // 4. Protección de Rutas: Si no está autenticado, fuerza la pantalla de Login
         if (!$estaAutenticado) {
             $authController = new AuthController();

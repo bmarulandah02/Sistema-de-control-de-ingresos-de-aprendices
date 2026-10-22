@@ -105,4 +105,158 @@ class AuthController {
         header('Location: index.php?action=login');
         exit();
     }
+
+    /**
+     * Muestra el formulario para solicitar recuperación de contraseña
+     */
+    public function mostrarRecuperar(?string $error = null, ?string $success = null): void {
+        Csrf::getToken();
+        require __DIR__ . '/../views/auth/recuperar.php';
+    }
+
+    /**
+     * Procesa la solicitud de recuperación y envía el correo con SMTP
+     */
+    public function procesarRecuperar(): void {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->mostrarRecuperar();
+            return;
+        }
+
+        $csrfToken = $_POST['csrf_token'] ?? null;
+        if ($csrfToken !== null && !Csrf::validar($csrfToken)) {
+            $this->mostrarRecuperar('Sesión expirada (Token CSRF inválido). Por favor intenta de nuevo.');
+            return;
+        }
+
+        $identificador = trim($_POST['identificador'] ?? '');
+        if (empty($identificador)) {
+            $this->mostrarRecuperar('Por favor ingresa tu correo institucional o número de documento.');
+            return;
+        }
+
+        require_once __DIR__ . '/../core/Mailer.php';
+
+        $usuario = UsuarioModel::buscarPorUsuarioOEmail($identificador);
+
+        // Por seguridad, para no revelar existencia de cuentas:
+        if ($usuario && !empty($usuario['correo']) && filter_var($usuario['correo'], FILTER_VALIDATE_EMAIL)) {
+            $tokenInfo = UsuarioModel::crearTokenRecuperacion((int)$usuario['id_usuario'], $usuario['correo']);
+
+            if ($tokenInfo) {
+                $nombreParaCorreo = $usuario['nombre'] ?? 'Usuario SENA';
+                $resultado = Mailer::enviarRecuperacion(
+                    $usuario['correo'],
+                    $nombreParaCorreo,
+                    $tokenInfo['token'],
+                    $tokenInfo['codigo']
+                );
+
+                if (!$resultado['success']) {
+                    error_log("Fallo al enviar correo de recuperación a {$usuario['correo']}: " . ($resultado['error'] ?? ''));
+                    $this->mostrarRecuperar('Ocurrió un problema temporal al enviar el correo. Por favor intenta en unos minutos o contacta al administrador.');
+                    return;
+                }
+            }
+        }
+
+        $mensajeExito = "Si los datos coinciden con un usuario registrado, hemos enviado las instrucciones y el código de verificación a tu correo.";
+        $this->mostrarRecuperar(null, $mensajeExito);
+    }
+
+    /**
+     * Procesa la validación por código de 6 dígitos introducido manualmente
+     */
+    public function procesarCodigoRecuperacion(): void {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            header('Location: index.php?action=recuperar-password');
+            exit();
+        }
+
+        $csrfToken = $_POST['csrf_token'] ?? null;
+        if ($csrfToken !== null && !Csrf::validar($csrfToken)) {
+            $this->mostrarRecuperar('Sesión expirada (Token CSRF inválido). Intenta de nuevo.');
+            return;
+        }
+
+        $identificador = trim($_POST['identificador'] ?? '');
+        $codigo        = trim($_POST['codigo'] ?? '');
+
+        if (empty($identificador) || empty($codigo)) {
+            $this->mostrarRecuperar('Debes ingresar tu correo/documento y el código de 6 dígitos.');
+            return;
+        }
+
+        $registro = UsuarioModel::validarCodigoRecuperacion($identificador, $codigo);
+        if (!$registro) {
+            $this->mostrarRecuperar('El código ingresado es incorrecto o ya ha expirado (validez de 30 minutos).');
+            return;
+        }
+
+        header('Location: index.php?action=restablecer-password&token=' . urlencode($registro['token']));
+        exit();
+    }
+
+    /**
+     * Muestra el formulario para ingresar la nueva contraseña
+     */
+    public function mostrarRestablecer(?string $token = null, ?string $error = null): void {
+        $token = $token ?? trim($_GET['token'] ?? '');
+        if (empty($token)) {
+            header('Location: index.php?action=login');
+            exit();
+        }
+
+        $tokenValido = UsuarioModel::validarTokenRecuperacion($token);
+        Csrf::getToken();
+        require __DIR__ . '/../views/auth/restablecer.php';
+    }
+
+    /**
+     * Procesa el cambio de contraseña con el token validado
+     */
+    public function procesarRestablecer(): void {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            header('Location: index.php?action=login');
+            exit();
+        }
+
+        $csrfToken = $_POST['csrf_token'] ?? null;
+        if ($csrfToken !== null && !Csrf::validar($csrfToken)) {
+            $token = trim($_POST['token'] ?? '');
+            $this->mostrarRestablecer($token, 'Sesión expirada (Token CSRF inválido). Recarga la página.');
+            return;
+        }
+
+        $token          = trim($_POST['token'] ?? '');
+        $password       = trim($_POST['password'] ?? '');
+        $passwordConfirm= trim($_POST['password_confirm'] ?? '');
+
+        if (empty($token)) {
+            header('Location: index.php?action=login');
+            exit();
+        }
+
+        if (strlen($password) < 6) {
+            $this->mostrarRestablecer($token, 'La nueva contraseña debe tener al menos 6 caracteres.');
+            return;
+        }
+
+        if ($password !== $passwordConfirm) {
+            $this->mostrarRestablecer($token, 'Las contraseñas ingresadas no coinciden.');
+            return;
+        }
+
+        $actualizado = UsuarioModel::restablecerPasswordConToken($token, $password);
+        if ($actualizado) {
+            $_SESSION['mensaje'] = [
+                'tipo' => 'success',
+                'texto' => '¡Tu contraseña ha sido actualizada con éxito! Ya puedes iniciar sesión con tu nueva clave.'
+            ];
+            header('Location: index.php?action=login');
+            exit();
+        } else {
+            $this->mostrarRestablecer($token, 'El enlace para restablecer la contraseña ha expirado o ya fue utilizado. Por favor solicita uno nuevo.');
+        }
+    }
 }

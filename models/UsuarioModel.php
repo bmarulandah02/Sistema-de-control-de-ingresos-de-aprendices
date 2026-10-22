@@ -440,4 +440,153 @@ class UsuarioModel {
         }
         return false;
     }
+
+    /**
+     * Asegura la existencia de la tabla de recuperación de contraseña
+     */
+    public static function asegurarTablaRecuperacion(): void {
+        try {
+            $mysql = new MySQL();
+            $mysql->conectarBD();
+            $conexion = $mysql->getConexion();
+            if ($conexion) {
+                $conexion->exec("CREATE TABLE IF NOT EXISTS recuperacion_contrasena (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    fk_usuario INT NOT NULL,
+                    correo VARCHAR(150) NOT NULL,
+                    token VARCHAR(64) NOT NULL,
+                    codigo VARCHAR(6) NOT NULL,
+                    expira_en DATETIME NOT NULL,
+                    usado TINYINT(1) DEFAULT 0,
+                    creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    KEY idx_token (token),
+                    KEY idx_codigo (codigo),
+                    KEY idx_fk_usuario (fk_usuario)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+            }
+        } catch (Exception $e) {
+            // Silencioso
+        }
+    }
+
+    /**
+     * Crea un token de recuperación y código numérico para un usuario (válido por 30 minutos)
+     */
+    public static function crearTokenRecuperacion(int $idUsuario, string $correo): ?array {
+        self::asegurarTablaRecuperacion();
+        try {
+            $mysql = new MySQL();
+            $mysql->conectarBD();
+            $conexion = $mysql->getConexion();
+            if ($conexion) {
+                // Invalidar tokens previos no usados de este usuario
+                $stmtOld = $conexion->prepare("UPDATE recuperacion_contrasena SET usado = 1 WHERE fk_usuario = :id");
+                $stmtOld->execute([':id' => $idUsuario]);
+
+                $token = bin2hex(random_bytes(32));
+                $codigo = (string) random_int(100000, 999999);
+
+                $stmt = $conexion->prepare("INSERT INTO recuperacion_contrasena (fk_usuario, correo, token, codigo, expira_en, usado) 
+                    VALUES (:id, :correo, :token, :codigo, DATE_ADD(NOW(), INTERVAL 30 MINUTE), 0)");
+                $stmt->execute([
+                    ':id'     => $idUsuario,
+                    ':correo' => $correo,
+                    ':token'  => $token,
+                    ':codigo' => $codigo
+                ]);
+
+                return ['token' => $token, 'codigo' => $codigo];
+            }
+        } catch (Exception $e) {
+            error_log("Error al crear token de recuperación: " . $e->getMessage());
+        }
+        return null;
+    }
+
+    /**
+     * Valida si un token existe, no ha sido usado y aún no expira
+     */
+    public static function validarTokenRecuperacion(string $token): ?array {
+        self::asegurarTablaRecuperacion();
+        try {
+            $mysql = new MySQL();
+            $mysql->conectarBD();
+            $conexion = $mysql->getConexion();
+            if ($conexion) {
+                $stmt = $conexion->prepare("SELECT r.*, u.nombre, u.apellido, u.nombre_usuario 
+                    FROM recuperacion_contrasena r
+                    JOIN usuario u ON r.fk_usuario = u.id_usuario
+                    WHERE r.token = :token AND r.usado = 0 AND r.expira_en > NOW()
+                    LIMIT 1");
+                $stmt->execute([':token' => $token]);
+                return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+            }
+        } catch (Exception $e) {
+            // Silencioso
+        }
+        return null;
+    }
+
+    /**
+     * Valida un código numérico de 6 dígitos asociado al correo o identificador del usuario
+     */
+    public static function validarCodigoRecuperacion(string $correoOIdentificador, string $codigo): ?array {
+        self::asegurarTablaRecuperacion();
+        try {
+            $mysql = new MySQL();
+            $mysql->conectarBD();
+            $conexion = $mysql->getConexion();
+            if ($conexion) {
+                $stmt = $conexion->prepare("SELECT r.*, u.nombre, u.apellido, u.nombre_usuario 
+                    FROM recuperacion_contrasena r
+                    JOIN usuario u ON r.fk_usuario = u.id_usuario
+                    WHERE (LOWER(r.correo) = LOWER(:correo) OR u.identificacion = :id)
+                      AND r.codigo = :codigo AND r.usado = 0 AND r.expira_en > NOW()
+                    ORDER BY r.id DESC LIMIT 1");
+                $stmt->execute([
+                    ':correo' => trim($correoOIdentificador),
+                    ':id'     => trim($correoOIdentificador),
+                    ':codigo' => trim($codigo)
+                ]);
+                return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+            }
+        } catch (Exception $e) {
+            // Silencioso
+        }
+        return null;
+    }
+
+    /**
+     * Actualiza la contraseña del usuario y marca el token como usado
+     */
+    public static function restablecerPasswordConToken(string $token, string $nuevaPassword): bool {
+        self::asegurarTablaRecuperacion();
+        try {
+            $tokenInfo = self::validarTokenRecuperacion($token);
+            if (!$tokenInfo) {
+                return false;
+            }
+
+            $mysql = new MySQL();
+            $mysql->conectarBD();
+            $conexion = $mysql->getConexion();
+            if ($conexion) {
+                $passwordHash = password_hash($nuevaPassword, PASSWORD_DEFAULT);
+
+                $stmtUpdate = $conexion->prepare("UPDATE usuario SET contrasena = :pass WHERE id_usuario = :id");
+                $stmtUpdate->execute([
+                    ':pass' => $passwordHash,
+                    ':id'   => $tokenInfo['fk_usuario']
+                ]);
+
+                $stmtMarcar = $conexion->prepare("UPDATE recuperacion_contrasena SET usado = 1 WHERE id = :id");
+                $stmtMarcar->execute([':id' => $tokenInfo['id']]);
+
+                return true;
+            }
+        } catch (Exception $e) {
+            error_log("Error al restablecer contraseña: " . $e->getMessage());
+        }
+        return false;
+    }
 }

@@ -147,6 +147,15 @@
         </div>
     </div>
 
+    <!-- Muestra mensaje de éxito de sesión si existe (ej. contraseña actualizada) -->
+    <?php if (!empty($_SESSION['mensaje'])): ?>
+    <div style="background-color:rgba(16,185,129,0.1); color:#047857; padding:0.75rem 1rem; border-radius:var(--radius-md); font-size:0.875rem; margin-bottom:1.25rem; border:1px solid rgba(16,185,129,0.3); display:flex; align-items:center; gap:0.625rem; font-weight:500;">
+        <i class="bi bi-check-circle-fill fs-5"></i>
+        <span><?= htmlspecialchars($_SESSION['mensaje']['texto'] ?? '') ?></span>
+    </div>
+    <?php unset($_SESSION['mensaje']); ?>
+    <?php endif; ?>
+
     <!-- Muestra mensaje de error si las credenciales fallan -->
     <?php if (!empty($error)): ?>
     <div style="background-color:rgba(239,68,68,0.1); color:#dc2626; padding:0.75rem 1rem; border-radius:var(--radius-md); font-size:0.875rem; margin-bottom:1.25rem; border:1px solid rgba(239,68,68,0.25); display:flex; align-items:center; gap:0.625rem; font-weight:500;">
@@ -173,9 +182,14 @@
         </div>
 
         <div class="auth-input-group" style="margin-bottom:1.5rem;">
-            <label style="display:block; font-size:0.8125rem; font-weight:600; margin-bottom:0.375rem; color:#1e293b;">
-                Contraseña
-            </label>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.375rem;">
+                <label style="font-size:0.8125rem; font-weight:600; color:#1e293b; margin:0;">
+                    Contraseña
+                </label>
+                <a href="index.php?action=recuperar-password" style="font-size:0.75rem; color:#059669; text-decoration:none; font-weight:600;">
+                    ¿Olvidaste tu contraseña?
+                </a>
+            </div>
             <div style="position:relative;">
                 <input type="password" id="loginPassword" name="password" class="shadcn-input" 
                        placeholder="••••••••" 
