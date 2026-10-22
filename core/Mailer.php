@@ -140,7 +140,7 @@ class Mailer {
         string $codigo
     ): array {
         $baseUrl = rtrim((string) env('APP_URL', 'http://localhost/Sistema-Ingreso/Sistema-de-control-de-ingresos-de-aprendices'), '/');
-        $enlaceRestablecer = $baseUrl . '/index.php?action=restablecer-password&token=' . urlencode($token);
+        $enlaceRestablecer = $baseUrl . '/index.php?action=login&reset_token=' . urlencode($token);
 
         $asunto = "Recuperación de Contraseña — SENA CTA Cartago";
 

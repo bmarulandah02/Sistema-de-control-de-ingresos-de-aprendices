@@ -78,30 +78,29 @@ class Router {
             }
         }
 
-        // 3.1 Recuperación de Contraseña (Acceso Público)
-        if ($action === 'recuperar-password') {
+        // 3.1 Endpoints AJAX para el Modal de Recuperación en Login
+        if ($action === 'ajax-recuperar') {
             $authController = new AuthController();
-            if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-                if (isset($_POST['tipo_accion']) && $_POST['tipo_accion'] === 'validar_codigo') {
-                    $authController->procesarCodigoRecuperacion();
-                } else {
-                    $authController->procesarRecuperar();
-                }
-            } else {
-                $authController->mostrarRecuperar();
-            }
+            $authController->ajaxRecuperar();
             return;
         }
 
-        // 3.2 Restablecimiento de Contraseña (Acceso Público mediante Token)
-        if ($action === 'restablecer-password') {
+        if ($action === 'ajax-restablecer') {
             $authController = new AuthController();
-            if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-                $authController->procesarRestablecer();
-            } else {
-                $authController->mostrarRestablecer();
-            }
+            $authController->ajaxRestablecer();
             return;
+        }
+
+        // 3.2 Redirecciones de compatibilidad para abrir el Modal directamente en el Login
+        if ($action === 'recuperar-password') {
+            header('Location: index.php?action=login&abrir_recuperar=1');
+            exit();
+        }
+
+        if ($action === 'restablecer-password') {
+            $token = $_GET['token'] ?? '';
+            header('Location: index.php?action=login&reset_token=' . urlencode($token));
+            exit();
         }
 
         // 4. Protección de Rutas: Si no está autenticado, fuerza la pantalla de Login

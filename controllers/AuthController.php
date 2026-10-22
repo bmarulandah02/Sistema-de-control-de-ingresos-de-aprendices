@@ -259,4 +259,125 @@ class AuthController {
             $this->mostrarRestablecer($token, 'El enlace para restablecer la contraseña ha expirado o ya fue utilizado. Por favor solicita uno nuevo.');
         }
     }
+
+    /**
+     * Endpoint AJAX para solicitar recuperación desde el Modal de Login
+     */
+    public function ajaxRecuperar(): void {
+        header('Content-Type: application/json; charset=utf-8');
+
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            echo json_encode(['success' => false, 'error' => 'Método no permitido.']);
+            return;
+        }
+
+        $csrfToken = $_POST['csrf_token'] ?? null;
+        if ($csrfToken !== null && !Csrf::validar($csrfToken)) {
+            echo json_encode(['success' => false, 'error' => 'Sesión expirada (Token CSRF inválido). Recarga la página.']);
+            return;
+        }
+
+        $identificador = trim($_POST['identificador'] ?? '');
+        if (empty($identificador)) {
+            echo json_encode(['success' => false, 'error' => 'Por favor ingresa tu correo institucional o número de documento.']);
+            return;
+        }
+
+        require_once __DIR__ . '/../core/Mailer.php';
+
+        $usuario = UsuarioModel::buscarPorUsuarioOEmail($identificador);
+
+        if ($usuario && !empty($usuario['correo']) && filter_var($usuario['correo'], FILTER_VALIDATE_EMAIL)) {
+            $tokenInfo = UsuarioModel::crearTokenRecuperacion((int)$usuario['id_usuario'], $usuario['correo']);
+
+            if ($tokenInfo) {
+                $nombreParaCorreo = $usuario['nombre'] ?? 'Usuario SENA';
+                $resultado = Mailer::enviarRecuperacion(
+                    $usuario['correo'],
+                    $nombreParaCorreo,
+                    $tokenInfo['token'],
+                    $tokenInfo['codigo']
+                );
+
+                if (!$resultado['success']) {
+                    error_log("Fallo al enviar correo a {$usuario['correo']}: " . ($resultado['error'] ?? ''));
+                    echo json_encode(['success' => false, 'error' => 'Ocurrió un problema al enviar el correo. Por favor contacta al administrador.']);
+                    return;
+                }
+            }
+        }
+
+        echo json_encode([
+            'success' => true,
+            'mensaje' => 'Si los datos coinciden con un usuario registrado, hemos enviado las instrucciones y el código de 6 dígitos a tu correo.'
+        ]);
+    }
+
+    /**
+     * Endpoint AJAX para restablecer la contraseña desde el Modal de Login
+     */
+    public function ajaxRestablecer(): void {
+        header('Content-Type: application/json; charset=utf-8');
+
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            echo json_encode(['success' => false, 'error' => 'Método no permitido.']);
+            return;
+        }
+
+        $csrfToken = $_POST['csrf_token'] ?? null;
+        if ($csrfToken !== null && !Csrf::validar($csrfToken)) {
+            echo json_encode(['success' => false, 'error' => 'Sesión expirada (Token CSRF inválido). Recarga la página.']);
+            return;
+        }
+
+        $token           = trim($_POST['token'] ?? '');
+        $codigo          = trim($_POST['codigo'] ?? '');
+        $identificador   = trim($_POST['identificador'] ?? '');
+        $password        = trim($_POST['password'] ?? '');
+        $passwordConfirm = trim($_POST['password_confirm'] ?? '');
+
+        if (empty($token) && (empty($codigo) || empty($identificador))) {
+            echo json_encode(['success' => false, 'error' => 'Faltan datos de verificación (código o token requerido).']);
+            return;
+        }
+
+        if (strlen($password) < 6) {
+            echo json_encode(['success' => false, 'error' => 'La nueva contraseña debe tener al menos 6 caracteres.']);
+            return;
+        }
+
+        if ($password !== $passwordConfirm) {
+            echo json_encode(['success' => false, 'error' => 'Las contraseñas no coinciden.']);
+            return;
+        }
+
+        if (!empty($token)) {
+            $registro = UsuarioModel::validarTokenRecuperacion($token);
+            if (!$registro) {
+                echo json_encode(['success' => false, 'error' => 'El enlace de recuperación es inválido o ya ha expirado (validez de 30 minutos).']);
+                return;
+            }
+            $tokenParaActualizar = $token;
+        } else {
+            $registro = UsuarioModel::validarCodigoRecuperacion($identificador, $codigo);
+            if (!$registro) {
+                echo json_encode(['success' => false, 'error' => 'El código de 6 dígitos es incorrecto o ya ha expirado.']);
+                return;
+            }
+            $tokenParaActualizar = $registro['token'];
+        }
+
+        $actualizado = UsuarioModel::restablecerPasswordConToken($tokenParaActualizar, $password);
+        if ($actualizado) {
+            echo json_encode([
+                'success' => true,
+                'mensaje' => '¡Tu contraseña ha sido actualizada con éxito! Ya puedes iniciar sesión con tu nueva clave.'
+            ]);
+        } else {
+            echo json_encode([
+                'success' => false,
+                'error' => 'No se pudo actualizar la contraseña. El token o código ya no es válido.'
+            ]);
+        }
+    }
 }
