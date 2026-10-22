@@ -9,32 +9,55 @@ Options -Indexes
 # 2. Codificación por defecto UTF-8
 AddDefaultCharset UTF-8
 
-# 3. Bloqueo de acceso HTTP directo a carpetas sensibles del backend (config, core, database, etc.)
+# 3. Reglas de Reescritura y Bloqueo Inmediato (mod_rewrite)
 <IfModule mod_rewrite.c>
     RewriteEngine On
+
+    # A) Bloquear cualquier archivo o carpeta que inicie con punto (.gitignore, .env, .git, etc.)
+    RewriteRule (^|/)\. - [F,L,NC]
+
+    # B) Bloquear acceso HTTP directo a carpetas sensibles del backend
     RewriteRule ^(config|core|database|models|controllers|views)/ - [F,L,NC]
+
+    # C) Bloquear extensiones y archivos sensibles por nombre
+    RewriteRule (?i)\.(gitignore|gitattributes|env|sql|log|ini|json|lock|bak|backup|config|md)$ - [F,L,NC]
 </IfModule>
 
+# Respaldo si mod_rewrite no estuviera disponible (RedirectMatch)
 <IfModule !mod_rewrite.c>
+    RedirectMatch 403 (?i)(^|/)\.(gitignore|env|git)
     RedirectMatch 403 (?i)/(config|core|database|models|controllers|views)/
+    RedirectMatch 403 (?i)\.(gitignore|gitattributes|env|sql|log|ini|json|lock|bak|backup|config|md)$
 </IfModule>
 
-# 4. Bloqueo estricto de archivos ocultos y sensibles (.env, .git, *.sql, *.log, etc.)
-<IfModule mod_authz_core.c>
-    # Bloquear cualquier archivo que comience con un punto (.env, .gitignore, .git, etc.)
-    <FilesMatch "^\.">
+# 4. Bloqueo estricto a nivel de archivos de Apache (Files & FilesMatch)
+<FilesMatch "(^\..*|.*\.gitignore|.*\.gitattributes|.*\.env.*|\.(env|sql|log|ini|json|lock|bak|backup|config|md))$">
+    <IfModule mod_authz_core.c>
         Require all denied
-    </FilesMatch>
-
-    # Bloquear extensiones sensibles
-    <FilesMatch "\.(env|sql|log|ini|json|lock|bak|backup|config|md)$">
-        Require all denied
-    </FilesMatch>
-</IfModule>
-
-<IfModule !mod_authz_core.c>
-    <FilesMatch "^\.|\.(env|sql|log|ini|json|lock|bak|backup|config|md)$">
+    </IfModule>
+    <IfModule !mod_authz_core.c>
         Order deny,allow
         Deny from all
-    </FilesMatch>
-</IfModule>
+    </IfModule>
+</FilesMatch>
+
+# Bloqueo explícito prioritario para archivos del sistema de control de versiones y entorno
+<Files ".gitignore">
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order deny,allow
+        Deny from all
+    </IfModule>
+</Files>
+
+<Files ".env">
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order deny,allow
+        Deny from all
+    </IfModule>
+</Files>
