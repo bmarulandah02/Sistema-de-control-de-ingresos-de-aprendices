@@ -9,7 +9,7 @@
 
 database/
 config/
-
+config/database.local.php
 
 # Logs y almacenamiento temporal
 *.log

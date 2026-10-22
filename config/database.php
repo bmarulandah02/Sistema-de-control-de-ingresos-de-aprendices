@@ -20,6 +20,9 @@ class MySQL {
         $charset    = (string) env('DB_CHARSET', 'utf8mb4');
         $timeZoneDb = (string) env('DB_TIMEZONE', '-05:00');
         $timeZoneApp= (string) env('APP_TIMEZONE', 'America/Bogota');
+         if (file_exists(__DIR__ . '/database.local.php')) {
+            include __DIR__ . '/database.local.php';
+        }
 
         $dsn = "mysql:host={$host};port={$port};dbname={$dbname};charset={$charset}";
 
