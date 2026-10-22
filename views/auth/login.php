@@ -206,6 +206,13 @@
             <i class="bi bi-box-arrow-in-right me-1"></i>
             <span>Iniciar Sesión</span>
         </button>
+
+        <div style="margin-top:1.25rem; text-align:center;">
+            <a href="index.php?action=recuperar-password" style="font-size:0.8125rem; color:#047857; text-decoration:none; font-weight:600; display:inline-flex; align-items:center; gap:0.4rem; padding:0.5rem 0.875rem; border-radius:8px; background:rgba(5,150,105,0.08); border:1px solid rgba(5,150,105,0.2);">
+                <i class="bi bi-key-fill"></i>
+                <span>¿Olvidaste tu contraseña? Recupérala aquí</span>
+            </a>
+        </div>
     </form>
 
     <div style="margin-top:1.75rem; text-align:center; font-size:0.75rem; color:#64748b; border-top:1px solid rgba(0,0,0,0.06); padding-top:1.25rem;">
