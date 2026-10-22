@@ -1,0 +1,40 @@
+# ──────────────────────────────────────────────
+#  Sistema de Control de Ingresos SENA — CTA Cartago
+#  Archivo Único y Centralizado de Configuración Apache (.htaccess)
+# ──────────────────────────────────────────────
+
+# 1. Deshabilitar listado de directorios
+Options -Indexes
+
+# 2. Codificación por defecto UTF-8
+AddDefaultCharset UTF-8
+
+# 3. Bloqueo de acceso HTTP directo a carpetas sensibles del backend (config, core, database, etc.)
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteRule ^(config|core|database|models|controllers|views)/ - [F,L,NC]
+</IfModule>
+
+<IfModule !mod_rewrite.c>
+    RedirectMatch 403 (?i)/(config|core|database|models|controllers|views)/
+</IfModule>
+
+# 4. Bloqueo estricto de archivos ocultos y sensibles (.env, .git, *.sql, *.log, etc.)
+<IfModule mod_authz_core.c>
+    # Bloquear cualquier archivo que comience con un punto (.env, .gitignore, .git, etc.)
+    <FilesMatch "^\.">
+        Require all denied
+    </FilesMatch>
+
+    # Bloquear extensiones sensibles
+    <FilesMatch "\.(env|sql|log|ini|json|lock|bak|backup|config|md)$">
+        Require all denied
+    </FilesMatch>
+</IfModule>
+
+<IfModule !mod_authz_core.c>
+    <FilesMatch "^\.|\.(env|sql|log|ini|json|lock|bak|backup|config|md)$">
+        Order deny,allow
+        Deny from all
+    </FilesMatch>
+</IfModule>

@@ -1,5 +1,15 @@
+# ── Variables de entorno y credenciales (NUNCA SUBIR A GIT) ──
+.env
+.env.local
+.env.*.local
+.env.development
+.env.test
+.env.production
+!.env.example
+
 database/
 config/
+
 
 # Logs y almacenamiento temporal
 *.log
