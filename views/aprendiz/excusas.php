@@ -118,7 +118,7 @@ $instructoresFicha = ExcusaModel::obtenerInstructoresPorUsuarioAprendiz($idUsuar
                     <td><?= htmlspecialchars($e['fecha_inicio']) ?> → <?= htmlspecialchars($e['fecha_fin']) ?></td>
                     <td>
                         <?php if ($e['archivo']): ?>
-                        <a href="public/uploads/excusas/<?= htmlspecialchars($e['archivo']) ?>" target="_blank" class="btn-shadcn btn-shadcn-outline" style="padding:0.2rem 0.5rem; font-size:0.75rem;">
+                        <a href="index.php?action=excusa-descargar&archivo=<?= urlencode($e['archivo']) ?>" target="_blank" class="btn-shadcn btn-shadcn-outline" style="padding:0.2rem 0.5rem; font-size:0.75rem;">
                             <i class="bi bi-paperclip"></i> Ver Documento
                         </a>
                         <?php else: ?>—<?php endif; ?>

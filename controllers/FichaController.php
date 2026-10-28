@@ -6,7 +6,10 @@
 require_once __DIR__ . '/../models/HorarioModel.php';
 require_once __DIR__ . '/../models/AprendizModel.php';
 
+
 class FichaController {
+    private const MAX_EXCEL_BYTES = 5 * 1024 * 1024; // 5 MB
+private const MAX_FILAS_APRENDICES = 500;
 
     /**
      * Muestra la lista de fichas de formación (filtradas si es Instructor)
@@ -69,6 +72,12 @@ class FichaController {
                 return;
             }
 
+            // Validación server-side: fecha_fin >= fecha_inicio
+            if (!empty($fecha_inicio) && !empty($fecha_fin) && strtotime($fecha_fin) < strtotime($fecha_inicio)) {
+                $this->formulario($esEdicion ? (int)$_POST['id'] : null, 'La fecha de fin no puede ser anterior a la fecha de inicio de la ficha.');
+                return;
+            }
+
             $datos = [
                 'numero_ficha'  => $numero_ficha,
                 'programa'      => $programa,
@@ -109,7 +118,7 @@ class FichaController {
             exit();
         }
 
-        $id = (int) ($_GET['id'] ?? 0);
+        $id = (int) ($_POST['id'] ?? 0);
         if ($id > 0) {
             $cantAprendices = HorarioModel::contarAprendicesEnFicha($id);
             if ($cantAprendices > 0) {
@@ -134,7 +143,7 @@ class FichaController {
             exit();
         }
 
-        $id = (int) ($_GET['id'] ?? 0);
+        $id = (int) ($_POST['id'] ?? 0);
         if ($id > 0) {
             HorarioModel::reactivarFicha($id);
         }
@@ -303,7 +312,30 @@ class FichaController {
 
             if ($esEjemplo) {
                 $rutaArchivo = __DIR__ . '/../public/uploads/horario/horario-ejemplo.xlsx';
-            } elseif (isset($_FILES['archivo_excel']) && $_FILES['archivo_excel']['error'] === UPLOAD_ERR_OK) {
+            } elseif (isset($_FILES['archivo_excel'])) {
+                $upErr = $_FILES['archivo_excel']['error'];
+                if ($upErr === UPLOAD_ERR_INI_SIZE || $upErr === UPLOAD_ERR_FORM_SIZE || $_FILES['archivo_excel']['size'] > self::MAX_EXCEL_BYTES) {
+                    $errorMsg = 'El archivo supera el tamaño máximo permitido de 5 MB.';
+                    if ($esAjax) {
+                        header('Content-Type: application/json; charset=utf-8');
+                        echo json_encode(['exito' => false, 'mensaje' => $errorMsg]);
+                        exit();
+                    }
+                    $error = $errorMsg;
+                    require __DIR__ . '/../views/fichas/importar_aprendices.php';
+                    return;
+                }
+                if ($upErr !== UPLOAD_ERR_OK) {
+                    $errorMsg = 'Error al subir el archivo. Inténtalo de nuevo.';
+                    if ($esAjax) {
+                        header('Content-Type: application/json; charset=utf-8');
+                        echo json_encode(['exito' => false, 'mensaje' => $errorMsg]);
+                        exit();
+                    }
+                    $error = $errorMsg;
+                    require __DIR__ . '/../views/fichas/importar_aprendices.php';
+                    return;
+                }
                 $ext = strtolower(pathinfo($_FILES['archivo_excel']['name'], PATHINFO_EXTENSION));
                 if ($ext !== 'xlsx') {
                     $errorMsg = 'Solo se permiten archivos en formato Excel (.xlsx).';
@@ -449,6 +481,14 @@ class FichaController {
             ], JSON_UNESCAPED_UNICODE);
             exit();
         }
+        if (($_SESSION['rol'] ?? '') === 'Instructor') {
+    $ids = array_map(fn($f) => (int)$f['id'], HorarioModel::obtenerFichasPorInstructor((int)($_SESSION['usuario_id'] ?? 0)));
+    if (!in_array($id, $ids, true)) {
+        http_response_code(403);
+        echo json_encode(['success' => false, 'mensaje' => 'Sin permiso', 'bloques' => []]);
+        exit();
+    }
+}
 
         $bloques = HorarioModel::obtenerHorarioBloquesFicha($id, $mes ?: null);
 
@@ -535,7 +575,30 @@ class FichaController {
             } elseif (!empty($_POST['aprendices_json'])) {
                 $idFicha = (int)($_POST['ficha_id'] ?? $idFichaDefault);
                 $aprendices = json_decode($_POST['aprendices_json'], true) ?: [];
-            } elseif (isset($_FILES['archivo_excel']) && $_FILES['archivo_excel']['error'] === UPLOAD_ERR_OK) {
+            } elseif (isset($_FILES['archivo_excel'])) {
+                $upErr = $_FILES['archivo_excel']['error'];
+                if ($upErr === UPLOAD_ERR_INI_SIZE || $upErr === UPLOAD_ERR_FORM_SIZE || $_FILES['archivo_excel']['size'] > self::MAX_EXCEL_BYTES) {
+                    $errorMsg = 'El archivo supera el tamaño máximo permitido de 5 MB.';
+                    if ($esAjax) {
+                        header('Content-Type: application/json; charset=utf-8');
+                        echo json_encode(['exito' => false, 'mensaje' => $errorMsg]);
+                        exit();
+                    }
+                    $error = $errorMsg;
+                    require __DIR__ . '/../views/fichas/importar_aprendices.php';
+                    return;
+                }
+                if ($upErr !== UPLOAD_ERR_OK) {
+                    $errorMsg = 'Error al subir el archivo. Inténtalo de nuevo.';
+                    if ($esAjax) {
+                        header('Content-Type: application/json; charset=utf-8');
+                        echo json_encode(['exito' => false, 'mensaje' => $errorMsg]);
+                        exit();
+                    }
+                    $error = $errorMsg;
+                    require __DIR__ . '/../views/fichas/importar_aprendices.php';
+                    return;
+                }
                 // Guardar archivo nuevo subido en la carpeta public/uploads/Aprendices/
                 $nombreOrig = basename($_FILES['archivo_excel']['name']);
                 $ext = strtolower(pathinfo($nombreOrig, PATHINFO_EXTENSION));
@@ -563,6 +626,18 @@ class FichaController {
                     ]);
                     exit();
                 }
+            }
+
+            if (count($aprendices) > self::MAX_FILAS_APRENDICES) {
+                $errorMsg = 'El archivo contiene demasiadas filas (' . count($aprendices) . '). El límite máximo es de ' . self::MAX_FILAS_APRENDICES . ' aprendices por carga.';
+                if ($esAjax) {
+                    header('Content-Type: application/json; charset=utf-8');
+                    echo json_encode(['exito' => false, 'mensaje' => $errorMsg]);
+                    exit();
+                }
+                $error = $errorMsg;
+                require __DIR__ . '/../views/fichas/importar_aprendices.php';
+                return;
             }
 
             if (empty($aprendices)) {

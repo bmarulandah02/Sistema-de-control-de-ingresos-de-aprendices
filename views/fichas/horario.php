@@ -929,7 +929,7 @@ function confirmarEliminarHorario(idFicha, numFicha) {
     switchAlert('eliminar_horario', { ficha: numFicha || idFicha }).then((result) => {
         if (result.isConfirmed) {
             switchAlert('eliminando_horario', { texto: 'Borrando bloques y asignaciones...' });
-            window.location.href = 'index.php?action=ficha-horario-eliminar&ficha_id=' + idFicha;
+            enviarPost('index.php?action=ficha-horario-eliminar', { ficha_id: idFicha });
         }
     });
 }

@@ -215,7 +215,7 @@ function confirmarOcultarFicha(id, numero, totalAprendices) {
 
     switchAlert('ocultar_ficha', { numero: numero }).then((result) => {
         if (result.isConfirmed) {
-            window.location.href = `index.php?action=ficha-eliminar&id=${id}`;
+          enviarPost('index.php?action=ficha-eliminar',  { id: id });
         }
     });
 }
@@ -223,7 +223,7 @@ function confirmarOcultarFicha(id, numero, totalAprendices) {
 function confirmarReactivarFicha(id, numero) {
     switchAlert('reactivar_ficha', { numero: numero }).then((result) => {
         if (result.isConfirmed) {
-            window.location.href = `index.php?action=ficha-reactivar&id=${id}`;
+           enviarPost('index.php?action=ficha-reactivar', { id: id });
         }
     });
 }

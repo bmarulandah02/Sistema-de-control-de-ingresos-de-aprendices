@@ -245,20 +245,25 @@ $mesesEspanol = [
                         </td>
                         <td>
                             <?php if ($e['archivo']): ?>
-                            <a href="public/uploads/excusas/<?= htmlspecialchars($e['archivo']) ?>" target="_blank" class="btn-shadcn btn-shadcn-outline" style="padding:0.2rem 0.5rem; font-size:0.75rem;">
+                            <a href="index.php?action=excusa-descargar&archivo=<?= urlencode($e['archivo']) ?>" target="_blank" class="btn-shadcn btn-shadcn-outline" style="padding:0.2rem 0.5rem; font-size:0.75rem;">
                                 <i class="bi bi-paperclip"></i> Ver Documento
                             </a>
                             <?php else: ?>—<?php endif; ?>
                         </td>
                         <td>
-                            <div style="display:flex; gap:0.375rem;">
-                                <a href="index.php?action=excusa-aprobar&id=<?= $e['id'] ?>" class="btn-shadcn btn-shadcn-primary" style="padding:0.25rem 0.5rem; font-size:0.75rem;" title="Aprobar para mis clases" onclick="return switchAlertLink(event, 'aprobar_excusa')">
-                                    <i class="bi bi-check-lg"></i> Aprobar
-                                </a>
-                                <a href="index.php?action=excusa-rechazar&id=<?= $e['id'] ?>" class="btn-shadcn btn-shadcn-danger" style="padding:0.25rem 0.5rem; font-size:0.75rem;" title="Rechazar para mis clases" onclick="return switchAlertLink(event, 'rechazar_excusa')">
-                                    <i class="bi bi-x-lg"></i> Rechazar
-                                </a>
-                            </div>
+                            <?php $paramsExcusa = htmlspecialchars(json_encode(['id' => (int)$e['id']]), ENT_QUOTES, 'UTF-8'); ?>
+                            <button type="button" class="btn-shadcn btn-shadcn-primary" style="padding:0.25rem 0.5rem; font-size:0.75rem;"
+                                    title="Aprobar para mis clases"
+                                    data-url="index.php?action=excusa-aprobar" data-params="<?= $paramsExcusa ?>"
+                                    onclick="return switchAlertPost(event, 'aprobar_excusa')">
+                                <i class="bi bi-check-lg"></i> Aprobar
+                            </button>
+                            <button type="button" class="btn-shadcn btn-shadcn-danger" style="padding:0.25rem 0.5rem; font-size:0.75rem;"
+                                    title="Rechazar para mis clases"
+                                    data-url="index.php?action=excusa-rechazar" data-params="<?= $paramsExcusa ?>"
+                                     onclick="return switchAlertPost(event, 'rechazar_excusa')">
+                                <i class="bi bi-x-lg"></i> Rechazar
+                        </button>
                         </td>
                     </tr>
                     <?php endforeach; ?>

@@ -31,11 +31,12 @@ require __DIR__ . '/../layouts/header.php';
             <span>Terminal RFID</span>
         </a>
         <!-- Botón para cerrar jornada: solo limpia los registros del instructor en sesión si es Instructor -->
-         <a href="index.php?action=cerrar-jornada" class="btn-shadcn btn-shadcn-outline"
-           onclick="return switchAlertLink(event, 'cerrar_jornada');">
+         <button type="button" class="btn-shadcn btn-shadcn-outline"
+        data-url="index.php?action=cerrar-jornada"
+        onclick="return switchAlertPost(event, 'cerrar_jornada');">
             <i class="bi bi-moon-stars"></i>
             <span>Cerrar Jornada</span>
-        </a>
+        </button>
     </div>
 </div>
 <!-- alerta de mantenmiento en el sistema -->

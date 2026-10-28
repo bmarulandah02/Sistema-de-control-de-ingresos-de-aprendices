@@ -18,6 +18,22 @@ require_once __DIR__ . '/../controllers/DesercionController.php';
 require_once __DIR__ . '/Csrf.php';
 
 class Router {
+    private const ACCIONES_MUTANTES = [
+    'logout', 'cerrar-jornada', 'excusa-aprobar', 'excusa-rechazar',
+    'usuario-eliminar', 'usuario-reactivar',
+    'ficha-eliminar', 'ficha-reactivar', 'ficha-horario-eliminar',
+];
+
+private static function rechazarCsrf(): void {
+    http_response_code(403);
+    if (strtolower($_SERVER['HTTP_X_REQUESTED_WITH'] ?? '') === 'xmlhttprequest') {
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode(['exito' => false, 'success' => false,
+            'mensaje' => 'Sesión de seguridad inválida. Recarga la página e intenta de nuevo.']);
+        return;
+    }
+    require __DIR__ . '/../views/errors/403.php';
+}
 
     public static function dispatch(): void {
         $action = $_GET['action'] ?? null;
@@ -39,6 +55,26 @@ class Router {
                 exit();
             }
             $_SESSION['ultimo_acceso'] = time();
+        }
+        // ── Protección CSRF ──
+        $esPost = ($_SERVER['REQUEST_METHOD'] === 'POST');
+
+        if ($action === 'logout' && !$estaAutenticado) {
+            header('Location: index.php?action=login');
+            exit();
+        }
+
+        // Acciones que cambian estado: solo POST
+        if (in_array($action, self::ACCIONES_MUTANTES, true) && !$esPost) {
+            self::rechazarCsrf();
+            return;
+        }
+
+        // Todo POST de un usuario autenticado debe traer token válido (login y ajax-* validan el suyo)
+        $exentasCsrf = ['login', 'ajax-recuperar', 'ajax-restablecer'];
+        if ($esPost && $estaAutenticado && !in_array($action, $exentasCsrf, true) && !Csrf::validarRequest()) {
+            self::rechazarCsrf();
+            return;
         }
 
         // 1. Manejo del Cierre de Sesión
@@ -120,7 +156,7 @@ class Router {
             'reportes', 'excusas-admin', 'reporte-pdf', 'reporte-excel', 'reporte-horario-excel', 'reporte-horario-pdf',
             'api-bloques',
             'desercion', 'desercion-citacion', 'desercion-aviso-guardar', 'desercion-exportar',
-            'mi-perfil', 'mi-perfil-guardar', 'reporte-faltas-aprendiz', 'excusa-subir', 'excusa-editar', 'excusa-aprobar', 'excusa-rechazar', 'mis-excusas', '403', '404'
+            'mi-perfil', 'mi-perfil-guardar', 'reporte-faltas-aprendiz', 'excusa-subir', 'excusa-editar', 'excusa-aprobar', 'excusa-rechazar', 'mis-excusas', 'excusa-descargar', '403', '404'
         ];
 
         if (!empty($action) && !in_array($action, $rutasValidas)) {
@@ -323,6 +359,9 @@ class Router {
                 break;
             case 'reporte-faltas-aprendiz':
                 (new UsuarioController())->reporteFaltasPDF();
+                break;
+                        case 'excusa-descargar':
+                (new ExcusaController())->descargar();
                 break;
             case 'mis-excusas':
                 require __DIR__ . '/../views/aprendiz/excusas.php';

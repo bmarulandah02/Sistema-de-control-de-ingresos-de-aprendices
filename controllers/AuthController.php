@@ -7,6 +7,9 @@ require_once __DIR__ . '/../models/UsuarioModel.php';
 
 class AuthController {
 
+
+
+
     /**
      * Muestra la vista de formulario de Login.
      */
@@ -53,6 +56,7 @@ class AuthController {
             $usuario = UsuarioModel::buscarPorUsuarioOEmail($correo);
 
             if ($usuario && UsuarioModel::verificarPassword($password, $usuario['contrasena'])) {
+                session_regenerate_id(true); 
                 // Reiniciar contador de intentos fallidos
                 $_SESSION['login_intentos'] = 0;
                 unset($_SESSION['login_bloqueo_hasta']);
@@ -98,13 +102,24 @@ class AuthController {
      * Cierra la sesión activa.
      */
     public function logout(): void {
-        if (session_status() === PHP_SESSION_ACTIVE) {
-            session_unset();
-            session_destroy();
+    if (session_status() === PHP_SESSION_ACTIVE) {
+        $_SESSION = [];
+        if (ini_get('session.use_cookies')) {
+            $p = session_get_cookie_params();
+            setcookie(session_name(), '', [
+                'expires'  => time() - 42000,
+                'path'     => $p['path'],
+                'domain'   => $p['domain'],
+                'secure'   => $p['secure'],
+                'httponly' => $p['httponly'],
+                'samesite' => $p['samesite'] ?? 'Lax',
+            ]);
         }
-        header('Location: index.php?action=login');
-        exit();
+        session_destroy();
     }
+    header('Location: index.php?action=login');
+    exit();
+}
 
     /**
      * Muestra el formulario para solicitar recuperación de contraseña

@@ -1,4 +1,4 @@
-# ── Variables de entorno y credenciales (NUNCA SUBIR A GIT) ──
+# Variables de entorno y credenciales (NUNCA SUBIR A GIT)
 .env
 .env.local
 .env.*.local
@@ -17,6 +17,10 @@ config/database.local.php
 /storage/logs/
 /temp/
 /cache/
-# Cargas / subidas de usuarios (si no deben versionarse)
+
+# Cargas / subidas de usuarios (no versionar archivos de usuarios)
 /public/uploads/*
 !/public/uploads/.gitkeep
+!/public/uploads/excusas/
+/public/uploads/excusas/*
+!/public/uploads/excusas/.htaccess

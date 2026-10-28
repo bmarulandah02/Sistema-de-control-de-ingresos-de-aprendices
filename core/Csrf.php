@@ -7,9 +7,19 @@ declare(strict_types=1);
 
 class Csrf {
 
+/**
+ * Valida el token enviado por formulario (csrf_token) o por cabecera (X-CSRF-Token, para fetch).
+ */
+public static function validarRequest(): bool {
+    $token = $_POST['csrf_token'] ?? ($_SERVER['HTTP_X_CSRF_TOKEN'] ?? null);
+    return self::validar(is_string($token) ? $token : null);
+}
+
+
     /**
      * Obtiene el token CSRF actual de la sesión o genera uno criptográficamente seguro si no existe.
      */
+    
     public static function getToken(): string {
         if (session_status() !== PHP_SESSION_ACTIVE) {
             session_start();

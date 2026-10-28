@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="<?= htmlspecialchars(Csrf::getToken(), ENT_QUOTES, 'UTF-8') ?>">
     <title><?= $pageTitle ?? 'Sistema de Ingreso SENA — Shadcn Admin' ?></title>
     
     <!-- Favicon Oficial SENA -->
@@ -116,10 +117,14 @@
                 <i class="bi bi-person-circle"></i>
                 <span>Mi Perfil</span>
             </a>
-            <a href="index.php?action=logout" class="nav-link-item text-danger">
+                <form method="POST" action="index.php?action=logout" style="margin:0;">
+            <?= Csrf::campoHtml() ?>
+            <button type="submit" class="nav-link-item text-danger"
+            style="width:100%; background:none; border:0; text-align:left; cursor:pointer; font:inherit;">
                 <i class="bi bi-box-arrow-right"></i>
                 <span>Cerrar sesión</span>
-            </a>
+            </button>
+        </form>
         </div>
     </aside>
 

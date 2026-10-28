@@ -58,6 +58,33 @@ class ExcusaModel {
     }
 
     /**
+ * ¿La excusa está asignada a este instructor? (excusa_instructor o instructor legado en excusa)
+ */
+public static function instructorPuedeGestionar(int $idExcusa, int $idInstructor): bool {
+    if ($idExcusa <= 0 || $idInstructor <= 0) return false;
+    try {
+        $mysql = new MySQL();
+        $mysql->conectarBD();
+        $conexion = $mysql->getConexion();
+        if (!$conexion) return false;
+
+        $stmt = $conexion->prepare(
+            "SELECT 1
+               FROM excusa e
+               LEFT JOIN excusa_instructor ei
+                      ON ei.fk_excusa = e.id_excusa AND ei.fk_usuario_instructor = :inst1
+              WHERE e.id_excusa = :excusa
+                AND (ei.id_excusa_instructor IS NOT NULL OR e.fk_usuario_instructor = :inst2)
+              LIMIT 1"
+        );
+        $stmt->execute([':inst1' => $idInstructor, ':excusa' => $idExcusa, ':inst2' => $idInstructor]);
+        return (bool) $stmt->fetchColumn();
+    } catch (Exception $e) {
+        error_log("Error en instructorPuedeGestionar: " . $e->getMessage());
+        return false;
+    }
+}
+    /**
      * Obtiene el listado completo de excusas médicas (Uso administrativo / auditoría)
      */
     public static function obtenerTodas(): array {
@@ -103,6 +130,9 @@ class ExcusaModel {
 
         return $excusas;
     }
+
+
+    
 
     /**
      * Obtiene las excusas de un aprendiz con el desglose de decisiones de cada instructor

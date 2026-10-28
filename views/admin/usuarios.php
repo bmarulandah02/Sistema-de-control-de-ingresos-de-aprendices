@@ -231,7 +231,7 @@ require __DIR__ . '/../../views/layouts/header.php';
 function confirmarRetirarAprendiz(id, nombre) {
     switchAlert('retirar_aprendiz', { nombre: nombre }).then((result) => {
         if (result.isConfirmed) {
-            window.location.href = `index.php?action=usuario-eliminar&id=${id}`;
+            enviarPost('index.php?action=usuario-eliminar',  { id: id }); 
         }
     });
 }
@@ -239,7 +239,7 @@ function confirmarRetirarAprendiz(id, nombre) {
 function confirmarReactivarAprendiz(id, nombre) {
     switchAlert('reactivar_aprendiz', { nombre: nombre }).then((result) => {
         if (result.isConfirmed) {
-            window.location.href = `index.php?action=usuario-reactivar&id=${id}`;
+            enviarPost('index.php?action=usuario-reactivar', { id: id });
         }
     });
 }
@@ -247,7 +247,7 @@ function confirmarReactivarAprendiz(id, nombre) {
 function confirmarEliminarUsuario(id, nombre) {
     switchAlert('eliminar_usuario', { nombre: nombre }).then((result) => {
         if (result.isConfirmed) {
-            window.location.href = `index.php?action=usuario-eliminar&id=${id}`;
+           enviarPost('index.php?action=usuario-eliminar',  { id: id });
         }
     });
 }
@@ -263,6 +263,33 @@ document.addEventListener('DOMContentLoaded', () => {
         aprendiz_reactivado: 'aprendiz_reactivado'
     };
     switchAlert(casos[<?= json_encode($_GET['success']) ?>] || 'operacion_exitosa');
+});
+<?php endif; ?>
+<?php if (isset($_GET['error'])): ?>
+document.addEventListener('DOMContentLoaded', () => {
+    const error = <?= json_encode($_GET['error']) ?>;
+    if (error === 'no_eliminar_propio') {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Acción no permitida',
+            text: 'No puedes eliminar tu propia cuenta de usuario en sesión activa.',
+            confirmButtonColor: '#059669'
+        });
+    } else if (error === 'sin_permiso') {
+        Swal.fire({
+            icon: 'error',
+            title: 'Acceso Denegado',
+            text: 'No tienes los permisos requeridos para realizar esta acción.',
+            confirmButtonColor: '#059669'
+        });
+    } else {
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'No fue posible completar la acción sobre el usuario.',
+            confirmButtonColor: '#059669'
+        });
+    }
 });
 <?php endif; ?>
 </script>

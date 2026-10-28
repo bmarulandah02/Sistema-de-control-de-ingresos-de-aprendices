@@ -401,7 +401,7 @@ class UsuarioModel {
 
                 $stmtAprendiz = $conexion->prepare("SELECT id_aprendiz FROM aprendiz WHERE fk_usuario = :id LIMIT 1");
                 $stmtAprendiz->execute([':id' => $idUsuario]);
-                $esAprendiz = ($rolId === 3 || $stmtAprendiz->fetchColumn());
+                $esAprendiz = ($rolId === 3 || (bool)$stmtAprendiz->fetchColumn());
 
                 if ($esAprendiz) {
                     // NO BORRAR: Marcar al aprendiz como Retirado (Deshabilitado)
@@ -409,15 +409,33 @@ class UsuarioModel {
                     $stmtUpdate->execute([':id' => $idUsuario]);
                     return 'retirado';
                 } else {
-                    // Si es otro rol (Instructor, etc.) se elimina
-                    $conexion->exec("DELETE FROM aprendiz WHERE fk_usuario = " . (int)$idUsuario);
+                    // Si es otro rol (Instructor, Administrador):
+                    // Ejecutamos en una transacción para desvincular dependencias foráneas y borrar limpiamente
+                    $conexion->beginTransaction();
+
+                    try { $conexion->prepare("DELETE FROM recuperacion_contrasena WHERE fk_usuario = :id")->execute([':id' => $idUsuario]); } catch (Exception $e) {}
+                    try { $conexion->prepare("UPDATE ficha SET fk_usuario = NULL WHERE fk_usuario = :id")->execute([':id' => $idUsuario]); } catch (Exception $e) {}
+                    try { $conexion->prepare("DELETE FROM ficha_instructor WHERE fk_usuario = :id")->execute([':id' => $idUsuario]); } catch (Exception $e) {}
+                    try { $conexion->prepare("DELETE FROM ficha_asignatura WHERE fk_usuario_instructor = :id")->execute([':id' => $idUsuario]); } catch (Exception $e) {}
+                    try { $conexion->prepare("DELETE FROM horario_bloque WHERE fk_usuario_instructor = :id")->execute([':id' => $idUsuario]); } catch (Exception $e) {}
+                    try { $conexion->prepare("DELETE FROM excusa_instructor WHERE fk_usuario_instructor = :id")->execute([':id' => $idUsuario]); } catch (Exception $e) {}
+                    try { $conexion->prepare("UPDATE excusa SET fk_usuario_instructor = NULL WHERE fk_usuario_instructor = :id")->execute([':id' => $idUsuario]); } catch (Exception $e) {}
+                    try { $conexion->prepare("DELETE FROM desercion_aviso WHERE fk_usuario_instructor = :id")->execute([':id' => $idUsuario]); } catch (Exception $e) {}
+                    try { $conexion->prepare("UPDATE ingreso SET fk_usuario_instructor = NULL WHERE fk_usuario_instructor = :id")->execute([':id' => $idUsuario]); } catch (Exception $e) {}
+                    try { $conexion->prepare("DELETE FROM aprendiz WHERE fk_usuario = :id")->execute([':id' => $idUsuario]); } catch (Exception $e) {}
+
                     $stmt = $conexion->prepare("DELETE FROM usuario WHERE id_usuario = :id");
                     $stmt->execute([':id' => $idUsuario]);
+
+                    $conexion->commit();
                     return 'eliminado';
                 }
             }
         } catch (Exception $e) {
-            // Silencioso
+            if (isset($conexion) && $conexion->inTransaction()) {
+                $conexion->rollBack();
+            }
+            error_log("Error en eliminarUsuario: " . $e->getMessage());
         }
         return 'error';
     }

@@ -167,10 +167,14 @@ class UsuarioController {
             }
         }
 
-        if ($idAprendiz <= 0) {
-            header('Location: index.php?action=mi-perfil');
-            exit();
-        }
+        if ($rolSesion === 'Instructor' && $idAprendiz > 0) {
+    $ap = (new AprendizModel())->obtenerAprendizPorId($idAprendiz);
+    $idsFichas = array_map(fn($f) => (int)$f['id'], HorarioModel::obtenerFichasPorInstructor($usuarioIdSesion));
+    if (!$ap || !in_array((int)$ap['fk_ficha'], $idsFichas, true)) {
+        header('Location: index.php?action=403');
+        exit();
+    }
+}
 
         $reporteFaltas = ReporteModel::obtenerFaltasMesAprendiz($idAprendiz, $mes);
         require __DIR__ . '/../views/aprendiz/reporte_faltas_pdf.php';
@@ -205,15 +209,26 @@ class UsuarioController {
             exit();
         }
 
-        $id = (int) ($_GET['id'] ?? 0);
+        $id = (int) ($_POST['id'] ?? 0);
+        $idPropio = (int) ($_SESSION['usuario_id'] ?? 0);
+
         if ($id > 0) {
+            if ($id === $idPropio) {
+                header('Location: index.php?action=usuarios&error=no_eliminar_propio');
+                exit();
+            }
+
             $resultado = UsuarioModel::eliminarUsuario($id);
             if ($resultado === 'retirado') {
                 header('Location: index.php?action=usuarios&success=aprendiz_retirado');
                 exit();
             }
+            if ($resultado === 'eliminado') {
+                header('Location: index.php?action=usuarios&success=eliminado');
+                exit();
+            }
         }
-        header('Location: index.php?action=usuarios&success=eliminado');
+        header('Location: index.php?action=usuarios&error=error_eliminar');
         exit();
     }
 
@@ -226,7 +241,7 @@ class UsuarioController {
             exit();
         }
 
-        $id = (int) ($_GET['id'] ?? 0);
+       $id = (int) ($_POST['id'] ?? 0);
         if ($id > 0) {
             UsuarioModel::reactivarAprendiz($id);
         }

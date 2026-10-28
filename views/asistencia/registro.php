@@ -61,11 +61,16 @@ require __DIR__ . '/../../views/layouts/header.php';
                     </div>
                 <?php endif; ?>
 
-                <?php if (!empty($claseMomento)): ?>
+                <?php if (!empty($claseMomento) && !empty($claseMomento['es_hora_exacta'])): ?>
                     <a href="index.php?action=abrir-sesion-asistencia" class="btn-shadcn btn-shadcn-primary" style="padding: 0.625rem 1.25rem;">
                         <i class="bi bi-play-fill me-1" style="font-size:1.1rem;"></i>
                         <span><?= $aperturaActiva ? 'Reiniciar 5 Minutos' : 'Abrir Registro (5 min Tolerancia)' ?></span>
                     </a>
+                <?php elseif (!empty($claseMomento)): ?>
+                    <button type="button" class="btn-shadcn btn-shadcn-outline" style="padding: 0.625rem 1.25rem; opacity: 0.65; cursor: not-allowed;" disabled title="Fuera del horario de clase programado">
+                        <i class="bi bi-clock me-1"></i>
+                        <span>Fuera de Horario (<?= substr($claseMomento['hora_inicio'] ?? '', 0, 5) ?> - <?= substr($claseMomento['hora_fin'] ?? '', 0, 5) ?>)</span>
+                    </button>
                 <?php else: ?>
                     <button type="button" class="btn-shadcn btn-shadcn-outline" style="padding: 0.625rem 1.25rem; opacity: 0.55; cursor: not-allowed;" disabled title="Sin clase programada hoy">
                         <i class="bi bi-slash-circle me-1"></i>

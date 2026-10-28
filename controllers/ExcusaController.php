@@ -114,34 +114,40 @@ class ExcusaController{
         $this->cambiarEstado('Rechazada');
     }
 
-    private function cambiarEstado(string $estadoNuevo): void {
-        $rol = $_SESSION['rol'] ?? '';
-        if ($rol !== 'Instructor') {
-            header('Location: index.php?action=403');
-            exit();
-        }
-
-        $idExcusa     = (int)($_GET['id'] ?? 0);
-        $idInstructor = (int)($_SESSION['usuario_id'] ?? 0);
-        $motivo       = trim($_GET['motivo'] ?? ($_POST['motivo'] ?? ''));
-
-        $excusa = ExcusaModel::obtenerPorId($idExcusa);
-
-        if (!$excusa) {
-            header('Location: index.php?action=reportes&tab=asistencia&error=' . urlencode('La excusa no existe.'));
-            exit();
-        }
-
-        $ok = ExcusaModel::actualizarEstado($idExcusa, $estadoNuevo, $idInstructor, $motivo);
-
-        $msg = ($estadoNuevo === 'Aprobada')
-            ? 'Excusa médica aprobada correctamente para tus clases asignadas.'
-            : 'Excusa médica rechazada. Se ha notificado el motivo al aprendiz.';
-
-        header('Location: index.php?action=reportes&tab=asistencia&msg=' . urlencode($msg));
+  private function cambiarEstado(string $estadoNuevo): void {
+    if (($_SESSION['rol'] ?? '') !== 'Instructor' || $_SERVER['REQUEST_METHOD'] !== 'POST') {
+        header('Location: index.php?action=403');
         exit();
     }
-    
+
+    $idExcusa     = (int) ($_POST['id'] ?? 0);
+    $idInstructor = (int) ($_SESSION['usuario_id'] ?? 0);
+    $motivo       = mb_substr(trim((string) ($_POST['motivo'] ?? '')), 0, 500);
+
+    // ── Verificación de propiedad (corrige el IDOR) ──
+    if (!ExcusaModel::instructorPuedeGestionar($idExcusa, $idInstructor)) {
+        header('Location: index.php?action=403');
+        exit();
+    }
+
+    if ($estadoNuevo === 'Rechazada' && $motivo === '') {
+        header('Location: index.php?action=reportes&tab=asistencia&error=' . urlencode('Debes indicar el motivo del rechazo.'));
+        exit();
+    }
+
+    $ok = ExcusaModel::actualizarEstado($idExcusa, $estadoNuevo, $idInstructor, $motivo);
+
+    if (!$ok) {
+        header('Location: index.php?action=reportes&tab=asistencia&error=' . urlencode('No fue posible registrar tu decisión.'));
+        exit();
+    }
+
+    $msg = ($estadoNuevo === 'Aprobada')
+        ? 'Excusa médica aprobada correctamente para tus clases asignadas.'
+        : 'Excusa médica rechazada. Se ha notificado el motivo al aprendiz.';
+    header('Location: index.php?action=reportes&tab=asistencia&msg=' . urlencode($msg));
+    exit();
+}
     
     private const CARPETA_UPLOADS = __DIR__ . '/../public/uploads/excusas/';
     private const EXTENSIONES_PERMITIDAS = ['pdf', 'jpg', 'jpeg', 'png'];
@@ -187,5 +193,98 @@ class ExcusaController{
     }
 
 
+
+
+    /**
+     * Descarga o visualiza de forma segura un archivo de soporte de excusa médica.
+     * Solo permite el acceso al Administrador, al aprendiz dueño o al instructor asignado.
+     */
+    public function descargar(): void {
+        if (session_status() !== PHP_SESSION_ACTIVE) {
+            session_start();
+        }
+
+        $usuarioId = (int)($_SESSION['usuario_id'] ?? 0);
+        $rol = $_SESSION['rol'] ?? '';
+
+        if ($usuarioId <= 0 || empty($rol)) {
+            header('Location: index.php?action=login');
+            exit();
+        }
+
+        $archivo = basename(trim((string)($_GET['archivo'] ?? '')));
+        if ($archivo === '') {
+            header('Location: index.php?action=404');
+            exit();
+        }
+
+        $rutaArchivo = realpath(self::CARPETA_UPLOADS . $archivo);
+        $carpetaReal = realpath(self::CARPETA_UPLOADS);
+
+        if (!$rutaArchivo || !file_exists($rutaArchivo) || !is_file($rutaArchivo) || strpos($rutaArchivo, $carpetaReal) !== 0) {
+            header('Location: index.php?action=404');
+            exit();
+        }
+
+        // Verificación de autorización
+        $autorizado = false;
+
+        if ($rol === 'Administrador') {
+            $autorizado = true;
+        } elseif ($rol === 'Aprendiz') {
+            // El aprendiz solo puede ver sus propias excusas
+            try {
+                $mysql = new MySQL();
+                $mysql->conectarBD();
+                $conexion = $mysql->getConexion();
+                if ($conexion) {
+                    $stmt = $conexion->prepare("SELECT 1 FROM excusa e JOIN aprendiz a ON e.fk_aprendiz = a.id_aprendiz WHERE e.documento = :archivo AND a.fk_usuario = :uid LIMIT 1");
+                    $stmt->execute([':archivo' => $archivo, ':uid' => $usuarioId]);
+                    $autorizado = (bool)$stmt->fetchColumn();
+                }
+            } catch (Exception $e) {
+                error_log("Error autorizando descarga de excusa para aprendiz: " . $e->getMessage());
+            }
+        } elseif ($rol === 'Instructor') {
+            // El instructor solo puede ver excusas de aprendices que tiene a cargo o donde está asignado
+            try {
+                $mysql = new MySQL();
+                $mysql->conectarBD();
+                $conexion = $mysql->getConexion();
+                if ($conexion) {
+                    $stmt = $conexion->prepare("SELECT e.id_excusa FROM excusa e WHERE e.documento = :archivo LIMIT 1");
+                    $stmt->execute([':archivo' => $archivo]);
+                    $idExcusa = (int)$stmt->fetchColumn();
+                    if ($idExcusa > 0) {
+                        $autorizado = ExcusaModel::instructorPuedeGestionar($idExcusa, $usuarioId);
+                    }
+                }
+            } catch (Exception $e) {
+                error_log("Error autorizando descarga de excusa para instructor: " . $e->getMessage());
+            }
+        }
+
+        if (!$autorizado) {
+            header('Location: index.php?action=403');
+            exit();
+        }
+
+        // Servir el archivo con el Content-Type adecuado
+        $ext = strtolower(pathinfo($archivo, PATHINFO_EXTENSION));
+        $tiposMime = [
+            'pdf'  => 'application/pdf',
+            'jpg'  => 'image/jpeg',
+            'jpeg' => 'image/jpeg',
+            'png'  => 'image/png',
+        ];
+        $contentType = $tiposMime[$ext] ?? 'application/octet-stream';
+
+        header('Content-Type: ' . $contentType);
+        header('Content-Disposition: inline; filename="' . $archivo . '"');
+        header('Content-Length: ' . filesize($rutaArchivo));
+        header('Cache-Control: private, max-age=3600');
+        readfile($rutaArchivo);
+        exit();
+    }
 
 }

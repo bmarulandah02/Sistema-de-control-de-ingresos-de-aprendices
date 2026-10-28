@@ -70,6 +70,16 @@ class AsistenciaController {
                 header("Location: index.php?action=asistencia");
                 exit();
             }
+            if (empty($claseHoy['es_hora_exacta'])) {
+                $hIni = substr($claseHoy['hora_inicio'] ?? '00:00', 0, 5);
+                $hFin = substr($claseHoy['hora_fin'] ?? '00:00', 0, 5);
+                $_SESSION['mensaje'] = [
+                    'texto' => "Estás fuera del rango de horario programado para tu clase ({$hIni} - {$hFin}). El registro solo puede abrirse durante el tiempo de formación.",
+                    'tipo' => "warning"
+                ];
+                header("Location: index.php?action=asistencia");
+                exit();
+            }
         }
 
         $_SESSION['hora_apertura_asistencia'] = time();
@@ -86,12 +96,12 @@ class AsistenciaController {
         $rolSesion       = $_SESSION['rol'] ?? '';
         $usuarioIdSesion = (int)($_SESSION['usuario_id'] ?? 0);
 
-        // Bloquear registro si es instructor y no tiene clase programada hoy
+        // Bloquear registro si es instructor y no tiene clase programada o está fuera del horario programado
         if ($rolSesion === 'Instructor') {
             $claseHoy = HorarioModel::obtenerClaseDelMomento(null, null, null, $usuarioIdSesion);
-            if (!$claseHoy) {
+            if (!$claseHoy || empty($claseHoy['es_hora_exacta'])) {
                 $_SESSION['mensaje'] = [
-                    'texto' => "No tienes ninguna clase programada para el día de hoy. No es posible registrar asistencias.",
+                    'texto' => "No es posible registrar asistencias fuera del rango horario programado para tu clase.",
                     'tipo' => "warning"
                 ];
                 header("Location: index.php?action=asistencia");

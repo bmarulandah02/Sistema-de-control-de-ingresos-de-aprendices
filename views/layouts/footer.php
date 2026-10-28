@@ -18,6 +18,36 @@
 
 <!-- SCRIPTS DE LA PLANTILLA SHADCN (Modo oscuro, menú responsivo, etc.) -->
 <script src="public/js/main.js"></script>
+<script>
+
+    
+(function () {
+    const token = document.querySelector('meta[name="csrf-token"]')?.content || '';
+    if (!token) return;
+
+    document.querySelectorAll('form').forEach(function (f) {
+        if ((f.getAttribute('method') || 'get').toLowerCase() !== 'post') return;
+        if (f.querySelector('input[name="csrf_token"]')) return;
+        const i = document.createElement('input');
+        i.type = 'hidden'; i.name = 'csrf_token'; i.value = token;
+        f.appendChild(i);
+    });
+
+    const _fetch = window.fetch;
+    window.fetch = function (input, init) {
+        init = init || {};
+        const url = new URL(input instanceof Request ? input.url : input, location.href);
+        const metodo = (init.method || (input instanceof Request ? input.method : 'GET')).toUpperCase();
+        if (url.origin === location.origin && metodo !== 'GET' && metodo !== 'HEAD') {
+            const h = new Headers(init.headers || (input instanceof Request ? input.headers : undefined));
+            if (!h.has('X-CSRF-Token')) h.set('X-CSRF-Token', token);
+            init.headers = h;
+        }
+        return _fetch.call(this, input, init);
+    };
+})();
+</script>
+
 </body>
 </html>
 
